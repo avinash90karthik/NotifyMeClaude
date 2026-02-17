@@ -9,13 +9,12 @@ SETUP:
   3. tracker_check.py is in .gitignore (your personal config stays private)
 """
 
-import urllib.request
-import urllib.parse
 import json
 import os
+import urllib.parse
+import urllib.request
 from datetime import datetime, timezone
 
-# ── Config from environment ──
 TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
 CHAT_ID = os.environ['TELEGRAM_CHAT_ID']
 SUPABASE_URL = os.environ['SUPABASE_URL']
@@ -61,8 +60,6 @@ TRADING_ZONES = {
 # ══════════════════════════════════════════════════════════════
 
 
-# ── Supabase State ──
-
 def supabase_request(method, path, data=None):
     """Make a request to Supabase REST API."""
     url = f'{SUPABASE_URL}/rest/v1/{path}'
@@ -94,18 +91,15 @@ def load_state():
 
 def save_state(prev_prices, alerted_levels, last_summary_hour):
     """Save tracker state to Supabase via upsert."""
+    now = datetime.now(timezone.utc).isoformat()
     items = [
-        {'key': 'prev_prices', 'value': prev_prices, 'updated_at': datetime.now(timezone.utc).isoformat()},
-        {'key': 'alerted_levels', 'value': list(alerted_levels), 'updated_at': datetime.now(timezone.utc).isoformat()},
-        {'key': 'last_summary_hour', 'value': last_summary_hour, 'updated_at': datetime.now(timezone.utc).isoformat()},
+        {'key': 'prev_prices', 'value': prev_prices, 'updated_at': now},
+        {'key': 'alerted_levels', 'value': list(alerted_levels), 'updated_at': now},
+        {'key': 'last_summary_hour', 'value': last_summary_hour, 'updated_at': now},
     ]
     for item in items:
-        url = f'tracker_state?on_conflict=key'
-        req = urllib.request.Request(
-            f'{SUPABASE_URL}/rest/v1/{url}',
-            data=json.dumps(item).encode(),
-            method='POST'
-        )
+        url = f'{SUPABASE_URL}/rest/v1/tracker_state?on_conflict=key'
+        req = urllib.request.Request(url, data=json.dumps(item).encode(), method='POST')
         req.add_header('apikey', SUPABASE_KEY)
         req.add_header('Authorization', f'Bearer {SUPABASE_KEY}')
         req.add_header('Content-Type', 'application/json')
@@ -115,8 +109,6 @@ def save_state(prev_prices, alerted_levels, last_summary_hour):
         except Exception as e:
             print(f'  State save error: {e}')
 
-
-# ── Price Fetching ──
 
 def get_prices():
     """Fetch current prices via yfinance."""
@@ -139,8 +131,6 @@ def get_prices():
     return result
 
 
-# ── Telegram ──
-
 def send_telegram(text, silent=True):
     """Send message via Telegram."""
     data = urllib.parse.urlencode({
@@ -157,8 +147,6 @@ def send_telegram(text, silent=True):
         print(f'  Telegram error: {e}')
         return None
 
-
-# ── Zone Context ──
 
 def get_zone_context(sym, price_level, direction):
     """Get AI trading context for a price level."""
@@ -193,8 +181,6 @@ def get_zone_status(sym, price):
     return ''
 
 
-# ── Alert Logic ──
-
 def check_alerts(prices, prev_prices, alerted_levels):
     """Check all alert conditions. Returns list of alert messages."""
     alerts = []
@@ -207,7 +193,7 @@ def check_alerts(prices, prev_prices, alerted_levels):
         price = data['price']
         change = data['change_pct']
 
-        # Flash move (vs previous check)
+        # Flash move vs previous check
         if sym in prev_prices and prev_prices[sym] > 0:
             move = ((price / prev_prices[sym]) - 1) * 100
             if abs(move) >= ALERT_RULES['flash_move_pct']:
@@ -219,7 +205,7 @@ def check_alerts(prices, prev_prices, alerted_levels):
                     'silent': False,
                 })
 
-        # Price level crossings with AI context
+        # Price level crossings
         if sym in ALERT_RULES:
             levels = ALERT_RULES[sym]
             for lvl in levels.get('above', []):
@@ -245,7 +231,7 @@ def check_alerts(prices, prev_prices, alerted_levels):
                         text += f'\n\n<i>{zone_note}</i>'
                     alerts.append({'text': text, 'silent': False})
 
-        # Big daily move
+        # Big daily move alert
         threshold = ALERT_RULES['big_daily_move_pct']
         for t in [threshold, threshold * 2, threshold * 3]:
             key = f'{sym}_daily_{int(t)}'
@@ -286,8 +272,6 @@ def format_summary(prices, prev_prices):
 
     return '\n'.join(lines)
 
-
-# ── Main ──
 
 def main():
     if not SYMBOLS:

@@ -80,10 +80,8 @@ def build_message(positions, watchlist, data, check_time):
     pos_lines = []
     watch_lines = []
 
-    # Set of symbols we own
-    owned_symbols = set(p['symbol'] for p in positions)
+    owned_symbols = {p['symbol'] for p in positions}
 
-    # --- OPEN POSITIONS ---
     for pos in positions:
         sym = pos['symbol']
         d = data.get(sym)
@@ -100,7 +98,6 @@ def build_message(positions, watchlist, data, check_time):
 
         pnl_pct = ((price - entry) / entry * 100) if entry and entry > 0 else 0
 
-        # RSI alerts for positions
         rsi_flag = ''
         if rsi and rsi > 70:
             rsi_flag = '!'
@@ -109,19 +106,16 @@ def build_message(positions, watchlist, data, check_time):
             rsi_flag = '*'
             alerts.append(f'RSI {sym} = {rsi:.0f} NACHKAUFEN?')
 
-        # Stop proximity
         if stop and price:
             stop_dist = abs(price - stop) / price * 100
             if stop_dist < 5:
                 alerts.append(f'{sym} {stop_dist:.1f}% vom Stop ${stop:.0f}!')
 
-        # KO proximity
         if ko and price:
             ko_dist = abs(price - ko) / price * 100
             if ko_dist < 15:
                 alerts.append(f'{sym} {ko_dist:.1f}% vom KO ${ko:.2f}!')
 
-        # Target proximity
         if target and price:
             target_dist = abs(target - price) / price * 100
             if target_dist < 5:
@@ -146,7 +140,6 @@ def build_message(positions, watchlist, data, check_time):
 
         pos_lines.append(line)
 
-    # --- WATCHLIST (stocks we DON'T own) ---
     for stock in watchlist:
         sym = stock['symbol']
         if sym in owned_symbols:
@@ -159,7 +152,6 @@ def build_message(positions, watchlist, data, check_time):
         rsi = d['rsi']
         name = stock.get('name', sym)
 
-        # RSI alerts for watchlist
         rsi_flag = ''
         if rsi and rsi > 70:
             rsi_flag = '!'
@@ -172,14 +164,9 @@ def build_message(positions, watchlist, data, check_time):
         chg = f'{d["change_pct"]:+.1f}%'
         watch_lines.append(f'  {sym} ${price:.2f} ({chg}) RSI:{rsi_str}')
 
-    # --- BUILD MESSAGE ---
-    # Detect market state from any symbol
-    any_state = ''
-    for d in data.values():
-        if d:
-            any_state = d.get('market_state', '')
-            break
-    market_str = 'OPEN' if any_state in ('REGULAR',) else 'PRE' if any_state == 'PRE' else 'POST' if any_state == 'POST' else 'CLOSED'
+    any_state = next((d.get('market_state', '') for d in data.values() if d), '')
+    state_map = {'REGULAR': 'OPEN', 'PRE': 'PRE', 'POST': 'POST'}
+    market_str = state_map.get(any_state, 'CLOSED')
 
     msg = f'<b>PORTFOLIO CHECK</b>\n'
     msg += f'{check_time} | Markt: {market_str}\n'
@@ -223,11 +210,7 @@ def main():
     positions = get_open_positions()
     watchlist = get_watchlist_symbols()
 
-    # Collect all unique symbols
-    all_symbols = list(set(
-        [p['symbol'] for p in positions] +
-        [s['symbol'] for s in watchlist]
-    ))
+    all_symbols = list({p['symbol'] for p in positions} | {s['symbol'] for s in watchlist})
 
     if not all_symbols:
         print('  No symbols to check.')
@@ -236,10 +219,11 @@ def main():
     print(f'  Fetching {len(all_symbols)} symbols...')
     data = fetch_yfinance_data(all_symbols)
 
+    owned_syms = {p['symbol'] for p in positions}
     for sym in sorted(data.keys()):
         d = data[sym]
         if d:
-            owned = ' [OWNED]' if sym in set(p['symbol'] for p in positions) else ''
+            owned = ' [OWNED]' if sym in owned_syms else ''
             print(f'  {sym}: ${d["price"]:.2f} RSI={d["rsi"]}{owned}')
 
     msg = build_message(positions, watchlist, data, check_time)

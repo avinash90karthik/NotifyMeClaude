@@ -3,13 +3,12 @@
 Runs once, checks prices, sends alerts if needed, then exits.
 State is persisted in Supabase."""
 
-import urllib.request
-import urllib.parse
 import json
 import os
+import urllib.parse
+import urllib.request
 from datetime import datetime, timezone
 
-# ── Config from environment ──
 TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
 CHAT_ID = os.environ['TELEGRAM_CHAT_ID']
 SUPABASE_URL = os.environ['SUPABASE_URL']
@@ -84,8 +83,6 @@ ALERT_RULES = {
     },
 }
 
-# ── AI Trading Context (updated per analysis session) ──
-# Last updated: 06.02.2026
 TRADING_ZONES = {
     'SI=F': {
         'bias': 'LONG',
@@ -334,8 +331,6 @@ TRADING_ZONES = {
 }
 
 
-# ── Supabase State ──
-
 def supabase_request(method, path, data=None):
     """Make a request to Supabase REST API."""
     url = f'{SUPABASE_URL}/rest/v1/{path}'
@@ -376,19 +371,15 @@ def load_state():
 
 def save_state(prev_prices, alerted_levels, last_summary_hour):
     """Save tracker state to Supabase via upsert."""
+    now = datetime.now(timezone.utc).isoformat()
     items = [
-        {'key': 'prev_prices', 'value': prev_prices, 'updated_at': datetime.now(timezone.utc).isoformat()},
-        {'key': 'alerted_levels', 'value': list(alerted_levels), 'updated_at': datetime.now(timezone.utc).isoformat()},
-        {'key': 'last_summary_hour', 'value': last_summary_hour, 'updated_at': datetime.now(timezone.utc).isoformat()},
+        {'key': 'prev_prices', 'value': prev_prices, 'updated_at': now},
+        {'key': 'alerted_levels', 'value': list(alerted_levels), 'updated_at': now},
+        {'key': 'last_summary_hour', 'value': last_summary_hour, 'updated_at': now},
     ]
     for item in items:
-        # Upsert via POST with on_conflict
-        url = f'tracker_state?on_conflict=key'
-        req = urllib.request.Request(
-            f'{SUPABASE_URL}/rest/v1/{url}',
-            data=json.dumps(item).encode(),
-            method='POST'
-        )
+        url = f'{SUPABASE_URL}/rest/v1/tracker_state?on_conflict=key'
+        req = urllib.request.Request(url, data=json.dumps(item).encode(), method='POST')
         req.add_header('apikey', SUPABASE_KEY)
         req.add_header('Authorization', f'Bearer {SUPABASE_KEY}')
         req.add_header('Content-Type', 'application/json')
@@ -398,8 +389,6 @@ def save_state(prev_prices, alerted_levels, last_summary_hour):
         except Exception as e:
             print(f'  State save error: {e}')
 
-
-# ── Price Fetching ──
 
 def get_prices():
     """Fetch current prices via yfinance."""
@@ -422,8 +411,6 @@ def get_prices():
     return result
 
 
-# ── Telegram ──
-
 def send_telegram(text, silent=True):
     """Send message via Telegram."""
     data = urllib.parse.urlencode({
@@ -441,7 +428,8 @@ def send_telegram(text, silent=True):
         return None
 
 
-# ── Zone Context ──
+ZONE_TYPE_EMOJI = {'BUY': '🟢', 'SELL': '🔴', 'WATCH': '👀', 'STOP': '⚠️', 'DANGER': '🔥'}
+
 
 def get_zone_context(sym, price_level, direction):
     """Get AI trading context for a price level."""
@@ -449,18 +437,15 @@ def get_zone_context(sym, price_level, direction):
         return None
     for zone in TRADING_ZONES[sym]['zones']:
         if zone['price'] == price_level and zone['dir'] == direction:
-            type_emoji = {'BUY': '🟢', 'SELL': '🔴', 'WATCH': '👀', 'STOP': '⚠️', 'DANGER': '🔥'}.get(zone['type'], '')
-            return f'{type_emoji} {zone["note"]}'
+            emoji = ZONE_TYPE_EMOJI.get(zone['type'], '')
+            return f'{emoji} {zone["note"]}'
     return None
 
 
 
-
-# ── Alert Logic ──
-
 def check_alerts(prices, prev_prices, alerted_levels):
     """Check all alert conditions. Returns list of alert messages.
-    Groups multiple level crossings per symbol into ONE message.
+    Groups multiple level crossings per symbol into one message.
     Skips stale prices (unchanged from last check = market closed)."""
     alerts = []
 
@@ -541,27 +526,18 @@ def check_alerts(prices, prev_prices, alerted_levels):
 
 
 
-
-# ── Main ──
-
 def main():
     now = datetime.now(timezone.utc)
-    hour = now.hour
     print(f'[{now.strftime("%H:%M:%S")} UTC] Silver Hawk Check')
 
-    # Load state
     prev_prices, alerted_levels, last_summary_hour = load_state()
-
-    # Fetch prices
     prices = get_prices()
 
-    # Check alerts
     alerts = check_alerts(prices, prev_prices, alerted_levels)
     for alert in alerts:
         send_telegram(alert['text'], silent=alert['silent'])
         print(f'  ALERT SENT: {alert["text"][:60]}...')
 
-    # Update prev_prices
     for sym, data in prices.items():
         if 'price' in data:
             p = data['price']
@@ -569,7 +545,6 @@ def main():
             print(f'  {sym}=${p:.2f}({c:+.1f}%)')
             prev_prices[sym] = p
 
-    # Save state
     save_state(prev_prices, alerted_levels, last_summary_hour)
     print('  [state saved]')
 

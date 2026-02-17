@@ -25,6 +25,21 @@
 
 ---
 
+## 0.0 PORTFOLIO.MD AKTUALISIEREN (VOR ANALYSE-START!)
+
+**Lese `memory/portfolio.md` und pruefe ob es aktuell ist.**
+
+Falls der User seit der letzten Aktualisierung einen Trade gemacht hat (neue Position, Teilverkauf, Stop ausgeloest), trage ihn JETZT ein BEVOR die Analyse beginnt.
+
+- Neue Position? → In "Offene Positionen" eintragen (Symbol, Sektor, Wert, Buy-In, KO, Stop)
+- Position geschlossen? → In "Geschlossene Trades" verschieben + P&L
+- Stop ausgeloest? → Als geschlossen markieren + Verlust eintragen
+- Datum der "Letzte Aktualisierung" setzen
+
+**Nach jedem Trade wird portfolio.md auch in Schritt 4 nochmals geprueft.**
+
+---
+
 ## 1.0 LIVE-DATEN VIA YFINANCE (PFLICHT!)
 
 **Fuehre IMMER zuerst dieses Python-Script aus:**

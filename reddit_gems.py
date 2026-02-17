@@ -2,30 +2,27 @@
 """Silver Hawk Trading - Daily Reddit Gems Scanner.
 Scans ApeWisdom for trending Reddit stocks, enriches with yfinance data,
 filters for actionable gems, and sends a Telegram summary.
-Runs daily via GitHub Actions (no LLM needed)."""
+Runs daily via GitHub Actions."""
 
-import urllib.request
 import json
 import os
-import sys
+import urllib.parse
+import urllib.request
 from datetime import datetime, timezone
 
-# ── Config ──
 TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
 CHAT_ID = os.environ['TELEGRAM_CHAT_ID']
 API_TG = f'https://api.telegram.org/bot{TOKEN}'
 
-# Stocks we already own or track (skip these as "gems")
 SKIP_TICKERS = {
-    'SPY', 'QQQ', 'IWM', 'DIA', 'VOO', 'VTI',  # ETFs
-    'BTC', 'ETH', 'DOGE', 'SOL',  # Crypto
+    'SPY', 'QQQ', 'IWM', 'DIA', 'VOO', 'VTI',
+    'BTC', 'ETH', 'DOGE', 'SOL',
 }
 
-# Minimum criteria for a "gem"
-MIN_MARKET_CAP = 500_000_000  # $500M minimum
-MIN_MENTION_CHANGE_PCT = 50  # Mentions must have grown 50%+ in 24h
-MAX_RESULTS = 50  # Check top 50 from Reddit
-TOP_GEMS = 8  # Send top 8 gems
+MIN_MARKET_CAP = 500_000_000
+MIN_MENTION_CHANGE_PCT = 50
+MAX_RESULTS = 50
+TOP_GEMS = 8
 
 
 def fetch_reddit_trending():
@@ -67,7 +64,6 @@ def enrich_with_yfinance(tickers):
             prev_close = info.get('previousClose', price)
             change_pct = ((price - prev_close) / prev_close * 100) if prev_close else 0
 
-            # Quick RSI from last 20 days
             hist = t.history(period='1mo')
             rsi = None
             if len(hist) >= 14:
@@ -77,7 +73,6 @@ def enrich_with_yfinance(tickers):
                 if loss > 0:
                     rsi = 100 - (100 / (1 + gain / loss))
 
-            # Volume spike
             avg_vol = info.get('averageVolume', 0)
             today_vol = info.get('volume', 0)
             vol_ratio = (today_vol / avg_vol) if avg_vol > 0 else 1.0
@@ -188,7 +183,6 @@ def format_gem_line(rank, sym, reddit, yf_data, score, mention_growth, wsb_data)
     mentions = reddit.get('mentions', 0)
     upvotes = reddit.get('upvotes', 0)
 
-    # Direction arrow based on mention growth
     if mention_growth >= 100:
         arrow = '🔥🔥'
     elif mention_growth >= 50:
@@ -233,7 +227,6 @@ def format_gem_line(rank, sym, reddit, yf_data, score, mention_growth, wsb_data)
 
 def send_telegram(text, silent=True):
     """Send message via Telegram."""
-    import urllib.parse
     data = urllib.parse.urlencode({
         'chat_id': CHAT_ID,
         'parse_mode': 'HTML',
@@ -269,12 +262,10 @@ def main():
     now = datetime.now(timezone.utc)
     print(f'[{now.strftime("%H:%M:%S")} UTC] Reddit Gems Scanner')
 
-    # Load portfolio to exclude owned stocks
     portfolio_syms = load_portfolio_symbols()
     skip = SKIP_TICKERS | portfolio_syms
     print(f'  Skipping: {skip}')
 
-    # Fetch Reddit data
     print('  Fetching ApeWisdom all-stocks...')
     trending = fetch_reddit_trending()
     print(f'  Got {len(trending)} trending stocks')
@@ -287,7 +278,6 @@ def main():
         print('  No data from ApeWisdom, aborting.')
         return
 
-    # Filter: skip ETFs, crypto, owned stocks, and low-mention stocks
     candidates = []
     for r in trending:
         sym = r['ticker']
@@ -296,7 +286,6 @@ def main():
         mentions = r.get('mentions', 0)
         mentions_24h = r.get('mentions_24h_ago', 1) or 1
         growth = ((mentions - mentions_24h) / mentions_24h) * 100
-        # Must have meaningful mention growth or be in top 10
         if growth >= MIN_MENTION_CHANGE_PCT or r.get('rank', 99) <= 10:
             candidates.append(r)
 
@@ -306,17 +295,14 @@ def main():
         send_telegram('🦅 <b>Daily Reddit Scan</b>\n\nKeine neuen Gems gefunden. Ruhiger Tag auf Reddit.', silent=True)
         return
 
-    # Enrich top candidates with yfinance (limit to save time)
     tickers_to_check = [c['ticker'] for c in candidates[:20]]
     print(f'  Enriching {len(tickers_to_check)} tickers with yfinance...')
     yf_data = enrich_with_yfinance(tickers_to_check)
 
-    # Score and rank
     scored = []
     for r in candidates:
         sym = r['ticker']
         yf = yf_data.get(sym)
-        # Skip if market cap too small (penny stocks)
         if yf and yf['market_cap'] < MIN_MARKET_CAP:
             continue
         mentions_24h = r.get('mentions_24h_ago', 1) or 1
@@ -331,7 +317,6 @@ def main():
         send_telegram('🦅 <b>Daily Reddit Scan</b>\n\nKeine Gems ueber dem Schwellenwert.', silent=True)
         return
 
-    # Format Telegram message
     date_str = now.strftime('%d.%m.%Y')
     lines = [f'🦅 <b>Daily Reddit Gems</b> | {date_str}\n']
 
@@ -348,7 +333,6 @@ def main():
     send_telegram(msg, silent=False)
     print(f'  Sent {len(top)} gems to Telegram!')
 
-    # Also print to console
     for score, mg, sym, reddit, yf in top:
         cap = f'${yf["market_cap"]/1e9:.1f}B' if yf and yf["market_cap"] >= 1e9 else 'N/A'
         print(f'  #{reddit["rank"]} {sym}: Score={score}, Mentions +{mg:.0f}%, Cap={cap}')

@@ -136,34 +136,6 @@ ${SUPABASE_URL}/storage/v1/object/public/charts/{{SYMBOL}}_chart.png
 
 ---
 
-## DATENBANK-EINTRAG
-
-**Sende ALLES an die NotifyMe App!**
-
-Die App hat Markdown-Support im Detail-Screen. Der User will die **VOLLSTAENDIGE** Analyse unterwegs auf dem iPhone lesen.
-
-**KEINE KURZFASSUNG! Sende ALLE Schritte:**
-- ✅ Schritt 1: yfinance Live-Daten + Chart-Analyse + News + Fundamentals + Korrelation + **RSI-Divergenz**
-- ✅ Schritt 2: Investment Debate (Bull Runde 1+2, Bear Runde 1+2) + SHORT-Bewertung
-- ✅ Schritt 3: Investment Judge + KO-Berechnung (ATR + Chart) + Trade-Plan
-- ✅ Schritt 4: Trading Card + Ausfuehrliche Analyse
-
-```sql
-INSERT INTO reminders (title, description, image_url, due_at, is_done)
-VALUES (
-  '🎯 {{SYMBOL}} Multi-Agent Analyse',
-  '[VOLLSTAENDIGE ANALYSE - ALLE SCHRITTE MIT ALLEN DETAILS]',
-  '${SUPABASE_URL}/storage/v1/object/public/charts/{{SYMBOL}}_chart.png',
-  NOW(),
-  false
-);
-```
-
-**WICHTIG:**
-- Die `description` muss die **KOMPLETTE** Analyse enthalten (kann sehr lang sein - das ist OK!)
-- Die `image_url` enthaelt den Chart fuer visuelle Referenz in der App
-- Der User will ALLES auf dem iPhone lesen koennen - keine Informationen auslassen!
-
 ---
 
 ## VALIDIERUNG VOR VERSAND (PFLICHT!)
@@ -172,7 +144,7 @@ Pruefe JEDEN Punkt bevor du sendest. Bei einem ❌ → STOPP und korrigieren!
 
 | # | Check | Kriterium |
 |---|-------|-----------|
-| 1 | Supabase gelesen? | Portfolio-Daten kommen aus DB, nicht aus Memory |
+| 1 | Portfolio gelesen? | portfolio.md gelesen (Supabase als Fallback) |
 | 2 | yfinance-Daten? | Preis, ATR, RSI aus yfinance (nicht Web-Suche) |
 | 3 | RSI-Divergenz geprueft? | Delta, Slope und Divergenz-Check ausgefuehrt |
 | 4 | Stop-Loss vorhanden? | Jeder Trade hat einen Stop (mental oder TR) |
@@ -240,10 +212,7 @@ Das ist die Single Source of Truth fuer den Portfolio-Stand.
 - ✅ Positions-Empfehlung in % vom Portfolio (nicht feste EUR-Betraege)
 - ✅ Minimum 500 Woerter in der Analyse
 - ✅ **RSI-Divergenz in Analyse und Telegram erwaehnt**
-- ✅ ALLE vorherigen Schritte in der Description
 - ✅ Chart zu Supabase Storage hochladen
-- ✅ Chart-URL in image_url
-- ✅ SQL INSERT ausfuehren
 - ✅ Telegram-Nachricht mit Trading Card senden (PFLICHT!)
 - ✅ Chart als Telegram-Foto senden
 - ✅ portfolio.md aktualisieren (PFLICHT!)

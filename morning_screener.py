@@ -7,6 +7,7 @@ Two-phase: fast batch yf.download(), then individual enrichment for top picks.
 Runs daily at 08:00 CET via GitHub Actions."""
 
 import json
+import os
 import re
 import urllib.parse
 import urllib.request
@@ -14,8 +15,6 @@ from datetime import datetime, timezone
 
 from supabase_client import supabase_request
 
-
-# ── Config ──
 FUTURES = {'SI=F', 'GC=F'}
 MIN_VOLUME = 100_000
 MIN_SCORE = 25
@@ -23,8 +22,6 @@ TOP_N = 5
 ENRICH_N = 10
 SECTOR_LIMIT = 0.60
 
-
-# ── Data Sources ──
 
 def fetch_nasdaq100_symbols():
     """Fetch NASDAQ-100 constituents + ICB sectors + company names from Wikipedia."""
@@ -79,20 +76,13 @@ def get_position_directions(positions, price_data=None):
     for p in positions:
         sym = p['symbol']
         ko = p.get('ko_level')
-        # Use live stock price from yfinance data
-        current_price = None
-        if price_data and sym in price_data:
-            current_price = price_data[sym].get('price')
+        current_price = price_data.get(sym, {}).get('price') if price_data else None
         if ko and current_price:
             dirs[sym] = 'LONG' if ko < current_price else 'SHORT'
-        elif ko:
-            dirs[sym] = '?'
         else:
             dirs[sym] = '?'
     return dirs
 
-
-# ── Technical Indicator Helpers ──
 
 def detect_rsi_divergence(close_vals, rsi_vals, lookback=20):
     """Detect bullish or bearish RSI divergence over last N bars."""
@@ -190,8 +180,6 @@ def calc_bollinger(close, sma_period=20, num_std=2, lookback=120):
     return {'bb_width_percentile': bb_pctl, 'bb_position': bb_pos}
 
 
-# ── Phase 1: Batch Download + Technicals ──
-
 def batch_download(symbols):
     """Batch download 1 year of OHLCV data for all symbols."""
     import yfinance as yf
@@ -219,7 +207,7 @@ def calc_technicals(batch_data, symbols, single=False):
             prev = float(close.iloc[-2]) if len(close) >= 2 else price
             change_pct = round((price - prev) / prev * 100, 2)
 
-            # ── RSI 14 (Wilder's smoothing) + series for delta/divergence ──
+            # RSI 14 (Wilder's smoothing)
             delta = close.diff()
             gain = delta.where(delta > 0, 0).ewm(alpha=1/14, min_periods=14).mean()
             loss_s = (-delta.where(delta < 0, 0)).ewm(alpha=1/14, min_periods=14).mean()
@@ -230,7 +218,7 @@ def calc_technicals(batch_data, symbols, single=False):
                 continue
             rsi = round(rsi_val, 1)
 
-            # RSI Delta (5-day)
+            # RSI delta (5-day)
             rsi_delta = None
             rsi_clean = rsi_series.dropna()
             if len(rsi_clean) >= 6:
@@ -238,10 +226,10 @@ def calc_technicals(batch_data, symbols, single=False):
                 if not np.isnan(r5):
                     rsi_delta = round(rsi - r5, 1)
 
-            # RSI Divergence
+            # RSI divergence
             rsi_divergence = detect_rsi_divergence(close.values, rsi_series.values)
 
-            # RSI Range Quality (last 20 days)
+            # RSI range quality (last 20 days)
             rsi_range = None
             rsi_had_extreme = False
             if len(rsi_clean) >= 20:
@@ -251,7 +239,7 @@ def calc_technicals(batch_data, symbols, single=False):
                     rsi_range = round(float(rsi_20_vals.max() - rsi_20_vals.min()), 1)
                     rsi_had_extreme = bool((rsi_20_vals < 35).any() or (rsi_20_vals > 65).any())
 
-            # ── MACD + histogram direction ──
+            # MACD + histogram direction
             macd_cur = macd_prev = None
             macd_hist_dir = None
             macd_converging = False
@@ -269,7 +257,7 @@ def calc_technicals(batch_data, symbols, single=False):
                     abs(float(macd_line.iloc[-2] - signal_line.iloc[-2]))
                 )
 
-            # ── ATR% ──
+            # ATR%
             atr_pct = None
             if len(high) >= 15 and len(low) >= 15 and len(close) >= 15:
                 h = high.values[-15:]
@@ -278,7 +266,7 @@ def calc_technicals(batch_data, symbols, single=False):
                 tr = np.maximum(h[1:] - l[1:], np.maximum(np.abs(h[1:] - c[:-1]), np.abs(l[1:] - c[:-1])))
                 atr_pct = round(float(np.mean(tr)) / price * 100, 2)
 
-            # ── ADX ──
+            # ADX
             adx_val = plus_di = minus_di = None
             if len(high) >= 30 and len(low) >= 30 and len(close) >= 30:
                 try:
@@ -290,25 +278,23 @@ def calc_technicals(batch_data, symbols, single=False):
                 except Exception:
                     pass
 
-            # ── SMAs + distance ──
+            # SMAs + distance
             sma50 = round(float(close.rolling(50).mean().iloc[-1]), 2) if len(close) >= 50 else None
             sma200 = round(float(close.rolling(200).mean().iloc[-1]), 2) if len(close) >= 200 else None
             sma200_dist = round((price - sma200) / sma200 * 100, 2) if sma200 else None
             sma50_dist = round((price - sma50) / sma50 * 100, 2) if sma50 else None
 
-            # ── Volume (directional) ──
-            # Use last complete trading day if current day has partial volume
+            # Volume (use last complete trading day if current day has partial volume)
             avg_vol = int(volume.tail(20).mean()) if len(volume) >= 20 else 0
             vol_today = int(volume.iloc[-1]) if len(volume) > 0 else 0
-            # If vol_today is suspiciously low (<10% of avg), likely partial day -> use previous
             if avg_vol > 0 and vol_today < avg_vol * 0.1 and len(volume) >= 2:
                 vol_today = int(volume.iloc[-2])
             vol_ratio = round(vol_today / avg_vol, 2) if avg_vol > 0 else 0
 
-            # ── Bollinger Bands ──
+            # Bollinger Bands
             bb = calc_bollinger(close)
 
-            # ── 5-day change ──
+            # 5-day change
             change_5d = None
             if len(close) >= 6:
                 c5 = float(close.iloc[-6])
@@ -344,8 +330,6 @@ def calc_technicals(batch_data, symbols, single=False):
     return results
 
 
-# ── Phase 2: Enrich Top Candidates ──
-
 def enrich_candidates(symbols, data):
     """Fetch individual yfinance info for top candidates."""
     import yfinance as yf
@@ -375,8 +359,6 @@ def enrich_candidates(symbols, data):
             print(f'  Enrich {sym}: {e}')
 
 
-# ── Hard Gates ──
-
 def passes_hard_gates(sym, d):
     if not d or not d.get('price') or d.get('rsi') is None:
         return False
@@ -392,24 +374,6 @@ def passes_hard_gates(sym, d):
     return True
 
 
-# ── v4 Scoring: Trend/Momentum (not reversal!) ──
-#
-# Philosophy: Score stocks with TREND CONFIRMATION.
-# LONG = uptrend + pullback to support + momentum resuming
-# SHORT = downtrend + bounce to resistance + momentum fading
-# Falling knives (RSI <30 under SMA200) get ZERO, not bonus points.
-#
-# Weight distribution (max ~100):
-#   Trend alignment (SMA200)     0-15  (mandatory foundation)
-#   SMA50 pullback/rejection     0-12  (entry timing)
-#   RSI sweet spot               0-12  (momentum, not extremes)
-#   MACD confirmation            0-13  (momentum direction)
-#   ATR% volatility              0-18  (Turbo leverage needs vol)
-#   ADX trend strength           0-10  (trending vs ranging)
-#   Volume confirmation          0-8   (institutional backing)
-#   Bollinger / squeeze          0-5   (breakout potential)
-#   Extras (SI, analyst, 5d)     0-7   (bonus signals)
-
 def score_long(d):
     """Score LONG potential (0-100). v4 Trend/Momentum scoring.
     Rewards: uptrend + pullback + momentum resuming.
@@ -423,8 +387,7 @@ def score_long(d):
     adx = d.get('adx')
     rd = d.get('rsi_delta')
 
-    # ── TREND ALIGNMENT: SMA200 (0-15, mandatory foundation) ──
-    # Above SMA200 = uptrend. Below = no LONG setup.
+    # Trend alignment: SMA200 (0-15)
     if dist200 is not None:
         if dist200 < 0:
             # Below SMA200: heavy penalty, kills the setup
@@ -439,8 +402,7 @@ def score_long(d):
         else:
             score += 4  # Very extended above SMA200
 
-    # ── SMA50 PULLBACK TIMING (0-12) ──
-    # Best LONG: price pulled back to SMA50 in an uptrend
+    # SMA50 pullback timing (0-12)
     if dist50 is not None and dist200 is not None and dist200 >= 0:
         if -3 <= dist50 <= 1:
             score += 12; signals.append('SMA50 Pullback')
@@ -449,9 +411,7 @@ def score_long(d):
         elif dist50 > 3:
             score += 4  # Above SMA50, trending
 
-    # ── RSI SWEET SPOT (0-12) ──
-    # Ideal LONG: RSI 35-55 (cooled off in uptrend, ready to resume)
-    # NOT oversold extremes (falling knife) or overbought (too late)
+    # RSI sweet spot (0-12)
     if 35 <= rsi <= 45:
         score += 12; signals.append(f'RSI {rsi:.0f} Pullback-Zone')
     elif 45 < rsi <= 55:
@@ -481,7 +441,7 @@ def score_long(d):
     if div == 'bullish' and dist200 is not None and dist200 >= 0:
         score += 5; signals.append('DIV bullish')
 
-    # ── MACD CONFIRMATION (0-13) ──
+    # MACD confirmation (0-13)
     mc = d.get('macd_hist')
     mp = d.get('macd_hist_prev')
     m_dir = d.get('macd_hist_direction')
@@ -495,7 +455,7 @@ def score_long(d):
         elif mp < 0 and mc < 0 and m_dir == 'increasing':
             score += 3  # Converging from below = potential cross
 
-    # ── ATR% VOLATILITY (0-18, Turbo king) ──
+    # ATR% volatility (0-18)
     atr = d.get('atr_pct')
     if atr is not None:
         if atr >= 5.0:
@@ -507,7 +467,7 @@ def score_long(d):
         elif atr >= 1.5:
             score += 4
 
-    # ── ADX TREND STRENGTH (0-10) ──
+    # ADX trend strength (0-10)
     if adx is not None:
         if adx >= 35:
             score += 10; signals.append(f'ADX {adx:.0f} stark')
@@ -518,7 +478,7 @@ def score_long(d):
         else:
             score -= 2  # No trend = bad for momentum
 
-    # ── VOLUME CONFIRMATION (0-8) ──
+    # Volume confirmation (0-8)
     vr = d.get('vol_ratio') or 0
     chg = d.get('change_pct', 0)
     if vr >= 2.5 and chg > 0:
@@ -528,7 +488,7 @@ def score_long(d):
     elif vr >= 1.5 and chg < -1:
         score -= 3  # High vol on red = distribution
 
-    # ── BOLLINGER SQUEEZE (0-5) ──
+    # Bollinger squeeze (0-5)
     bb_pct = d.get('bb_width_percentile')
     bb_pos = d.get('bb_position')
     if bb_pct is not None and bb_pos is not None:
@@ -537,22 +497,19 @@ def score_long(d):
         elif bb_pct < 25:
             score += 2
 
-    # ── EXTRAS (0-7) ──
-    # Short Interest: squeeze fuel for LONG
+    # Extras (0-7)
     si = d.get('short_pct') or 0
     if si >= 0.20:
         score += 4; signals.append(f'SI {si*100:.0f}%')
     elif si >= 0.10:
         score += 2
 
-    # Analyst
     rating = d.get('analyst_rating') or ''
     if rating in ('strong_buy', 'strongBuy'):
         score += 3
     elif rating in ('buy',):
         score += 2
 
-    # 5-day pullback in uptrend
     c5d = d.get('change_5d')
     if c5d is not None and -8 <= c5d <= -2 and dist200 is not None and dist200 >= 0:
         score += 5; signals.append('5d Pullback im Uptrend')
@@ -573,8 +530,7 @@ def score_short(d):
     adx = d.get('adx')
     rd = d.get('rsi_delta')
 
-    # ── TREND ALIGNMENT: SMA200 (0-15, mandatory foundation) ──
-    # Below SMA200 = downtrend. Above = no SHORT setup.
+    # Trend alignment: SMA200 (0-15)
     if dist200 is not None:
         if dist200 > 0:
             # Above SMA200: heavy penalty, kills the setup
@@ -589,8 +545,7 @@ def score_short(d):
         else:
             score += 4  # Very extended below SMA200
 
-    # ── SMA50 REJECTION TIMING (0-12) ──
-    # Best SHORT: price bounced up to SMA50 in a downtrend
+    # SMA50 rejection timing (0-12)
     if dist50 is not None and dist200 is not None and dist200 < 0:
         if -1 <= dist50 <= 3:
             score += 12; signals.append('SMA50 Abprall')
@@ -599,8 +554,7 @@ def score_short(d):
         elif dist50 < -3:
             score += 4  # Below SMA50, trending down
 
-    # ── RSI SWEET SPOT (0-12) ──
-    # Ideal SHORT: RSI 50-65 (bounced in downtrend, ready to resume down)
+    # RSI sweet spot (0-12)
     if 55 <= rsi <= 65:
         score += 12; signals.append(f'RSI {rsi:.0f} Bounce-Zone')
     elif 50 <= rsi < 55:
@@ -630,7 +584,7 @@ def score_short(d):
     if div == 'bearish' and dist200 is not None and dist200 < 0:
         score += 5; signals.append('DIV bearish')
 
-    # ── MACD CONFIRMATION (0-13) ──
+    # MACD confirmation (0-13)
     mc = d.get('macd_hist')
     mp = d.get('macd_hist_prev')
     m_dir = d.get('macd_hist_direction')
@@ -644,7 +598,7 @@ def score_short(d):
         elif mp > 0 and mc > 0 and m_dir == 'decreasing':
             score += 3  # Converging from above = potential cross down
 
-    # ── ATR% VOLATILITY (0-18, Turbo king) ──
+    # ATR% volatility (0-18)
     atr = d.get('atr_pct')
     if atr is not None:
         if atr >= 5.0:
@@ -656,7 +610,7 @@ def score_short(d):
         elif atr >= 1.5:
             score += 4
 
-    # ── ADX TREND STRENGTH (0-10) ──
+    # ADX trend strength (0-10)
     if adx is not None:
         if adx >= 35:
             score += 10; signals.append(f'ADX {adx:.0f} stark')
@@ -667,7 +621,7 @@ def score_short(d):
         else:
             score -= 2  # No trend = bad for momentum
 
-    # ── VOLUME CONFIRMATION (0-8) ──
+    # Volume confirmation (0-8)
     vr = d.get('vol_ratio') or 0
     chg = d.get('change_pct', 0)
     if vr >= 2.5 and chg < 0:
@@ -677,7 +631,7 @@ def score_short(d):
     elif vr >= 1.5 and chg > 1:
         score -= 3  # High vol on green = accumulation
 
-    # ── BOLLINGER SQUEEZE (0-5) ──
+    # Bollinger squeeze (0-5)
     bb_pct = d.get('bb_width_percentile')
     bb_pos = d.get('bb_position')
     if bb_pct is not None and bb_pos is not None:
@@ -686,8 +640,7 @@ def score_short(d):
         elif bb_pct < 25:
             score += 2
 
-    # ── EXTRAS (0-7) ──
-    # Short Interest: crowded short = risky
+    # Extras (0-7)
     si = d.get('short_pct') or 0
     if si >= 0.25:
         score -= 5  # Too crowded, squeeze risk
@@ -696,22 +649,18 @@ def score_short(d):
     elif si < 0.05:
         score += 2  # Low SI = room to short
 
-    # Analyst
     rating = d.get('analyst_rating') or ''
     if rating in ('sell', 'strong_sell', 'strongSell'):
         score += 3
     elif rating in ('underperform',):
         score += 2
 
-    # 5-day bounce in downtrend
     c5d = d.get('change_5d')
     if c5d is not None and 2 <= c5d <= 8 and dist200 is not None and dist200 < 0:
         score += 5; signals.append('5d Bounce im Downtrend')
 
     return max(0, min(100, score)), signals
 
-
-# ── Portfolio Context ──
 
 def calc_sector_concentration(positions, sector_map):
     sector_values = {}
@@ -726,8 +675,6 @@ def calc_sector_concentration(positions, sector_map):
         return {}
     return {s: round(v / total * 100, 1) for s, v in sector_values.items()}
 
-
-# ── Message ──
 
 def fmt_candidate(i, score, sym, sector, d, signals, direction, pos_dirs, name=''):
     """Format a single candidate line for Telegram."""
@@ -844,7 +791,6 @@ def build_message(all_data, positions, sector_map, scan_time, total_scanned, pos
 
 def send_telegram(text):
     """Send message via Telegram. Splits if over 4096 chars."""
-    import os
     token = os.environ['TELEGRAM_BOT_TOKEN']
     chat_id = os.environ['TELEGRAM_CHAT_ID']
     api = f'https://api.telegram.org/bot{token}/sendMessage'
@@ -879,7 +825,6 @@ def main():
     scan_time = now.strftime('%d.%m.%Y %H:%M UTC')
     print(f'[{now.strftime("%H:%M:%S")} UTC] Morning Screener v3')
 
-    # 1. Build symbol universe
     print('  Fetching NASDAQ-100 list...')
     ndx100, ndx100_sectors, ndx100_names = fetch_nasdaq100_symbols()
     print(f'  NASDAQ-100: {len(ndx100)} symbols')
@@ -898,49 +843,37 @@ def main():
         print('  No symbols to scan.')
         return
 
-    # Sector map: Wikipedia > watchlist (portfolio has no sector column)
     sector_map = dict(ndx100_sectors)
     for s in watchlist:
         sector_map.setdefault(s['symbol'], s.get('sector', 'Unbekannt'))
 
-    # Name map: Wikipedia > watchlist
     name_map = dict(ndx100_names)
     for s in watchlist:
         name_map.setdefault(s['symbol'], s.get('name', s['symbol']))
-    # Futures get manual sector assignment
     sector_map.setdefault('SI=F', 'Commodities')
     sector_map.setdefault('GC=F', 'Commodities')
 
-    # 2. Phase 1: Batch download
     print(f'  Phase 1: Batch downloading {total_scanned} symbols...')
     single = len(all_symbols) == 1
     batch_data = batch_download(all_symbols)
     print('  Download complete.')
 
-    # 3. Calculate all technicals
-    print('  Calculating v3 technicals (RSI/delta/div, MACD, ATR, ADX, BB, vol)...')
+    print('  Calculating technicals...')
     data = calc_technicals(batch_data, all_symbols, single=single)
     print(f'  Technicals for {len(data)} symbols')
 
-    # 3b. Infer position directions from KO vs current stock price
     pos_dirs = get_position_directions(positions, data)
     for sym, d in pos_dirs.items():
         print(f'    {sym}: {d}')
 
-    # 4. Phase 2: Enrich top candidates
     passed = {sym: d for sym, d in data.items() if passes_hard_gates(sym, d)}
     print(f'  Hard gates: {len(passed)} passed')
 
     long_pre = sorted([(score_long(d)[0], sym) for sym, d in passed.items()], reverse=True)
     short_pre = sorted([(score_short(d)[0], sym) for sym, d in passed.items()], reverse=True)
 
-    enrich_syms = set()
-    for sc, sym in long_pre[:ENRICH_N]:
-        enrich_syms.add(sym)
-    for sc, sym in short_pre[:ENRICH_N]:
-        enrich_syms.add(sym)
-    enrich_syms |= FUTURES & set(data.keys())
-    enrich_syms |= position_syms & set(data.keys())
+    enrich_syms = {sym for _, sym in long_pre[:ENRICH_N]} | {sym for _, sym in short_pre[:ENRICH_N]}
+    enrich_syms |= (FUTURES | position_syms) & set(data.keys())
 
     print(f'  Phase 2: Enriching {len(enrich_syms)} candidates...')
     enrich_candidates(list(enrich_syms), data)
@@ -949,7 +882,6 @@ def main():
         if sym in data and data[sym].get('sector'):
             sector_map.setdefault(sym, data[sym]['sector'])
 
-    # 5. Build and send
     msg = build_message(data, positions, sector_map, scan_time, total_scanned, pos_dirs, name_map)
     print(f'\n{msg}\n')
 
