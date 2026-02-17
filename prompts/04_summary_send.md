@@ -27,12 +27,12 @@
 ║  Chart-basiert: $XX.XX (unter Support $XX.XX)        ║
 ║  → FINALES KO:  $XX.XX (XX.X% Abstand)              ║
 ║  → Hebel:       ~Xx                                  ║
-║  Stop-Loss:     $XX.XX (mental, über KO)              ║
+║  Stop-Loss:     $XX.XX (mental, ueber KO)            ║
 ║                                                      ║
 ╠══════════════════════════════════════════════════════╣
 ║  POSITIONS-EMPFEHLUNG (% vom Portfolio)              ║
 ╠══════════════════════════════════════════════════════╣
-║  Mini (5%):        XXX EUR - [Produkt + KO]          ║
+║  Lotto (5%):       XXX EUR - [Produkt + KO]         ║
 ║  Klein (15%):      XXX EUR - [Produkt + KO]         ║
 ║  Standard (30%):   XXX EUR - [Produkt + KO]         ║
 ║  Ohne Hebel (20%): XXX EUR - [ETF/ETC/Aktie]        ║
@@ -42,8 +42,8 @@
 ╠══════════════════════════════════════════════════════╣
 ║  EXITS (gestaffelt)                                  ║
 ╠══════════════════════════════════════════════════════╣
-║  Sell 1: $XX.XX (XX%) - [Begründung]                ║
-║  Sell 2: $XX.XX (XX%) - [Begründung]                ║
+║  Sell 1: $XX.XX (XX%) - [Begruendung]               ║
+║  Sell 2: $XX.XX (XX%) - [Begruendung]               ║
 ║  Sell 3: $XX.XX (Rest) - [Stretch-Ziel]             ║
 ║  Time-Stop: X Tage ohne Bewegung → halbieren        ║
 ║                                                      ║
@@ -59,7 +59,7 @@
 ╠══════════════════════════════════════════════════════╣
 ║  Sektor-Konzentration: XX% [Sektor]  [✅/⚠️]       ║
 ║  Offene Positionen gleiche Richtung: X  [✅/⚠️]    ║
-║  Nächstes Event: [Event] am [Datum]  [✅/⚠️]       ║
+║  Naechstes Event: [Event] am [Datum]  [✅/⚠️]      ║
 ║  Risk-Budget verbraucht: XX%  [✅/⚠️]               ║
 ║                                                      ║
 ╠══════════════════════════════════════════════════════╣
@@ -74,38 +74,39 @@
 
 ---
 
-## AUSFÜHRLICHE ANALYSE ({{LANGUAGE}}, 500-800 Wörter)
+## AUSFUEHRLICHE ANALYSE ({{LANGUAGE}}, 500-800 Woerter)
 
-**PFLICHT! Minimum 500 Wörter!**
+**PFLICHT! Minimum 500 Woerter!**
 
-Schreibe eine vollständige Analyse mit folgender Struktur:
+Schreibe eine vollstaendige Analyse mit folgender Struktur:
 
-**1. EINLEITUNG (50-100 Wörter)**
+**1. EINLEITUNG (50-100 Woerter)**
 - Aktueller Kontext: Was passiert gerade mit dem Asset?
-- Warum ist jetzt ein wichtiger Zeitpunkt für eine Analyse?
+- Warum ist jetzt ein wichtiger Zeitpunkt fuer eine Analyse?
 
-**2. TECHNISCHE SITUATION (100-150 Wörter)**
+**2. TECHNISCHE SITUATION (100-150 Woerter)**
 - Beschreibe den aktuellen Chart-Zustand
 - Wichtige Levels und was sie bedeuten
-- Trend-Stärke und -Richtung
+- Trend-Staerke und -Richtung
+- **RSI-Delta und Divergenz-Befund erwaehnen!**
 - **Referenziere deine Chart-Beobachtungen!**
 
-**3. FUNDAMENTALE FAKTOREN (100-150 Wörter)**
+**3. FUNDAMENTALE FAKTOREN (100-150 Woerter)**
 - Was treibt das Asset fundamental?
 - Supply/Demand Situation
 - Relevante Makro-Faktoren
 
-**4. NEWS & KATALYSATOREN (100-150 Wörter)**
+**4. NEWS & KATALYSATOREN (100-150 Woerter)**
 - Die wichtigsten aktuellen News
-- Kommende Events die den Preis bewegen könnten
-- Sentiment-Einschätzung
+- Kommende Events die den Preis bewegen koennten
+- Sentiment-Einschaetzung
 
-**5. RISIKEN (50-100 Wörter)**
-- Was könnte schiefgehen?
-- Was würde die These invalidieren?
+**5. RISIKEN (50-100 Woerter)**
+- Was koennte schiefgehen?
+- Was wuerde die These invalidieren?
 - **Korrelations-Risiko zu bestehenden Positionen!**
 
-**6. FAZIT & HANDLUNGSEMPFEHLUNG (100-150 Wörter)**
+**6. FAZIT & HANDLUNGSEMPFEHLUNG (100-150 Woerter)**
 - Klare Empfehlung: Was soll der Trader tun?
 - Entry-Strategie
 - Risk Management (max. Verlust in EUR und % vom Portfolio)
@@ -139,19 +140,19 @@ ${SUPABASE_URL}/storage/v1/object/public/charts/{{SYMBOL}}_chart.png
 
 **Sende ALLES an die NotifyMe App!**
 
-Die App hat Markdown-Support im Detail-Screen. Der User will die **VOLLSTÄNDIGE** Analyse unterwegs auf dem iPhone lesen.
+Die App hat Markdown-Support im Detail-Screen. Der User will die **VOLLSTAENDIGE** Analyse unterwegs auf dem iPhone lesen.
 
 **KEINE KURZFASSUNG! Sende ALLE Schritte:**
-- ✅ Schritt 1: yfinance Live-Daten + Chart-Analyse + News + Fundamentals + Korrelation
+- ✅ Schritt 1: yfinance Live-Daten + Chart-Analyse + News + Fundamentals + Korrelation + **RSI-Divergenz**
 - ✅ Schritt 2: Investment Debate (Bull Runde 1+2, Bear Runde 1+2) + SHORT-Bewertung
 - ✅ Schritt 3: Investment Judge + KO-Berechnung (ATR + Chart) + Trade-Plan
-- ✅ Schritt 4: Trading Card + Ausführliche Analyse
+- ✅ Schritt 4: Trading Card + Ausfuehrliche Analyse
 
 ```sql
 INSERT INTO reminders (title, description, image_url, due_at, is_done)
 VALUES (
   '🎯 {{SYMBOL}} Multi-Agent Analyse',
-  '[VOLLSTÄNDIGE ANALYSE - ALLE SCHRITTE MIT ALLEN DETAILS]',
+  '[VOLLSTAENDIGE ANALYSE - ALLE SCHRITTE MIT ALLEN DETAILS]',
   '${SUPABASE_URL}/storage/v1/object/public/charts/{{SYMBOL}}_chart.png',
   NOW(),
   false
@@ -160,26 +161,27 @@ VALUES (
 
 **WICHTIG:**
 - Die `description` muss die **KOMPLETTE** Analyse enthalten (kann sehr lang sein - das ist OK!)
-- Die `image_url` enthält den Chart für visuelle Referenz in der App
-- Der User will ALLES auf dem iPhone lesen können - keine Informationen auslassen!
+- Die `image_url` enthaelt den Chart fuer visuelle Referenz in der App
+- Der User will ALLES auf dem iPhone lesen koennen - keine Informationen auslassen!
 
 ---
 
 ## VALIDIERUNG VOR VERSAND (PFLICHT!)
 
-Prüfe JEDEN Punkt bevor du sendest. Bei einem ❌ → STOPP und korrigieren!
+Pruefe JEDEN Punkt bevor du sendest. Bei einem ❌ → STOPP und korrigieren!
 
 | # | Check | Kriterium |
 |---|-------|-----------|
 | 1 | Supabase gelesen? | Portfolio-Daten kommen aus DB, nicht aus Memory |
 | 2 | yfinance-Daten? | Preis, ATR, RSI aus yfinance (nicht Web-Suche) |
-| 3 | Stop-Loss vorhanden? | Jeder Trade hat einen Stop (mental oder TR) |
-| 4 | KO berechnet? | KO = MAX(ATR-basiert, Chart-basiert), nicht geschätzt |
-| 5 | SHORT geprüft? | Scorecard ausgefüllt, SHORT-Setup wenn Score >= LONG |
-| 6 | Wechselkurs live? | EUR/USD aus yfinance, nicht hardcodiert |
-| 7 | Positionen in %? | Empfehlungen in % vom Portfolio, nicht feste EUR |
-| 8 | Korrelation OK? | Sektor-Konzentration < 60% nach diesem Trade |
-| 9 | Risk-Budget OK? | Max. 10% Verlust pro Trade, 40% gesamt |
+| 3 | RSI-Divergenz geprueft? | Delta, Slope und Divergenz-Check ausgefuehrt |
+| 4 | Stop-Loss vorhanden? | Jeder Trade hat einen Stop (mental oder TR) |
+| 5 | KO berechnet? | KO = MAX(ATR-basiert, Chart-basiert), nicht geschaetzt |
+| 6 | SHORT geprueft? | Scorecard ausgefuellt, SHORT-Setup wenn Score >= LONG |
+| 7 | Wechselkurs live? | EUR/USD aus yfinance, nicht hardcodiert |
+| 8 | Positionen in %? | Empfehlungen in % vom Portfolio, nicht feste EUR |
+| 9 | Korrelation OK? | Sektor-Konzentration < 60% nach diesem Trade |
+| 10 | Risk-Budget OK? | Max. 10% Verlust pro Trade, 40% gesamt |
 
 Zeige die Checkliste im Output:
 ✅ oder ❌ pro Punkt, mit konkretem Wert.
@@ -204,8 +206,7 @@ Time-Stop: X Tage
 
 ⚠️ Risiko: Max. XXX EUR (XX% Portfolio)
 📊 Sektor-Konz.: XX% [Sektor]
-
-Volle Analyse in der App.
+📈 RSI-Divergenz: [Bullisch/Bearisch/Keine]
 EOF
 )"
 ```
@@ -220,16 +221,32 @@ send_photo('${CHART_OUTPUT_DIR}/{{SYMBOL}}_chart.png', '📊 {{SYMBOL}} Chart')
 
 ---
 
+## PORTFOLIO.MD AKTUALISIEREN (PFLICHT!)
+
+Nach JEDER Analyse: `memory/portfolio.md` aktualisieren.
+Das ist die Single Source of Truth fuer den Portfolio-Stand.
+
+- Neue Position? → In "Offene Positionen" eintragen
+- Position geschlossen? → In "Geschlossene Trades" verschieben + P&L
+- Sektor-Verteilung neu berechnen
+- Anstehende Events aktualisieren
+- Datum der letzten Aktualisierung updaten
+
+---
+
 ## ENFORCEMENT
 
 - ✅ Trading Card mit allen Key-Facts inkl. KO-Methode und Risiko-Check
-- ✅ Positions-Empfehlung in % vom Portfolio (nicht feste EUR-Beträge)
-- ✅ Minimum 500 Wörter in der Analyse
+- ✅ Positions-Empfehlung in % vom Portfolio (nicht feste EUR-Betraege)
+- ✅ Minimum 500 Woerter in der Analyse
+- ✅ **RSI-Divergenz in Analyse und Telegram erwaehnt**
 - ✅ ALLE vorherigen Schritte in der Description
+- ✅ Chart zu Supabase Storage hochladen
 - ✅ Chart-URL in image_url
-- ✅ SQL INSERT ausführen
+- ✅ SQL INSERT ausfuehren
 - ✅ Telegram-Nachricht mit Trading Card senden (PFLICHT!)
 - ✅ Chart als Telegram-Foto senden
+- ✅ portfolio.md aktualisieren (PFLICHT!)
 
 ```
 ✅ [SCHRITT 4: ZUSAMMENFASSUNG & VERSAND ABGESCHLOSSEN]

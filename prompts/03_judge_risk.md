@@ -10,22 +10,28 @@
 
 ## INVESTMENT JUDGE
 
-**Der Judge MUSS den Chart als unabhängige Quelle heranziehen!**
+**Der Judge MUSS den Chart als unabhaengige Quelle heranziehen!**
 
 ### JUDGE CHART-ANALYSE
 
-**Analysiere den Chart UNABHÄNGIG von Bull/Bear:**
+**Analysiere den Chart UNABHAENGIG von Bull/Bear:**
 
 | Aspekt | Deine Beobachtung | Gewichtung |
 |--------|-------------------|------------|
 | Trend-Richtung | [Was siehst du?] | Hoch/Mittel/Niedrig |
 | SMA-Konstellation | [Golden/Death Cross?] | Hoch/Mittel/Niedrig |
-| RSI-Signal | [Überkauft/Überverkauft/Neutral?] | Hoch/Mittel/Niedrig |
-| Volume-Bestätigung | [Bestätigt Volume den Trend?] | Hoch/Mittel/Niedrig |
+| RSI-Signal | [Ueberkauft/Ueberverkauft/Neutral?] | Hoch/Mittel/Niedrig |
+| **RSI-Delta/Divergenz** | [Dreht RSI? Divergenz erkannt?] | **Hoch** |
+| Volume-Bestaetigung | [Bestaetigt Volume den Trend?] | Hoch/Mittel/Niedrig |
 | Money Flow (CMF) | [Akkumulation/Distribution?] | Hoch/Mittel/Niedrig |
 | Chart-Pattern | [Erkennbare Muster?] | Hoch/Mittel/Niedrig |
 
-**Chart-Urteil:** Der Chart spricht für [BULL/BEAR/NEUTRAL] weil [1-2 Sätze]
+**RSI-Divergenz-Urteil:**
+> Wenn bullische Divergenz bei RSI <35: Starkes Argument fuer bevorstehende Trendwende.
+> Wenn RSI oversold ABER Delta negativ und keine Divergenz: Wasserfall-Risiko, KEIN Kaufsignal!
+> Divergenz-Daten aus Schritt 1 hier EXPLIZIT referenzieren!
+
+**Chart-Urteil:** Der Chart spricht fuer [BULL/BEAR/NEUTRAL] weil [1-2 Saetze]
 
 ### URTEIL
 
@@ -33,11 +39,12 @@ Analysiere die Bull vs Bear Argumente aus Schritt 2:
 
 **Bewertung der Argumente:**
 
-| Seite | Stärke | Beste Argumente |
-|-------|--------|-----------------|
+| Seite | Staerke | Beste Argumente |
+|-------|---------|-----------------|
 | 🐂 Bull | X/10 | [Top 2 Argumente] |
 | 🐻 Bear | X/10 | [Top 2 Argumente] |
 | 📊 Chart | X/10 | [Was sagt der Chart?] |
+| 📈 RSI-Divergenz | [Bullisch/Bearisch/Keine] | [Staerke des Signals] |
 | 🩳 Short Interest | X% Float / X Tage | [Squeeze-Potential oder bearishes Signal?] |
 
 **Entscheidende Faktoren:**
@@ -54,7 +61,7 @@ Analysiere die Bull vs Bear Argumente aus Schritt 2:
 ╚═══════════════════════════════════════╝
 ```
 
-**Begründung:** [2-3 Sätze warum diese Entscheidung - inkl. Chart-Bestätigung!]
+**Begruendung:** [2-3 Saetze warum diese Entscheidung - inkl. Chart-Bestaetigung und RSI-Divergenz!]
 
 ### Confidence Score Referenz:
 | Wert | Bedeutung |
@@ -92,10 +99,10 @@ ATR (14) aus Schritt 1: **$XX.XX (X.X%)**
 
 | Asset-Klasse | Beispiele | ATR-Multiplikator | Warum |
 |-------------|-----------|-------------------|-------|
-| Large Cap Aktien | NVDA, AAPL, MSFT | 2.0x ATR | Stabile Orderbücher, geringe Gap-Gefahr |
-| Mid/Small Cap Aktien | ARM, IREN, VST | 2.5x ATR | Dünnere Liquidität, stärkere Earnings-Moves |
-| Rohstoffe (Gold, Silber) | GC=F, SI=F | 3.0x ATR | Makro-Schocks (Fed, Zölle, Geopolitik), Gap-Risiko über Nacht |
-| Krypto-bezogen | MSTR, COIN | 3.0x ATR | Extreme Volatilität, 24/7 Underlying |
+| Large Cap Aktien | NVDA, AAPL, MSFT | 2.0x ATR | Stabile Orderbuecher, geringe Gap-Gefahr |
+| Mid/Small Cap Aktien | ARM, IREN, VST | 2.5x ATR | Duennere Liquiditaet, staerkere Earnings-Moves |
+| Rohstoffe (Gold, Silber) | GC=F, SI=F | 3.0x ATR | Makro-Schocks (Fed, Zoelle, Geopolitik), Gap-Risiko ueber Nacht |
+| Krypto-bezogen | MSTR, COIN | 3.0x ATR | Extreme Volatilitaet, 24/7 Underlying |
 | Gehebelte Indizes | QQQ, SPY Turbos | 2.0x ATR | Breit diversifiziert, weniger Einzelrisiko |
 
 **Bestimme die Asset-Klasse von {{SYMBOL}}:** [Klasse]
@@ -107,13 +114,13 @@ ATR (14) aus Schritt 1: **$XX.XX (X.X%)**
 
 Identifiziere die relevanten Chart-Levels aus Schritt 1:
 
-| Level | Preis | Stärke (1-5) | Begründung |
-|-------|-------|--------------|------------|
-| Nächster Support (S1) | $XX.XX | X/5 | [Warum ist das ein Support?] |
+| Level | Preis | Staerke (1-5) | Begruendung |
+|-------|-------|---------------|-------------|
+| Naechster Support (S1) | $XX.XX | X/5 | [Warum ist das ein Support?] |
 | Starker Support (S2) | $XX.XX | X/5 | [Warum?] |
 | Kritischer Support (S3) | $XX.XX | X/5 | [Warum?] |
 
-**Chart-basiertes KO-Level:** Unter dem stärksten relevanten Support + Puffer (0.5-1%)
+**Chart-basiertes KO-Level:** Unter dem staerksten relevanten Support + Puffer (0.5-1%)
 → Support bei $XX.XX → KO bei **$XX.XX** (Support - X%)
 
 ### SCHRITT C: FINALES KO-LEVEL
@@ -133,17 +140,17 @@ Identifiziere die relevanten Chart-Levels aus Schritt 1:
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
-**Begründung:** [2-3 Sätze warum dieses KO-Level. Welches Chart-Level schützt? Warum reicht der ATR-Abstand (nicht)?]
+**Begruendung:** [2-3 Saetze warum dieses KO-Level. Welches Chart-Level schuetzt? Warum reicht der ATR-Abstand (nicht)?]
 
 ### EARNINGS / EVENT-WARNUNG
 
 ```
 ⚠️ EARNINGS/EVENT CHECK:
-- Nächster Earnings-Termin: [Datum oder "keiner in 2 Wochen"]
+- Naechster Earnings-Termin: [Datum oder "keiner in 2 Wochen"]
 - Andere Events (Fed, CPI, etc.): [Datum]
 - WENN Event < 5 Handelstage entfernt:
-  → ATR-Multiplikator um +0.5 erhöhen (Earnings-Gaps!)
-  → ODER Position vor Event teilweise schließen
+  → ATR-Multiplikator um +0.5 erhoehen (Earnings-Gaps!)
+  → ODER Position vor Event teilweise schliessen
 ```
 
 ---
@@ -159,7 +166,7 @@ Identifiziere die relevanten Chart-Levels aus Schritt 1:
 ║  Max. Verlust pro Trade (10%):      XXX EUR                  ║
 ║  Max. gleichzeitig riskiert (40%):  XXX EUR                  ║
 ║  Aktuell riskiert (offene Pos.):    XXX EUR                  ║
-║  Noch verfügbares Risiko-Budget:    XXX EUR                  ║
+║  Noch verfuegbares Risiko-Budget:   XXX EUR                  ║
 ║                                                               ║
 ║  ⚠️ Wenn Risiko-Budget aufgebraucht → KEIN neuer Trade!     ║
 ║                                                               ║
@@ -173,29 +180,29 @@ Identifiziere die relevanten Chart-Levels aus Schritt 1:
 **Basierend auf der Analyse - konkrete Handlungsempfehlung:**
 
 ### Entry
-| Aktion | Preis | Begründung |
-|--------|-------|------------|
+| Aktion | Preis | Begruendung |
+|--------|-------|-------------|
 | **Buy** | $XX.XX | [Warum hier einsteigen?] |
 | **KO-Level** | $XX.XX | [ATR + Chart kombiniert] |
 
 ### Exits (gestaffelt)
-| Aktion | Preis | Anteil | Begründung |
-|--------|-------|--------|------------|
+| Aktion | Preis | Anteil | Begruendung |
+|--------|-------|--------|-------------|
 | **Sell** | $XX.XX | XX% | [Welches Resistance-Level?] |
-| **Sell** | $XX.XX | XX% | [Nächstes Ziel?] |
+| **Sell** | $XX.XX | XX% | [Naechstes Ziel?] |
 | **Sell** | $XX.XX | Rest | [Stretch-Ziel?] |
 
 ### Stops
-| Aktion | Preis | Anteil | Begründung |
-|--------|-------|--------|------------|
-| **Stop** | $XX.XX | XX% | [Mentaler Stop ÜBER KO!] |
+| Aktion | Preis | Anteil | Begruendung |
+|--------|-------|--------|-------------|
+| **Stop** | $XX.XX | XX% | [Mentaler Stop UEBER KO!] |
 | **Stop** | $XX.XX | Rest | [Absolutes Limit?] |
 
 ### Time-Stops
 | Bedingung | Aktion |
 |-----------|--------|
 | Nach 5 Handelstagen <5% im Plus | Position halbieren |
-| Nach 8 Handelstagen seitwärts | Position schließen |
+| Nach 8 Handelstagen seitwaerts | Position schliessen |
 | Earnings < 2 Tage entfernt | Min. 50% sichern |
 
 ### Watch Zones
@@ -208,12 +215,13 @@ Identifiziere die relevanten Chart-Levels aus Schritt 1:
 
 ## ENFORCEMENT
 
-- ✅ Judge analysiert Chart UNABHÄNGIG von Bull/Bear
+- ✅ Judge analysiert Chart UNABHAENGIG von Bull/Bear
+- ✅ **RSI-Divergenz explizit im Judge-Urteil beruecksichtigt**
 - ✅ Signal-Box mit LONG/SHORT/HOLD + Konfidenz%
 - ✅ KO-Level mit BEIDEN Methoden berechnet (ATR + Chart)
 - ✅ ATR-Multiplikator nach Asset-Klasse differenziert
-- ✅ KO liegt IMMER unter dem stärksten Support (LONG) / über Resistance (SHORT)
-- ✅ Earnings/Event-Warnung geprüft
+- ✅ KO liegt IMMER unter dem staerksten Support (LONG) / ueber Resistance (SHORT)
+- ✅ Earnings/Event-Warnung geprueft
 - ✅ Risk-per-Trade Check gegen Portfolio-Limit
 - ✅ Gestaffelter Sell-Plan mit konkreten Preisen und Prozenten
 - ✅ Time-Stops definiert
