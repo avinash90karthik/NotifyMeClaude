@@ -65,14 +65,30 @@ def calculate_macd(data):
 
 from datetime import datetime
 
-# Hole Daten fuer {{SYMBOL}}
+# Futures-Proxy-Map: Fuer RSI/MACD ETF statt Futures nutzen (kein Rollover-Problem)
+FUTURES_ETF_PROXY = {
+    'SI=F': 'SLV',   # Silber → iShares Silver ETF
+    'GC=F': 'GLD',   # Gold → SPDR Gold ETF
+    'CL=F': 'USO',   # Oel → United States Oil ETF
+    'NG=F': 'UNG',   # Natural Gas → United States Natural Gas ETF
+}
+
+# Hole Preisdaten fuer {{SYMBOL}}
 ticker = yf.Ticker("{{SYMBOL}}")
 hist = ticker.history(period='3mo')
 info = ticker.info
 
-# Berechne Technicals
-rsi = calculate_rsi(hist)
-macd, signal, histogram = calculate_macd(hist)
+# Fuer Technicals: ETF-Proxy wenn Futures, sonst direkt
+proxy_symbol = FUTURES_ETF_PROXY.get("{{SYMBOL}}")
+if proxy_symbol:
+    proxy_hist = yf.Ticker(proxy_symbol).history(period='3mo')
+    rsi = calculate_rsi(proxy_hist)
+    macd, signal, histogram = calculate_macd(proxy_hist)
+    technicals_source = f'{proxy_symbol} (ETF-Proxy, rollover-frei)'
+else:
+    rsi = calculate_rsi(hist)
+    macd, signal, histogram = calculate_macd(hist)
+    technicals_source = '{{SYMBOL}}'
 
 # EXAKTER TIMESTAMP
 now = datetime.utcnow()
@@ -85,6 +101,7 @@ print('=' * 60)
 print(f'Analyse-Zeit:      {now.strftime("%Y-%m-%d %H:%M:%S")} UTC')
 print(f'Letzter Trade:     {last_trade.strftime("%Y-%m-%d %H:%M:%S")}')
 print(f'Market State:      {market_state}')
+print(f'Technicals-Quelle: {technicals_source}')
 print('=' * 60)
 print()
 print('PREIS & PERFORMANCE')

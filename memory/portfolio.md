@@ -105,6 +105,8 @@
 | **17.02** | **CEG** | **LONG (nach Earnings)** | **62%** | **V-Bottom $243, RSI∆5d +19.3 EXPLOSIV! MACD Crossover. Calpine $26.6B = 55GW. ABER: Earnings 19.02! CEG-VST Korrelation 0.825! Entry NACH Earnings $310-315. KO $240, Stop $270** |
 | **17.02** | **ENR.DE** | **LONG (SOFORT!)** | **75%** | **GEKAUFT 18.02! BESTER SETUP! 240% EG, EUR 146B Backlog, 65% Turbinen=AI. Golden Cross, RSI 65.5, KEIN Earnings bis Mai! VST-Korrelation nur 0.153! KO EUR 144, Stop EUR 152. Exits 170/185/210** |
 | **17.02** | **ARM** | **HOLD** | **52%** | **Coin-Flip! LONG 32 vs SHORT 31. Death Cross, P/E 57.5, Earnings -12.3%. Aber Revenue +26%, RSI-Slope dreht positiv. Stop EUR 1.70 ($115). NVIDIA 25.02 = Katalysator! 50% sichern vorher!** |
+| **18.02** | **SI=F** | **WARTEN** | **55%** | **Post-Parabola 121->75 (-37.5%). RSI 27.1 OVERSOLD aber Delta -4.4 = Wasserfall! ATR 12.5% -> 3x KO = nur 2.7x Hebel. LONG-Trigger: RSI>30+positiv+Kurs>SMA50 78.89. SHORT-Trigger: Tief<71+RSI<25. NUR Mini 5% wenn einstieg!** |
+| **18.02** | **SAP.DE** | **LONG (nach VST-Verkauf)** | **62%** | **€169.64 nahe 52W-Tief €159.60. RSI 33 dreht, MACD bullish. FCF €7.8B, €10B Buyback. KO €155.42, Stop €162, Exits €179/€196/€210. Beta 0.706 = defensiv! Klein ~80 EUR nach VST-Teilverkauf. Earnings 23.04 → 50% vorher sichern!** |
 | **18.02** | **APLD** | **WARTEN** | **52%** | **Post-Parabola $42→$33. RSI-Delta -10.2, kein Boden-Signal. SMA50 $31.96 kritisch. Long-Trigger: $32-32.50 wenn RSI dreht. KO $27.34, Stop $29.50. Exits $37/$39.50/$42. CASH 0 EUR → erst VST 50 Stück verkaufen! NVIDIA 25.02: 50% sichern!** |
 
 ---
