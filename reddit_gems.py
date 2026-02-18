@@ -241,21 +241,29 @@ def send_telegram(text, silent=True):
 
 
 def load_portfolio_symbols():
-    """Load current portfolio symbols from Supabase to exclude from gems."""
-    supa_url = os.environ.get('SUPABASE_URL', '')
-    supa_key = os.environ.get('SUPABASE_ANON_KEY', '')
-    if not supa_url or not supa_key:
+    """Load current portfolio symbols from memory/portfolio.md to exclude from gems."""
+    portfolio_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'portfolio.md')
+    if not os.path.exists(portfolio_file):
         return set()
-    try:
-        url = f'{supa_url}/rest/v1/portfolio?status=eq.open&select=symbol'
-        req = urllib.request.Request(url)
-        req.add_header('apikey', supa_key)
-        req.add_header('Authorization', f'Bearer {supa_key}')
-        resp = urllib.request.urlopen(req, timeout=10)
-        rows = json.loads(resp.read())
-        return {r['symbol'] for r in rows}
-    except Exception:
-        return set()
+    symbols = set()
+    in_table = False
+    with open(portfolio_file) as f:
+        for line in f:
+            if 'Offene Positionen' in line:
+                in_table = True
+                continue
+            if in_table and line.startswith('---'):
+                break
+            if not in_table or not line.startswith('|'):
+                continue
+            if 'Symbol' in line or '---' in line:
+                continue
+            cols = [c.strip() for c in line.split('|') if c.strip()]
+            if cols:
+                sym = cols[0].replace('*', '').strip()
+                if sym and sym.lower() not in ('cash', 'nvda aktie'):
+                    symbols.add(sym)
+    return symbols
 
 
 def main():
