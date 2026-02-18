@@ -10,7 +10,7 @@
     "sma200": 240.12,
     "market_cap": 3885396656128,
     "analyst_rating": "Buy",
-    "last_updated": "2026-02-18T21:13:55.138083+00:00"
+    "last_updated": "2026-02-18T21:44:46.222138+00:00"
   },
   {
     "symbol": "ARM",
@@ -23,7 +23,7 @@
     "sma200": 138.52,
     "market_cap": 135128694784,
     "analyst_rating": "Buy",
-    "last_updated": "2026-02-18T21:13:55.138083+00:00"
+    "last_updated": "2026-02-18T21:44:46.222138+00:00"
   },
   {
     "symbol": "NVDA",
@@ -36,7 +36,7 @@
     "sma200": 172.43,
     "market_cap": 4576749027328,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-02-18T21:13:55.138083+00:00"
+    "last_updated": "2026-02-18T21:44:46.222138+00:00"
   },
   {
     "symbol": "GOOGL",
@@ -49,7 +49,7 @@
     "sma200": 244.08,
     "market_cap": 3669382922240,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-02-18T21:13:55.138083+00:00"
+    "last_updated": "2026-02-18T21:44:46.222138+00:00"
   },
   {
     "symbol": "QBTS",
@@ -62,7 +62,7 @@
     "sma200": 21.96,
     "market_cap": 7052641792,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-02-18T21:13:55.138083+00:00"
+    "last_updated": "2026-02-18T21:44:46.222138+00:00"
   },
   {
     "symbol": "IREN",
@@ -75,7 +75,7 @@
     "sma200": 34.01,
     "market_cap": 13960426496,
     "analyst_rating": "Buy",
-    "last_updated": "2026-02-18T21:13:55.138083+00:00"
+    "last_updated": "2026-02-18T21:44:46.222138+00:00"
   },
   {
     "symbol": "APLD",
@@ -88,7 +88,7 @@
     "sma200": 21.31,
     "market_cap": 8921583616,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-02-18T21:13:55.138083+00:00"
+    "last_updated": "2026-02-18T21:44:46.222138+00:00"
   },
   {
     "symbol": "SAP.DE",
@@ -101,7 +101,7 @@
     "sma200": 229.06,
     "market_cap": 201919102976,
     "analyst_rating": "Buy",
-    "last_updated": "2026-02-18T21:13:55.138083+00:00"
+    "last_updated": "2026-02-18T21:44:46.222138+00:00"
   },
   {
     "symbol": "ASML",
@@ -114,20 +114,20 @@
     "sma200": 950.35,
     "market_cap": 570080231424,
     "analyst_rating": "Buy",
-    "last_updated": "2026-02-18T21:13:55.138083+00:00"
+    "last_updated": "2026-02-18T21:44:46.222138+00:00"
   },
   {
     "symbol": "VST",
     "name": "Vistra Energy",
     "sector": "Energy",
-    "price": 170.52,
-    "change_pct": -1.82,
-    "rsi": 58.0,
+    "price": 170.57,
+    "change_pct": -1.79,
+    "rsi": 58.1,
     "sma50": 162.78,
     "sma200": 180.2,
-    "market_cap": 57776525312,
+    "market_cap": 57793470464,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-02-18T21:13:55.138083+00:00"
+    "last_updated": "2026-02-18T21:44:46.222138+00:00"
   },
   {
     "symbol": "CEG",
@@ -140,7 +140,7 @@
     "sma200": 326.41,
     "market_cap": 106531397632,
     "analyst_rating": "Buy",
-    "last_updated": "2026-02-18T21:13:55.138083+00:00"
+    "last_updated": "2026-02-18T21:44:46.222138+00:00"
   },
   {
     "symbol": "ENR.DE",
@@ -153,32 +153,32 @@
     "sma200": 105.46,
     "market_cap": 142543110144,
     "analyst_rating": "Buy",
-    "last_updated": "2026-02-18T21:13:55.138083+00:00"
+    "last_updated": "2026-02-18T21:44:46.222138+00:00"
   },
   {
     "symbol": "SI=F",
     "name": "Silver Futures",
     "sector": "Commodities",
-    "price": 77.235,
-    "change_pct": 5.02,
+    "price": 77.22,
+    "change_pct": 5.0,
     "rsi": 46.2,
     "sma50": 78.89,
     "sma200": 50.79,
     "market_cap": null,
     "analyst_rating": null,
-    "last_updated": "2026-02-18T21:13:55.138083+00:00"
+    "last_updated": "2026-02-18T21:44:46.222138+00:00"
   },
   {
     "symbol": "GC=F",
     "name": "Gold Futures",
     "sector": "Commodities",
-    "price": 5006.3,
-    "change_pct": 2.05,
-    "rsi": 55.7,
-    "sma50": 4636.88,
-    "sma200": 3868.76,
+    "price": 5000.9,
+    "change_pct": 1.94,
+    "rsi": 55.6,
+    "sma50": 4636.77,
+    "sma200": 3868.73,
     "market_cap": null,
     "analyst_rating": null,
-    "last_updated": "2026-02-18T21:13:55.138083+00:00"
+    "last_updated": "2026-02-18T21:44:46.222138+00:00"
   }
 ]
