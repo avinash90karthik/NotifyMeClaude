@@ -2,11 +2,12 @@ name: Silver Hawk Tracker
 
 on:
   schedule:
-    # Every 10 minutes during market hours (07:00-21:00 UTC = 08:00-22:00 CET)
-    - cron: '*/10 7-21 * * 1-5'  # Weekdays only
-    # Every 30 minutes outside market hours (for Silver futures overnight)
+    - cron: '*/10 7-21 * * 1-5'
     - cron: '0,30 0-6,22-23 * * 1-5'
-  workflow_dispatch: # Manual trigger
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   check:
@@ -15,6 +16,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-python@v5
         with:
@@ -28,6 +31,12 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: python tracker_check.py
+
+      - name: Commit tracker state
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add memory/tracker_state.json
+          git diff --staged --quiet || git commit -m "tracker: update state [skip ci]"
+          git push

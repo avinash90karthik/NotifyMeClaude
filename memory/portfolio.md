@@ -22,9 +22,9 @@
 
 | Symbol | Sektor | Wert EUR | Anteil | P&L | KO (Underlying) | Shares | Buy-In | Stop |
 |--------|--------|----------|--------|-----|-----------------|--------|--------|------|
-| **VST** | Energy/US | ~468 EUR | ~58% | +50.0% | $115.68 | 100 | 3.12 EUR | **3.50 EUR** |
-| **ARM** | Tech/Semi | ~208 EUR | ~26% | -2.37% | $94.64 | 84 | 2.54 EUR | **1.70 EUR** |
-| **ENR.DE** | Energy/DE | ~113 EUR | ~14% | -4.68% | 143.74 EUR | 65 | 1.825 EUR | **1.100 EUR** |
+| **VST** | Energy/US | ~490 EUR | ~58% | +57% | $115.68 | 100 | 3.12 EUR | **4.20 EUR** (erhöht!) |
+| **ARM** | Tech/Semi | ~229 EUR | ~27% | +7-15% | $94.64 | 84→42 nach Teilverkauf | 2.54 EUR | **2.20 EUR** (erhöht!) |
+| **ENR.DE** | Energy/DE | ~138 EUR | ~16% | +16% | 143.74 EUR | 65 | 1.825 EUR | **1.43 EUR** (erhöht! war 1.100) |
 | NVDA Aktie | Tech | ~10 EUR | ~1% | +11.56% | - | 0.063 | - | Geschenk TR |
 | **Cash** | - | **~0 EUR** | **~0%** | - | - | - | - | - |
 

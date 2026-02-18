@@ -13,7 +13,10 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
-from supabase_client import supabase_request
+import re
+
+WATCHLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'watchlist.json')
+PORTFOLIO_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'portfolio.md')
 
 FUTURES = {'SI=F', 'GC=F'}
 MIN_VOLUME = 100_000
@@ -59,13 +62,46 @@ def fetch_nasdaq100_symbols():
 
 
 def get_watchlist():
-    result = supabase_request('GET', 'stocks?select=symbol,name,sector&is_active=eq.true')
-    return result or []
+    """Load watchlist from memory/watchlist.json."""
+    if not os.path.exists(WATCHLIST_FILE):
+        return []
+    with open(WATCHLIST_FILE) as f:
+        return json.load(f)
 
 
 def get_open_positions():
-    result = supabase_request('GET', 'portfolio?select=*&status=eq.open')
-    return result or []
+    """Parse open positions from memory/portfolio.md."""
+    if not os.path.exists(PORTFOLIO_FILE):
+        return []
+    with open(PORTFOLIO_FILE) as f:
+        content = f.read()
+    positions = []
+    in_table = False
+    for line in content.splitlines():
+        if 'Offene Positionen' in line:
+            in_table = True
+            continue
+        if in_table and line.startswith('---'):
+            break
+        if not in_table or not line.startswith('|'):
+            continue
+        if 'Symbol' in line or '---' in line:
+            continue
+        cols = [c.strip() for c in line.split('|') if c.strip()]
+        if not cols:
+            continue
+        symbol = re.sub(r'\*+', '', cols[0]).strip()
+        if not symbol or symbol.lower() in ('cash', 'nvda aktie'):
+            continue
+        ko = None
+        if len(cols) > 5:
+            ko_raw = re.sub(r'[\$€\*~]', '', cols[5]).strip().split()[0] if cols[5] else None
+            try:
+                ko = float(ko_raw) if ko_raw else None
+            except (ValueError, TypeError):
+                ko = None
+        positions.append({'symbol': symbol, 'ko_level': ko, 'sector': None})
+    return positions
 
 
 def get_position_directions(positions, price_data=None):

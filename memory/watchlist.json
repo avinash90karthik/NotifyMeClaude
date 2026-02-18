@@ -1,0 +1,16 @@
+[
+  {"symbol": "AAPL", "name": "Apple", "sector": "Technology"},
+  {"symbol": "ARM", "name": "ARM Holdings", "sector": "Technology"},
+  {"symbol": "NVDA", "name": "NVIDIA", "sector": "Technology"},
+  {"symbol": "GOOGL", "name": "Alphabet", "sector": "Technology"},
+  {"symbol": "QBTS", "name": "D-Wave Quantum", "sector": "Technology"},
+  {"symbol": "IREN", "name": "IREN", "sector": "Technology"},
+  {"symbol": "APLD", "name": "Applied Digital", "sector": "Technology"},
+  {"symbol": "SAP.DE", "name": "SAP SE", "sector": "Technology"},
+  {"symbol": "ASML", "name": "ASML Holding", "sector": "Technology"},
+  {"symbol": "VST", "name": "Vistra Energy", "sector": "Energy"},
+  {"symbol": "CEG", "name": "Constellation Energy", "sector": "Energy"},
+  {"symbol": "ENR.DE", "name": "Siemens Energy", "sector": "Energy"},
+  {"symbol": "SI=F", "name": "Silver Futures", "sector": "Commodities"},
+  {"symbol": "GC=F", "name": "Gold Futures", "sector": "Commodities"}
+]

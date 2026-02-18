@@ -1,30 +1,70 @@
 #!/usr/bin/env python3
 """Silver Hawk Trading - Portfolio Health Check (GitHub Actions).
-Fetches live data for open positions + full watchlist, sends Telegram alert with RSI flags."""
+Reads open positions from memory/portfolio.md, watchlist from memory/watchlist.json.
+Fetches live yfinance data and sends RSI/stop/KO alerts via Telegram."""
 
 import json
 import os
+import re
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
-from supabase_client import supabase_request
+PORTFOLIO_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'portfolio.md')
+WATCHLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'watchlist.json')
 
 
 def get_open_positions():
-    """Fetch open positions from portfolio table."""
-    result = supabase_request('GET', 'portfolio?select=*&status=eq.open')
-    return result or []
+    """Parse open position symbols from memory/portfolio.md."""
+    if not os.path.exists(PORTFOLIO_FILE):
+        return []
+    with open(PORTFOLIO_FILE) as f:
+        content = f.read()
+
+    positions = []
+    in_table = False
+    for line in content.splitlines():
+        if 'Offene Positionen' in line:
+            in_table = True
+            continue
+        if in_table and line.startswith('---'):
+            break
+        if not in_table or not line.startswith('|'):
+            continue
+        # Skip header rows
+        if 'Symbol' in line or '---' in line:
+            continue
+        # Parse: | **VST** | ... | KO | Shares | Buy-In | Stop |
+        cols = [c.strip() for c in line.split('|') if c.strip()]
+        if not cols:
+            continue
+        # Extract symbol (remove ** bold markers and extra whitespace)
+        symbol = re.sub(r'\*+', '', cols[0]).strip()
+        if not symbol or symbol.lower() in ('cash', 'nvda aktie'):
+            continue
+        # Try to extract KO from col[5] (index 5 = KO Underlying)
+        ko = None
+        if len(cols) > 5:
+            ko_raw = re.sub(r'[\$€\*~]', '', cols[5]).strip().split()[0] if cols[5] else None
+            try:
+                ko = float(ko_raw) if ko_raw else None
+            except (ValueError, TypeError):
+                ko = None
+        positions.append({'symbol': symbol, 'ko_level': ko})
+
+    return positions
 
 
 def get_watchlist_symbols():
-    """Fetch all active symbols from stocks table."""
-    result = supabase_request('GET', 'stocks?select=symbol,name&is_active=eq.true')
-    return result or []
+    """Load watchlist symbols from memory/watchlist.json."""
+    if not os.path.exists(WATCHLIST_FILE):
+        return []
+    with open(WATCHLIST_FILE) as f:
+        stocks = json.load(f)
+    return [{'symbol': s['symbol'], 'name': s.get('name', s['symbol'])} for s in stocks]
 
 
 def fetch_yfinance_data(symbols):
-    """Fetch live yfinance data for a list of symbols."""
     import yfinance as yf
     import numpy as np
 
@@ -36,17 +76,15 @@ def fetch_yfinance_data(symbols):
             hist = t.history(period='3mo')
 
             rsi = None
-            macd_hist = None
-
             if len(hist) >= 14:
                 delta = hist['Close'].diff()
                 gain = delta.where(delta > 0, 0).ewm(alpha=1/14, min_periods=14).mean()
                 loss = (-delta.where(delta < 0, 0)).ewm(alpha=1/14, min_periods=14).mean()
-                rs = gain / loss
-                rsi_val = float((100 - (100 / (1 + rs))).iloc[-1])
+                rsi_val = float((100 - (100 / (1 + gain / loss))).iloc[-1])
                 if not np.isnan(rsi_val):
                     rsi = round(rsi_val, 1)
 
+            macd_hist = None
             if len(hist) >= 26:
                 exp12 = hist['Close'].ewm(span=12, adjust=False).mean()
                 exp26 = hist['Close'].ewm(span=26, adjust=False).mean()
@@ -75,7 +113,6 @@ def fetch_yfinance_data(symbols):
 
 
 def build_message(positions, watchlist, data, check_time):
-    """Build the Telegram alert message."""
     alerts = []
     pos_lines = []
     watch_lines = []
@@ -90,13 +127,7 @@ def build_message(positions, watchlist, data, check_time):
 
         price = d['price']
         rsi = d['rsi']
-        entry = pos.get('entry_price')
-        stop = pos.get('stop_loss')
-        target = pos.get('target_price')
         ko = pos.get('ko_level')
-        qty = pos.get('quantity', 0)
-
-        pnl_pct = ((price - entry) / entry * 100) if entry and entry > 0 else 0
 
         rsi_flag = ''
         if rsi and rsi > 70:
@@ -104,40 +135,18 @@ def build_message(positions, watchlist, data, check_time):
             alerts.append(f'RSI {sym} = {rsi:.0f} VERKAUF ERWAEGEN!')
         elif rsi and rsi < 30:
             rsi_flag = '*'
-            alerts.append(f'RSI {sym} = {rsi:.0f} NACHKAUFEN?')
-
-        if stop and price:
-            stop_dist = abs(price - stop) / price * 100
-            if stop_dist < 5:
-                alerts.append(f'{sym} {stop_dist:.1f}% vom Stop ${stop:.0f}!')
+            alerts.append(f'RSI {sym} = {rsi:.0f} UEBERVERKAUFT!')
 
         if ko and price:
             ko_dist = abs(price - ko) / price * 100
             if ko_dist < 15:
-                alerts.append(f'{sym} {ko_dist:.1f}% vom KO ${ko:.2f}!')
-
-        if target and price:
-            target_dist = abs(target - price) / price * 100
-            if target_dist < 5:
-                alerts.append(f'{sym} fast am Ziel ${target:.0f}!')
+                alerts.append(f'{sym} {ko_dist:.1f}% vom KO {ko:.2f}!')
 
         rsi_str = f'{rsi:.0f}{rsi_flag}' if rsi else '-'
-        pnl_sign = '+' if pnl_pct >= 0 else ''
         chg = f'{d["change_pct"]:+.1f}%'
-
         line = f'  {sym} ${price:.2f} ({chg}) RSI:{rsi_str}'
-        line += f'\n    {pnl_sign}{pnl_pct:.1f}% | {qty:.0f}x'
-
-        level_parts = []
-        if stop:
-            level_parts.append(f'S${stop:.0f}')
         if ko:
-            level_parts.append(f'KO${ko:.0f}')
-        if target:
-            level_parts.append(f'T${target:.0f}')
-        if level_parts:
-            line += f' | {"/".join(level_parts)}'
-
+            line += f' | KO:{ko:.2f}'
         pos_lines.append(line)
 
     for stock in watchlist:
@@ -148,55 +157,40 @@ def build_message(positions, watchlist, data, check_time):
         if not d:
             continue
 
-        price = d['price']
         rsi = d['rsi']
-        name = stock.get('name', sym)
-
         rsi_flag = ''
         if rsi and rsi > 70:
             rsi_flag = '!'
             alerts.append(f'{sym} RSI {rsi:.0f} - OVERBOUGHT')
         elif rsi and rsi < 30:
             rsi_flag = '*'
-            alerts.append(f'{sym} RSI {rsi:.0f} - OVERSOLD (Chance?)')
+            alerts.append(f'{sym} RSI {rsi:.0f} - OVERSOLD')
 
         rsi_str = f'{rsi:.0f}{rsi_flag}' if rsi else '-'
         chg = f'{d["change_pct"]:+.1f}%'
-        watch_lines.append(f'  {sym} ${price:.2f} ({chg}) RSI:{rsi_str}')
+        watch_lines.append(f'  {sym} ${d["price"]:.2f} ({chg}) RSI:{rsi_str}')
 
     any_state = next((d.get('market_state', '') for d in data.values() if d), '')
-    state_map = {'REGULAR': 'OPEN', 'PRE': 'PRE', 'POST': 'POST'}
-    market_str = state_map.get(any_state, 'CLOSED')
+    market_str = {'REGULAR': 'OPEN', 'PRE': 'PRE', 'POST': 'POST'}.get(any_state, 'CLOSED')
 
-    msg = f'<b>PORTFOLIO CHECK</b>\n'
-    msg += f'{check_time} | Markt: {market_str}\n'
+    msg = f'<b>PORTFOLIO CHECK</b>\n{check_time} | Markt: {market_str}\n'
 
     if alerts:
-        msg += f'\n<b>ALERTS</b>\n'
-        for a in alerts:
-            msg += f'  {a}\n'
+        msg += f'\n<b>ALERTS</b>\n' + ''.join(f'  {a}\n' for a in alerts)
 
     if pos_lines:
-        msg += f'\n<b>POSITIONEN</b>\n'
-        msg += '\n'.join(pos_lines)
+        msg += f'\n<b>POSITIONEN</b>\n' + '\n'.join(pos_lines)
 
     if watch_lines:
-        msg += f'\n\n<b>WATCHLIST</b>\n'
-        msg += '\n'.join(watch_lines)
+        msg += f'\n\n<b>WATCHLIST</b>\n' + '\n'.join(watch_lines)
 
     return msg
 
 
 def send_telegram(text):
-    """Send message via Telegram."""
     token = os.environ['TELEGRAM_BOT_TOKEN']
     chat_id = os.environ['TELEGRAM_CHAT_ID']
-
-    body = urllib.parse.urlencode({
-        'chat_id': chat_id,
-        'parse_mode': 'HTML',
-        'text': text
-    }).encode()
+    body = urllib.parse.urlencode({'chat_id': chat_id, 'parse_mode': 'HTML', 'text': text}).encode()
     req = urllib.request.Request(f'https://api.telegram.org/bot{token}/sendMessage', data=body)
     resp = urllib.request.urlopen(req)
     return json.loads(resp.read())
@@ -210,8 +204,9 @@ def main():
     positions = get_open_positions()
     watchlist = get_watchlist_symbols()
 
-    all_symbols = list({p['symbol'] for p in positions} | {s['symbol'] for s in watchlist})
+    print(f'  Positions: {[p["symbol"] for p in positions]}')
 
+    all_symbols = list({p['symbol'] for p in positions} | {s['symbol'] for s in watchlist})
     if not all_symbols:
         print('  No symbols to check.')
         return

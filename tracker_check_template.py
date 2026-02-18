@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Silver Hawk Trading - Price Tracker Template (for GitHub Actions).
 Runs once, checks prices, sends alerts if needed, then exits.
-State is persisted in Supabase.
+State is persisted in memory/tracker_state.json (committed back by GitHub Actions).
 
 SETUP:
   1. Copy this file: cp tracker_check_template.py tracker_check.py
@@ -17,9 +17,9 @@ from datetime import datetime, timezone
 
 TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
 CHAT_ID = os.environ['TELEGRAM_CHAT_ID']
-SUPABASE_URL = os.environ['SUPABASE_URL']
-SUPABASE_KEY = os.environ['SUPABASE_ANON_KEY']
 API = f'https://api.telegram.org/bot{TOKEN}'
+
+STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'tracker_state.json')
 
 # ══════════════════════════════════════════════════════════════
 # CUSTOMIZE BELOW: Add your tracked symbols
@@ -60,54 +60,36 @@ TRADING_ZONES = {
 # ══════════════════════════════════════════════════════════════
 
 
-def supabase_request(method, path, data=None):
-    """Make a request to Supabase REST API."""
-    url = f'{SUPABASE_URL}/rest/v1/{path}'
-    body = json.dumps(data).encode() if data else None
-    req = urllib.request.Request(url, data=body, method=method)
-    req.add_header('apikey', SUPABASE_KEY)
-    req.add_header('Authorization', f'Bearer {SUPABASE_KEY}')
-    req.add_header('Content-Type', 'application/json')
-    req.add_header('Prefer', 'return=representation')
-    try:
-        resp = urllib.request.urlopen(req)
-        return json.loads(resp.read())
-    except Exception as e:
-        print(f'  Supabase error: {e}')
-        return None
-
-
 def load_state():
-    """Load tracker state from Supabase."""
-    result = supabase_request('GET', 'tracker_state?select=key,value')
-    if not result:
+    """Load tracker state from local JSON file."""
+    if not os.path.exists(STATE_FILE):
         return {}, set(), -1
-    state = {row['key']: row['value'] for row in result}
-    prev_prices = state.get('prev_prices', {})
-    alerted_levels = set(state.get('alerted_levels', []))
-    last_summary_hour = state.get('last_summary_hour', -1)
-    return prev_prices, alerted_levels, last_summary_hour
+    try:
+        with open(STATE_FILE) as f:
+            state = json.load(f)
+        prev_prices = state.get('prev_prices', {})
+        alerted_levels = set(state.get('alerted_levels', []))
+        last_summary_hour = state.get('last_summary_hour', -1)
+        return prev_prices, alerted_levels, last_summary_hour
+    except Exception as e:
+        print(f'  State load error: {e}, starting fresh')
+        return {}, set(), -1
 
 
 def save_state(prev_prices, alerted_levels, last_summary_hour):
-    """Save tracker state to Supabase via upsert."""
-    now = datetime.now(timezone.utc).isoformat()
-    items = [
-        {'key': 'prev_prices', 'value': prev_prices, 'updated_at': now},
-        {'key': 'alerted_levels', 'value': list(alerted_levels), 'updated_at': now},
-        {'key': 'last_summary_hour', 'value': last_summary_hour, 'updated_at': now},
-    ]
-    for item in items:
-        url = f'{SUPABASE_URL}/rest/v1/tracker_state?on_conflict=key'
-        req = urllib.request.Request(url, data=json.dumps(item).encode(), method='POST')
-        req.add_header('apikey', SUPABASE_KEY)
-        req.add_header('Authorization', f'Bearer {SUPABASE_KEY}')
-        req.add_header('Content-Type', 'application/json')
-        req.add_header('Prefer', 'resolution=merge-duplicates')
-        try:
-            urllib.request.urlopen(req)
-        except Exception as e:
-            print(f'  State save error: {e}')
+    """Save tracker state to local JSON file."""
+    state = {
+        'prev_prices': prev_prices,
+        'alerted_levels': list(alerted_levels),
+        'last_summary_hour': last_summary_hour,
+        'updated_at': datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
+        with open(STATE_FILE, 'w') as f:
+            json.dump(state, f, indent=2)
+    except Exception as e:
+        print(f'  State save error: {e}')
 
 
 def get_prices():
