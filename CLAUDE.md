@@ -12,10 +12,36 @@ Each user runs their own independent instance: own Telegram bot, own GitHub Acti
 
 ### Ausgangslage
 - **Startkapital:** 957 EUR (Ende Januar 2026)
-- **Ziel:** 1.914 EUR (Verdopplung) bis Ende Februar 2026
 - **Instrumente:** Turbo-Zertifikate (Knockout-Produkte, Long UND Short)
 - **Plattform:** Trade Republic
 - **Gehandelte Assets:** Aktien, Rohstoffe (Gold, Silber) - alles via Turbos
+
+### TRADING-STRATEGIE (ab März 2026)
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  KERN-STRATEGIE — IMMER EINHALTEN!                           ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  1. +20% Turbo-Gewinn → SOFORT RAUS. Kein "vielleicht mehr" ║
+║  2. Rücksetzer abwarten → gleiche oder bessere Position rein ║
+║  3. MAX 2 offene Positionen gleichzeitig                     ║
+║  4. Stop IMMER beim Kauf setzen — keine Ausnahme             ║
+║  5. Rücksetzer kommt immer — Geduld zahlt sich aus           ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+### Bevorzugte Trading-Assets
+
+| Kategorie | Assets | Warum |
+|-----------|--------|-------|
+| **Rohstoffe** | Silver (SI=F), Gold (GC=F) | Volatil, klare Makro-Treiber, gut zu lesen |
+| **Energie/KI** | VST, CEG, ENR.DE | KI-Stromverbrauch wächst strukturell |
+| **AI Cloud** | NBIS, APLD | Hyperwachstum, GPU-Infrastruktur |
+| **Space/Defense** | RKLB | Hypersonic, Government Contracts |
+| **Quantum** | QBTS, APLD-adjacent | Hochspekulativ, nur Mini-Positionen |
+| **Europa** | ASML, SAP.DE, ENR.DE | Diversifikation, EUR-denominiert |
 
 ### Risk Management Regeln
 

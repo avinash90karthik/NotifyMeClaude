@@ -22,11 +22,11 @@
 
 | Symbol | Sektor | Wert EUR | Anteil | P&L | KO (Underlying) | Shares | Buy-In | Stop |
 |--------|--------|----------|--------|-----|-----------------|--------|--------|------|
-| **VST** | Energy/US | ~490 EUR | ~58% | +57% | $115.68 | 100 | 3.12 EUR | **4.20 EUR** (erhöht!) |
-| **ARM** | Tech/Semi | ~229 EUR | ~27% | +7-15% | $94.64 | 84→42 nach Teilverkauf | 2.54 EUR | **2.20 EUR** (erhöht!) |
-| **ENR.DE** | Energy/DE | ~138 EUR | ~16% | +16% | 143.74 EUR | 65 | 1.825 EUR | **1.43 EUR** (erhöht! war 1.100) |
+| **VST** | Energy/US | ~490 EUR | ~55% | +57% | $115.68 | 100 | 3.12 EUR | **4.20 EUR** |
+| **ENR.DE** | Energy/DE | ~310 EUR | ~35% | +10.6% | 143.76 EUR | 135 | 2.08 EUR | **1.43 EUR** |
+| **RKLB** | Aerospace | ~66 EUR | ~7% | -2.4% | $59.82 | 5 | 13.55 EUR | **~10.60 EUR** ($72) |
 | NVDA Aktie | Tech | ~10 EUR | ~1% | +11.56% | - | 0.063 | - | Geschenk TR |
-| **Cash** | - | **~0 EUR** | **~0%** | - | - | - | - | - |
+| **Cash** | - | **~15 EUR** | **~2%** | - | - | - | - | - |
 
 **Aenderungen seit 17.02:**
 - ENR.DE Turbo gekauft: 65x @ 1.825 EUR = ~118.63 EUR (HSBC, Leverage 8.92x, KO 143.74 EUR)
@@ -79,6 +79,7 @@
 | SI=F LONG (alt) | -17 | |
 | SI=F LONG (12.02) | -29 | Blow-Off-Top, KO zu eng |
 | NVDA Turbo (13.02) | ~-75? | Verkauft, 4 rote Tage |
+| **ARM Turbo (18.02)** | **+31** | **84x verkauft, Erloes ~244 EUR** |
 | IREN Turbo (13.02) | ~-20? | Verkauft, KO war zu eng |
 | AMD Turbo | ? | Verkauft, Zeitpunkt/P&L unbekannt |
 | **HOOD Turbo (17.02)** | **-57** | **Stop bei ~6.44 EUR ausgeloest. Ohne Stop waere KO-Gefahr!** |
@@ -106,6 +107,8 @@
 | **17.02** | **ENR.DE** | **LONG (SOFORT!)** | **75%** | **GEKAUFT 18.02! BESTER SETUP! 240% EG, EUR 146B Backlog, 65% Turbinen=AI. Golden Cross, RSI 65.5, KEIN Earnings bis Mai! VST-Korrelation nur 0.153! KO EUR 144, Stop EUR 152. Exits 170/185/210** |
 | **17.02** | **ARM** | **HOLD** | **52%** | **Coin-Flip! LONG 32 vs SHORT 31. Death Cross, P/E 57.5, Earnings -12.3%. Aber Revenue +26%, RSI-Slope dreht positiv. Stop EUR 1.70 ($115). NVIDIA 25.02 = Katalysator! 50% sichern vorher!** |
 | **18.02** | **SI=F** | **WARTEN** | **55%** | **Post-Parabola 121->75 (-37.5%). RSI 27.1 OVERSOLD aber Delta -4.4 = Wasserfall! ATR 12.5% -> 3x KO = nur 2.7x Hebel. LONG-Trigger: RSI>30+positiv+Kurs>SMA50 78.89. SHORT-Trigger: Tief<71+RSI<25. NUR Mini 5% wenn einstieg!** |
+| **19.02** | **NBIS** | **LONG** | **72%** | **W-Bottom 73->108 (+46%), MACD +1.960 staerkste Signal. Revenue +547%, ARR 1.3B->7-9B Ziel, Microsoft 17.4B, Meta Llama. KO 87.12 USD, Stop 97 USD. Exits 118/130/138. Klein 90 EUR nach 50 VST verkaufen. NVIDIA 25.02 = Katalysator! Keine Earnings bis 29.04!** |
+| **18.02** | **RKLB** | **LONG (taktisch, VOR Earnings)** | **63%** | **+7.7% heute, SMA50 Breakout, RSI dreht positiv, Bullische Divergenz. $1.8B SDA Vertrag. KO $58.61, Stop $67. Exits $82/$87/$92. PFLICHT: 100% raus bis 24.02! Earnings 26.02 +/-14%! Klein ~80 EUR nach ARM-Verkauf.** |
 | **18.02** | **SAP.DE** | **LONG (nach VST-Verkauf)** | **62%** | **€169.64 nahe 52W-Tief €159.60. RSI 33 dreht, MACD bullish. FCF €7.8B, €10B Buyback. KO €155.42, Stop €162, Exits €179/€196/€210. Beta 0.706 = defensiv! Klein ~80 EUR nach VST-Teilverkauf. Earnings 23.04 → 50% vorher sichern!** |
 | **18.02** | **APLD** | **WARTEN** | **52%** | **Post-Parabola $42→$33. RSI-Delta -10.2, kein Boden-Signal. SMA50 $31.96 kritisch. Long-Trigger: $32-32.50 wenn RSI dreht. KO $27.34, Stop $29.50. Exits $37/$39.50/$42. CASH 0 EUR → erst VST 50 Stück verkaufen! NVIDIA 25.02: 50% sichern!** |
 
