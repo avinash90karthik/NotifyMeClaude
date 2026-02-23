@@ -10,7 +10,7 @@
     "sma200": 240.74,
     "market_cap": 3888777003008,
     "analyst_rating": "Buy",
-    "last_updated": "2026-02-23T07:23:20.537425+00:00"
+    "last_updated": "2026-02-23T08:11:27.061409+00:00"
   },
   {
     "symbol": "ARM",
@@ -23,7 +23,7 @@
     "sma200": 138.56,
     "market_cap": 133365784576,
     "analyst_rating": "Buy",
-    "last_updated": "2026-02-23T07:23:20.537425+00:00"
+    "last_updated": "2026-02-23T08:11:27.061409+00:00"
   },
   {
     "symbol": "NVDA",
@@ -36,7 +36,7 @@
     "sma200": 173.17,
     "market_cap": 4621547864064,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-02-23T07:23:20.537425+00:00"
+    "last_updated": "2026-02-23T08:11:27.061409+00:00"
   },
   {
     "symbol": "GOOGL",
@@ -49,7 +49,7 @@
     "sma200": 245.53,
     "market_cap": 3810313371648,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-02-23T07:23:20.537425+00:00"
+    "last_updated": "2026-02-23T08:11:27.061409+00:00"
   },
   {
     "symbol": "QBTS",
@@ -62,7 +62,7 @@
     "sma200": 22.07,
     "market_cap": 6679114240,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-02-23T07:23:20.537425+00:00"
+    "last_updated": "2026-02-23T08:11:27.061409+00:00"
   },
   {
     "symbol": "IREN",
@@ -75,7 +75,7 @@
     "sma200": 34.37,
     "market_cap": 13269238784,
     "analyst_rating": "Buy",
-    "last_updated": "2026-02-23T07:23:20.537425+00:00"
+    "last_updated": "2026-02-23T08:11:27.061409+00:00"
   },
   {
     "symbol": "APLD",
@@ -88,20 +88,20 @@
     "sma200": 21.56,
     "market_cap": 8119172608,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-02-23T07:23:20.537425+00:00"
+    "last_updated": "2026-02-23T08:11:27.061409+00:00"
   },
   {
     "symbol": "SAP.DE",
     "name": "SAP SE",
     "sector": "Technology",
     "price": 173.8,
-    "change_pct": 1.79,
+    "change_pct": 0.0,
     "rsi": 43.7,
     "sma50": 193.27,
     "sma200": 228.18,
     "market_cap": 202408230912,
     "analyst_rating": "Buy",
-    "last_updated": "2026-02-23T07:23:20.537425+00:00"
+    "last_updated": "2026-02-23T08:11:27.061409+00:00"
   },
   {
     "symbol": "ASML",
@@ -114,7 +114,7 @@
     "sma200": 958.16,
     "market_cap": 570417938432,
     "analyst_rating": "Buy",
-    "last_updated": "2026-02-23T07:23:20.537425+00:00"
+    "last_updated": "2026-02-23T08:11:27.061409+00:00"
   },
   {
     "symbol": "VST",
@@ -127,7 +127,7 @@
     "sma200": 180.53,
     "market_cap": 58074689536,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-02-23T07:23:20.537425+00:00"
+    "last_updated": "2026-02-23T08:11:27.061409+00:00"
   },
   {
     "symbol": "CEG",
@@ -140,45 +140,45 @@
     "sma200": 326.87,
     "market_cap": 106817609728,
     "analyst_rating": "Buy",
-    "last_updated": "2026-02-23T07:23:20.537425+00:00"
+    "last_updated": "2026-02-23T08:11:27.061409+00:00"
   },
   {
     "symbol": "ENR.DE",
     "name": "Siemens Energy",
     "sector": "Energy",
     "price": 165.25,
-    "change_pct": 0.64,
-    "rsi": 66.8,
+    "change_pct": 0.0,
+    "rsi": 67.0,
     "sma50": 136.73,
     "sma200": 106.37,
     "market_cap": 141345619968,
     "analyst_rating": "Buy",
-    "last_updated": "2026-02-23T07:23:20.537425+00:00"
+    "last_updated": "2026-02-23T08:11:27.061409+00:00"
   },
   {
     "symbol": "SI=F",
     "name": "Silver Futures",
     "sector": "Commodities",
-    "price": 86.415,
-    "change_pct": 4.95,
-    "rsi": 53.4,
-    "sma50": 80.3,
+    "price": 85.75,
+    "change_pct": 4.14,
+    "rsi": 52.9,
+    "sma50": 80.28,
     "sma200": 51.53,
     "market_cap": null,
     "analyst_rating": null,
-    "last_updated": "2026-02-23T07:23:20.537425+00:00"
+    "last_updated": "2026-02-23T08:11:27.061409+00:00"
   },
   {
     "symbol": "GC=F",
     "name": "Gold Futures",
     "sector": "Commodities",
-    "price": 5171.9,
-    "change_pct": 1.79,
-    "rsi": 61.1,
-    "sma50": 4688.49,
-    "sma200": 3894.17,
+    "price": 5154.1,
+    "change_pct": 1.44,
+    "rsi": 60.6,
+    "sma50": 4688.13,
+    "sma200": 3894.08,
     "market_cap": null,
     "analyst_rating": null,
-    "last_updated": "2026-02-23T07:23:20.537425+00:00"
+    "last_updated": "2026-02-23T08:11:27.061409+00:00"
   }
 ]
