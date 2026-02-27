@@ -11,7 +11,7 @@ Each user runs their own independent instance: own Telegram bot, own GitHub Acti
 ## TRADING KONTEXT (Silver Hawk)
 
 ### Ausgangslage
-- **Startkapital:** 957 EUR (Ende Januar 2026)
+- **Startkapital März:** ~1.788 EUR (frisches Kapital eingezahlt, Februar: 957 → 753 EUR / -21.3%)
 - **Instrumente:** Turbo-Zertifikate (Knockout-Produkte, Long UND Short)
 - **Plattform:** Trade Republic
 - **Gehandelte Assets:** Aktien, Rohstoffe (Gold, Silber) - alles via Turbos
@@ -20,12 +20,13 @@ Each user runs their own independent instance: own Telegram bot, own GitHub Acti
 
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║  KERN-STRATEGIE — IMMER EINHALTEN!                           ║
+║  KERN-STRATEGIE — IMMER EINHALTEN!  Ziel: +30%/Monat        ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  1. +20% Turbo-Gewinn → SOFORT RAUS. Kein "vielleicht mehr" ║
+║  1. 50% bei +20% SOFORT RAUS, Rest Trailing Stop laufen     ║
+║     lassen → Runner-Ziel +40-60% auf die zweite Hälfte      ║
 ║  2. Rücksetzer abwarten → gleiche oder bessere Position rein ║
-║  3. MAX 2 offene Positionen gleichzeitig                     ║
+║  3. MAX 3 offene Positionen gleichzeitig                     ║
 ║  4. Stop IMMER beim Kauf setzen — keine Ausnahme             ║
 ║  5. Rücksetzer kommt immer — Geduld zahlt sich aus           ║
 ║                                                               ║
@@ -50,8 +51,8 @@ Each user runs their own independent instance: own Telegram bot, own GitHub Acti
 ║  DIESE REGELN GELTEN IMMER - KEINE AUSNAHMEN!                ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  1. Max. Verlust pro Trade:      10% des Portfolios          ║
-║  2. Max. gleichzeitig riskiert:  40% des Portfolios          ║
+║  1. Max. Verlust pro Trade:      15% des Portfolios          ║
+║  2. Max. gleichzeitig riskiert:  50% des Portfolios          ║
 ║  3. Max. Sektor-Konzentration:   60% in einem Sektor         ║
 ║  4. Nach 2 Verlusten in Folge:   Positionsgröße halbieren    ║
 ║  5. Nach -20% Drawdown:          24h Trading-Pause           ║
@@ -66,6 +67,8 @@ Each user runs their own independent instance: own Telegram bot, own GitHub Acti
 Die konkreten Trading-Entscheidungen (Entry, Exit, Stop, KO-Abstand) kommen aus der 4-Schritt-Analyse - nicht aus festen Regeln. Die Analyse liefert Support/Resistance, Konfidenz und Positionsgröße pro Trade.
 
 **Kernprinzipien:**
+- **Gestaffelte Exits:** 50% bei +20% raus, Rest Trailing Stop auf Break-Even → Runner-Ziel +40-60%
+- **Konfidenz-Gate:** Nur Trades mit ≥60% Konfidenz aus der Analyse
 - **Gewinne mitnehmen** wenn die Analyse es zeigt (D-Wave Lektion: waren +30% im Plus, nicht mitgenommen)
 - **LONG und SHORT sind gleichwertig** - die Analyse entscheidet die Richtung, nicht ein Bias
 - **KO-Berechnung: ATR + Chart kombiniert** - KO liegt IMMER unter dem stärksten Support (LONG) bzw. über Resistance (SHORT). ATR-Multiplikator nach Asset-Klasse (Large Cap 2x, Small Cap 2.5x, Rohstoffe 3x)
@@ -149,8 +152,8 @@ Language defaults to German. Change `{{LANGUAGE}}` in `prompts/00_master.md` for
 - **KO = Maximum aus ATR-basiert und Chart-basiert** (immer das weiter entfernte Level)
 - **ATR-Multiplikator nach Asset-Klasse:** Large Cap 2.0x, Small/Mid Cap 2.5x, Rohstoffe 3.0x, Krypto 3.0x
 - **SHORT-Trades werden gleichwertig bewertet** via LONG vs SHORT Scorecard in Schritt 2
-- Position sizing in % vom Portfolio (5% Mini / 15% Klein / 30% Standard / 20% Ohne Hebel)
-- Risk-per-trade capped at 10% Portfolio
+- Position sizing in % vom Portfolio (10% Lotto / 25% Klein / 35% Standard / 20% Ohne Hebel)
+- Risk-per-trade capped at 15% Portfolio
 - Time-stops: 5 Tage ohne Bewegung → halbieren, 8 Tage → raus
 - Correlation check against open positions before each new trade
 

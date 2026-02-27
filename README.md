@@ -7,7 +7,7 @@ AI-powered trading analysis and price alerts via Telegram. Built with Claude Cod
 - **Multi-Agent Analysis:** 4-step pipeline (data collection, bull/bear debate, judge verdict, trading card) for any stock or commodity
 - **LONG & SHORT Signals:** Scorecard-based evaluation ensures SHORT trades are treated equally
 - **3-Step KO Calculation:** ATR-based + chart-support combined, asset-class adjusted (Large Cap 2x, Mid/Small 2.5x, Commodities 3x)
-- **Risk Management:** 10% max per trade, 40% max simultaneous risk, 60% max sector concentration
+- **Risk Management:** 15% max per trade, 50% max simultaneous risk, 60% max sector concentration
 - **Portfolio Tracking:** `memory/portfolio.md` as single source of truth — updated after every analysis and trade
 - **Correlation Check:** Reads open positions from `memory/portfolio.md` before every new trade
 - **Time-Stops:** Auto-halve after 5 days sideways, close after 8 days, secure 50% before earnings
