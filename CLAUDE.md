@@ -190,6 +190,14 @@ CHART_OUTPUT_DIR=...        # Optional: path to chart output directory
 - Marks already-owned stocks, flags upcoming earnings
 - Workflow: `.github/workflows/morning_screener.yml` (08:00 CET, weekdays, 10 min timeout)
 
+## Reddit Gems Scanner
+
+**`reddit_gems.py`** - Daily scan of Reddit trending stocks via ApeWisdom API.
+- Fetches trending tickers from all stock subreddits, enriches top candidates with yfinance
+- Filters: min $500M market cap, min 50% mention change, skips ETFs/crypto
+- Sends top 8 gems as Telegram summary before European market open
+- Workflow: `.github/workflows/reddit_gems.yml` (07:00 CET, weekdays)
+
 ## Stock Watchlist
 
 Curated watchlist managed via `admin_stocks.py`, updated automatically via GitHub Actions.
@@ -218,6 +226,7 @@ Curated watchlist managed via `admin_stocks.py`, updated automatically via GitHu
 | Price Tracker | `tracker.yml` | Every 10 min (market hours) | Price alerts via Telegram |
 | Portfolio Check | `portfolio_check.yml` | 3x daily (08:00, 15:00, 21:00 CET) | RSI alerts, stop/KO proximity |
 | Morning Screener | `morning_screener.yml` | 08:00 CET (weekdays) | LONG/SHORT scoring, top picks |
+| Reddit Gems | `reddit_gems.yml` | 07:00 CET (weekdays) | Reddit trending stocks via ApeWisdom |
 
 Secrets needed: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 
