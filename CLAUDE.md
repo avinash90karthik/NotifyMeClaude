@@ -54,6 +54,7 @@ Each user runs their own independent instance: own Telegram bot, own GitHub Acti
 ║  1. Max. Verlust pro Trade:      15% des Portfolios          ║
 ║  2. Max. gleichzeitig riskiert:  50% des Portfolios          ║
 ║  3. Max. Sektor-Konzentration:   60% in einem Sektor         ║
+║     (Ausnahme: bei klarem Makro-Event bewusst überschreitbar)║
 ║  4. Nach 2 Verlusten in Folge:   Positionsgröße halbieren    ║
 ║  5. Nach -20% Drawdown:          24h Trading-Pause           ║
 ║                                                               ║

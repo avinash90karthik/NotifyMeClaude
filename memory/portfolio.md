@@ -1,6 +1,6 @@
 # Silver Hawk Portfolio - Single Source of Truth
 
-**Letzte Aktualisierung:** 27.02.2026
+**Letzte Aktualisierung:** 28.02.2026 (Portfolio-Update aus Screenshots)
 **Startkapital März:** ~1.788 EUR (frisches Kapital eingezahlt)
 **Ziel März:** +30% (2.324 EUR)
 
@@ -10,19 +10,21 @@
 
 | Metrik | Wert |
 |--------|------|
-| **Portfolio-Wert** | **~1.788 EUR** (1.577 Cash + 211 investiert) |
-| **Investiert** | 211 EUR (TSM SHORT, aktuell -35 EUR = ~176 EUR) |
-| **Cash frei** | **1.577 EUR** |
-| **Offene Positionen** | **1** — TSM SHORT |
+| **Portfolio-Wert** | **~1.795 EUR** (1.177 Cash + 618 investiert) |
+| **Investiert** | 618,35 EUR (SI=F LONG + TSM SHORT + NVDA Rest) |
+| **Cash frei** | **1.176,58 EUR** |
+| **Offene Positionen** | **2** — SI=F LONG, TSM SHORT |
+| **Tages-P&L** | +31,61 EUR (+5,39%) |
 
 ---
 
 ## Offene Positionen (März)
 
-| Symbol | Typ | Sektor | Investiert | Aktuell | P&L | Stop | KO |
-|--------|-----|--------|------------|---------|-----|------|-----|
-| TSM SHORT | Short-Turbo | Semi/Tech | 211 EUR | ~176 EUR | **-35 EUR** | $392 | $404 |
-| NVDA | Aktie (ignorieren) | Tech | ~10.79 | - | - | - | - |
+| Symbol | Typ | Stück | Buy-In | Aktuell | Wert | P&L | KO | Hebel | % Portf. |
+|--------|-----|-------|--------|---------|------|-----|-----|-------|----------|
+| SI=F LONG | Long-Turbo (HSBC) | 42 | 9,53 € | 10,05 € | 422,10 € | **+21,68 € (+5,41%)** | $82.27 | 7.86x | 68,26% | **Stop: 7,00 €** |
+| TSM SHORT | Short-Turbo (HSBC) | 71 | 2,48 € | 2,63 € | 186,73 € | **+10,36 € (+5,87%)** | $405.39 | 11.78x | 30,20% | **Stop: 2,48 € (BE)** |
+| NVDA | Aktie (Rest) | 0,063 | - | 9,52 € | 9,52 € | -13,43% | - | - | ~1,5% |
 
 ---
 
@@ -34,7 +36,11 @@
 
 ## Abgeschlossene Analysen (März)
 
-*Noch keine Analysen im März.*
+| Datum | Symbol | Signal | Konfidenz | Ergebnis |
+|-------|--------|--------|-----------|----------|
+| 27.02 | TSM | SHORT HALTEN | 63% | Re-Analyse: Blow-Off-Top $390, RSI-Kollaps, Cover $360/$345/$332 |
+| 27.02 | SI=F | LONG (TAKTISCH) | 65% | Entry $90-93, KO $81.69, Stop $86, Exits $100/$108/$120. Montag nach Asian Open kaufen! |
+| 27.02 | GC=F | LONG (KONSERVATIV) | 60% | Entry $5,180-5,220, KO $5,014, Stop $5,100, Exits $5,400/$5,500/$5,586. Sicherer als SI=F über WE |
 
 ---
 
