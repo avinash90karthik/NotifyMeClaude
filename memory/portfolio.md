@@ -1,6 +1,6 @@
 # Silver Hawk Portfolio - Single Source of Truth
 
-**Letzte Aktualisierung:** 28.02.2026 (Portfolio-Update aus Screenshots)
+**Letzte Aktualisierung:** 04.03.2026 (3 Analysen: ^GDAXI SHORT, RCAT LONG, ENR.DE LONG)
 **Startkapital März:** ~1.788 EUR (frisches Kapital eingezahlt)
 **Ziel März:** +30% (2.324 EUR)
 
@@ -10,27 +10,36 @@
 
 | Metrik | Wert |
 |--------|------|
-| **Portfolio-Wert** | **~1.795 EUR** (1.177 Cash + 618 investiert) |
-| **Investiert** | 618,35 EUR (SI=F LONG + TSM SHORT + NVDA Rest) |
-| **Cash frei** | **1.176,58 EUR** |
-| **Offene Positionen** | **2** — SI=F LONG, TSM SHORT |
-| **Tages-P&L** | +31,61 EUR (+5,39%) |
+| **Portfolio-Wert** | **~1.668 EUR** (945 investiert + ~723 Cash) |
+| **Investiert** | ~945 EUR (4 Positionen) |
+| **Cash frei** | **~723 EUR** |
+| **Offene Positionen** | **4** |
+| **März P&L** | **-120 EUR (-6.7%)** ← verbessert durch ENR.DE! |
 
 ---
 
 ## Offene Positionen (März)
 
-| Symbol | Typ | Stück | Buy-In | Aktuell | Wert | P&L | KO | Hebel | % Portf. |
-|--------|-----|-------|--------|---------|------|-----|-----|-------|----------|
-| SI=F LONG | Long-Turbo (HSBC) | 42 | 9,53 € | 10,05 € | 422,10 € | **+21,68 € (+5,41%)** | $82.27 | 7.86x | 68,26% | **Stop: 7,00 €** |
-| TSM SHORT | Short-Turbo (HSBC) | 71 | 2,48 € | 2,63 € | 186,73 € | **+10,36 € (+5,87%)** | $405.39 | 11.78x | 30,20% | **Stop: 2,48 € (BE)** |
-| NVDA | Aktie (Rest) | 0,063 | - | 9,52 € | 9,52 € | -13,43% | - | - | ~1,5% |
+| # | Symbol | Richtung | Stück | Buy-In | Aktuell | P&L | KO | Stop/Limit | Notiz |
+|---|--------|----------|-------|--------|---------|-----|-----|------------|-------|
+| 1 | NVIDIA (Bruchteil) | LONG | 0.063 | ~11 EUR | ~9 EUR | ~-2 EUR | - | - | Mini-Position |
+| 2 | ENR.DE LONG Turbo KO 138,40 | LONG | 278 Stk | ~551 EUR (Buy-in ~1,98) | 617,16 EUR (+11,92%) | +66 EUR | KO 138,40€ | Stop 148€ / +20% Limit ~2,38€ für 139 Stk | Gekauft 04.03 |
+| 3 | DAX SHORT Turbo KO 25.009 | SHORT | 19 Stk | ~167 EUR (Buy-in 8,80) | 163,78 EUR (-2,07%) | -3 EUR | KO 25.009 | Stop 6,00€ / Limit 10,56€ | Gekauft 04.03, HSBC |
+| 4 | HOOD LONG Turbo KO 62,74 | LONG | 10 Stk | ~163 EUR (Buy-in 16,30) | 154,20 EUR (-5,40%) | -9 EUR | KO $62,74 | Stop 11,40€ / Limit 19,56€ | Gekauft 04.03 |
 
 ---
 
 ## Geschlossene Trades (März)
 
-*Noch keine Trades im März.*
+| Symbol | Kauf (€) | Verkauf (€) | P&L EUR | Notiz |
+|--------|----------|-------------|---------|-------|
+| TSM SHORT KO 405$ (71 Stk.) | ~211 (Feb) | 227,62 | **+16,62** | Stop-Sell 02.03 |
+| SI=F LONG KO 82$ (42 Stk.) | 400,42 (27.Feb) | 395,90 | **-4,52** | Stop-Sell 02.03 |
+| ENR.DE LONG KO 138.98€ | 458,70 | 285,35 + 165,75 = 451,10 | **-7,60** | Kauf 02.03, 50% Limit-Sell +20%, Rest 03.03 verkauft |
+| GC=F LONG KO 5149$ (falsch) | 450,40 | 456,80 | **+6,40** | Falscher Turbo (KO=Stop), sofort korrigiert |
+| GC=F LONG KO 4975$ (richtig) | 443,00 | 258,42 | **-184,58** | Iran-Krieg Volatilität, -41.7% auf Turbo |
+| Zinsen 2% p.a. | — | 2,66 | **+2,66** | 01.03 |
+| **GESAMT** | | | **-173,02** | |
 
 ---
 
@@ -39,8 +48,20 @@
 | Datum | Symbol | Signal | Konfidenz | Ergebnis |
 |-------|--------|--------|-----------|----------|
 | 27.02 | TSM | SHORT HALTEN | 63% | Re-Analyse: Blow-Off-Top $390, RSI-Kollaps, Cover $360/$345/$332 |
-| 27.02 | SI=F | LONG (TAKTISCH) | 65% | Entry $90-93, KO $81.69, Stop $86, Exits $100/$108/$120. Montag nach Asian Open kaufen! |
-| 27.02 | GC=F | LONG (KONSERVATIV) | 60% | Entry $5,180-5,220, KO $5,014, Stop $5,100, Exits $5,400/$5,500/$5,586. Sicherer als SI=F über WE |
+| 27.02 | SI=F | LONG (TAKTISCH) | 65% | Entry $90-93, KO $81.69, Stop $86, Exits $100/$108/$120 |
+| 27.02 | GC=F | LONG (KONSERVATIV) | 60% | Entry $5,180-5,220, KO $5,014, Stop $5,100, Exits $5,400/$5,500/$5,586 |
+| 01.03 | FIG | SHORT | 68% | Entry $28.50-30, KO $36.36, Stop $33, Cover $25/$22/$20 |
+| 02.03 | ENR.DE | LONG (TAKTISCH) | 64% | Entry EUR 155-159, KO EUR 140, Stop EUR 150. Gekauft, 50% bei +20% verkauft, Rest bei -33% geschlossen |
+| 02.03 | GC=F | LONG (STARK) | 72% | Entry $5,300-5,350, KO $4,975, Stop $5,150. Gekauft (richtiger KO), aber Iran-Volatilität → -41.7% Verlust |
+| 02.03 | HOOD | WARTEN | 58% | Unter 60% Gate. Death Cross, ATR 5.5% zu riskant. SHORT wenn $73 bricht, LONG wenn $80 bricht |
+| 02.03 | GC=F | LONG Re-Analyse | 72% | Bestätigt. Analyse war richtig, aber Turbo-Hebel + Geopolitik = tödliche Kombi |
+| 03.03 | ASML | WARTEN | 52% | Unter 60% Gate. RSI-Kollaps 82→49, Scorecard 31:30 Unentschieden |
+| 03.03 | ENR.DE | WARTEN/HALTEN | 55% | Unter 60% Gate. Iran-Krieg drückt alle EU-Aktien. Q1 Rekord (17.6B Aufträge, Gewinn x2). RSI 38, kein Umkehrsignal |
+| 03.03 | ^GDAXI | SHORT (TAKTISCH) | 72% | Entry 24.000-24.300 (Bounce), KO 25.100, Stop 24.600, Cover 23.000/22.500/22.000. Bearische Divergenz bestätigt, alle Supports gebrochen |
+| 04.03 | RCAT | LONG (SPEKULATIV) | 62% | Entry $13.90-14.50 (Rücksetzer), Stop $11.20, Exits $16.70/$18/$20. NUR Lotto 10% OHNE Hebel! ATR 9.3%, Earnings 18.03 → vorher 50% raus! |
+| 04.03 | ENR.DE | LONG (TAKTISCH) | 68% | Entry EUR 155-160, KO EUR 139, Stop EUR 148, Exits EUR 170 (50%)/180 (30%)/195+ (Rest). Q1 Rekord (17.6B Aufträge, Gewinn 3x, FCF 2x). Turbo möglich (ATR 3.5%), Hebel ~7.6x |
+| 04.03 | ASML | WARTEN | 58% | Unter 60% Gate! KOSPI -12%, Semi-Sektor unter Druck, keine RSI-Divergenz. Entry-Trigger: RSI <35 + Divergenz ODER SMA50-Test ($1.322) + Hammer. KO $1.267, Stop $1.310 |
+| 04.03 | HOOD | LONG (SPEKULATIV) | 61% | Knapp über Gate. BULLISCHE RSI-Divergenz ($69/$73 vs RSI 30/38), MACD dreht. NUR Lotto 10% OHNE Hebel! Stop $69, Exits $80 (50%)/$90 (30%)/$99+ (Rest). Death Cross + Beta 2,48 = hohes Risiko |
 
 ---
 
@@ -48,34 +69,34 @@
 
 | Datum | Event | Relevanz | Aktion |
 |-------|-------|----------|--------|
+| LAUFEND | US-Iran Krieg | SEHR HOCH | Risk-Off, Safe Haven dominiert |
 | 10.03 | APLD Earnings | Hoch | Beobachten |
-| 17.03 | TSM Ex-Dividend | Niedrig | Beachten bei SHORT-Position |
-| 17-18.03 | FOMC Meeting | Hoch | Fed erwartet HOLD 3.50-3.75% |
+| 17-18.03 | FOMC Meeting | Hoch | Fed erwartet HOLD, aber Inflation durch Öl? |
+| 15.04 | ASML Earnings | Mittel | Weit weg |
 | 16.04 | TSM Earnings | Mittel | Weit weg |
-| 30.04 | AMZN Earnings | Mittel | Weit weg |
+| 29.04 | HOOD Earnings | Mittel | Vor Earnings min. 50% sichern! |
+| 12.05 | ENR.DE Earnings Q2 | Mittel | Weit weg |
 
 ---
 
 ## Learnings
 
+### Februar (wichtigste)
 - NVDA Turbo war nicht im Tracking → ALLE Positionen erfassen!
 - NVDA Turbo hatte keinen Stop → IMMER Stop beim Kauf!
-- ARM gegen Analyse aufgestockt statt Teilverkauf → Analyse befolgen!
-- AMD über Entry-Zone gekauft ($209 statt $190-200) → Geduld!
-- HOOD Turbo KO $66.21 bei ATR 7.8% = NUR 1.65x ATR → Turbo mit breiterem KO wählen!
-- HOOD Stop hat -57 EUR gerettet statt potentiellem Totalverlust → STOPS FUNKTIONIEREN!
+- HOOD Stop hat -57 EUR gerettet statt Totalverlust → STOPS FUNKTIONIEREN!
 - Turbo mit 7.9x Hebel: Stock -4% = Turbo -32% → Stop ist ÜBERLEBENSWICHTIG
 - 0 EUR Cash = 0 Handlungsfreiheit
-- VST Teilverkauf rechtzeitig vor Earnings gemacht → Analyse befolgt!
-- SI=F LONG gekauft nachdem LONG-Trigger aus 18.02-Analyse gegriffen hat → Geduld belohnt (+10% Stop)
+- Kern-Strategie funktioniert — SI=F (+10%), NVO (+20%), VST (+50%) alle durch Stops realisiert
 - Portfolio-Screenshots sind IMMER aktueller als Memory-Datei!
-- **SI=F LONG: +10% Stop hat funktioniert → Kern-Strategie bestätigt!**
-- **NVO SHORT: +20% Stop hat funktioniert → Kern-Strategie bestätigt!**
-- **VST LONG: +50% Stop hat funktioniert → Größter Einzelgewinn (~78 EUR)!**
-- **Drei Stops in 4 Tagen = ~99 EUR Gewinn → Stops sind passives Einkommen!**
-- **Stop IMMER bei Gewinn setzen wenn man im Plus ist** — 1.80 EUR Stop bei 2.08 Buy-In = VERLUST!
-- **ENR.DE Break-Even Stop war richtig** — hat ~3 EUR Gewinn gesichert statt Verlust
-- **Kern-Strategie funktioniert** — SI=F (+10%), NVO (+20%), VST (+50%) alle durch Stops realisiert
+
+### März (NEU)
+- **Gold LONG war RICHTIG (72% Konfidenz)** — Richtung stimmte, war im Plus, aber +20% NICHT mitgenommen!
+- **Bei +20% SOFORT 50% raus — GILT AUCH für Turbos!** — Kern-Strategie befolgen, immer!
+- **Falschen Turbo gekauft (KO 5149 = unser STOP-Level!)** — IMMER KO prüfen vor Kauf! KO ≠ Stop!
+- **ENR.DE Teilverkauf bei +20% war richtig** — 285 EUR gesichert statt komplettem Verlust
+- **ENR.DE Q1 Rekord-Zahlen, trotzdem -5.5%** — Makro schlägt Fundamentals kurzfristig
+- **Geopolitik-Trades können funktionieren** — Fr→Mo Gold-Call war goldrichtig, Ausführung war das Problem
 
 ---
 
