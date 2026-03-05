@@ -1,0 +1,29 @@
+name: Silver Hawk Watchlist Check
+
+on:
+  schedule:
+    - cron: '30 6 * * 1-5'    # 06:30 UTC = 07:30 CET (Pre-Market)
+    - cron: '15 20 * * 1-5'   # 20:15 UTC = 21:15 CET (Post-Close)
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install yfinance numpy pandas
+
+      - name: Run watchlist check
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python watchlist_check.py

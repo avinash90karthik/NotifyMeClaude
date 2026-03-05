@@ -191,6 +191,18 @@ CHART_OUTPUT_DIR=...        # Optional: path to chart output directory
 - Marks already-owned stocks, flags upcoming earnings
 - Workflow: `.github/workflows/morning_screener.yml` (08:00 CET, weekdays, 10 min timeout)
 
+## Watchlist Check
+
+**`watchlist_check.py`** - 2x daily scan of personal watchlist (`memory/watchlist.md`) with v4 scoring.
+- Parses `memory/watchlist.md` (Markdown tables) for symbols + sectors + names
+- Parses `memory/portfolio.md` for open positions
+- Batch `yf.download()` for all ~38 symbols, then individual enrichment for top candidates
+- v4 Trend/Momentum scoring identical to morning_screener.py (RSI, MACD, ADX, ATR%, Bollinger, SMA50/200)
+- Hard gates relaxed vs morning screener: MIN_SCORE 20, volume 50k (watchlist is pre-curated)
+- Shows Top 5 LONG + Top 5 SHORT, portfolio summary, upcoming events
+- Stateless — no state file, no git commit needed
+- Workflow: `.github/workflows/watchlist_check.yml` (07:30 + 21:15 CET, weekdays, 5 min timeout)
+
 ## Reddit Gems Scanner
 
 **`reddit_gems.py`** - Daily scan of Reddit trending stocks via ApeWisdom API.
@@ -224,10 +236,11 @@ Curated watchlist managed via `admin_stocks.py`, updated automatically via GitHu
 | Workflow | File | Schedule | Purpose |
 |----------|------|----------|---------|
 | Stock Updater | `update_stocks.yml` | Every 30 min (market hours) | Update prices, RSI, SMAs |
-| Price Tracker | `tracker.yml` | Every 10 min (market hours) | Price alerts via Telegram |
+| Watchlist Check | `watchlist_check.yml` | 07:30 + 21:15 CET (weekdays) | Top 5 LONG/SHORT from personal watchlist |
 | Portfolio Check | `portfolio_check.yml` | 3x daily (08:00, 15:00, 21:00 CET) | RSI alerts, stop/KO proximity |
 | Morning Screener | `morning_screener.yml` | 08:00 CET (weekdays) | LONG/SHORT scoring, top picks |
 | Reddit Gems | `reddit_gems.yml` | 07:00 CET (weekdays) | Reddit trending stocks via ApeWisdom |
+| ~~Price Tracker~~ | `tracker.yml` | ~~Every 10 min~~ DEPRECATED | Replaced by Watchlist Check |
 
 Secrets needed: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 

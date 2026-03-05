@@ -1,9 +1,11 @@
-name: Silver Hawk Tracker
+name: Silver Hawk Tracker (DEPRECATED - replaced by watchlist_check.yml)
 
+# DEPRECATED: Use watchlist_check.yml instead (2x daily watchlist scan)
+# Schedule disabled — kept for reference only
 on:
-  schedule:
-    - cron: '*/10 7-21 * * 1-5'
-    - cron: '0,30 0-6,22-23 * * 1-5'
+  # schedule:
+  #   - cron: '*/10 7-21 * * 1-5'
+  #   - cron: '0,30 0-6,22-23 * * 1-5'
   workflow_dispatch:
 
 permissions:
