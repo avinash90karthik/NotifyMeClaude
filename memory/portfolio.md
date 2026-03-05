@@ -1,6 +1,6 @@
 # Silver Hawk Portfolio - Single Source of Truth
 
-**Letzte Aktualisierung:** 04.03.2026 (3 Analysen: ^GDAXI SHORT, RCAT LONG, ENR.DE LONG)
+**Letzte Aktualisierung:** 05.03.2026 (AMD LONG gekauft, HOOD/ENR.DE Teilverkäufe, TSM WARTEN)
 **Startkapital März:** ~1.788 EUR (frisches Kapital eingezahlt)
 **Ziel März:** +30% (2.324 EUR)
 
@@ -10,11 +10,11 @@
 
 | Metrik | Wert |
 |--------|------|
-| **Portfolio-Wert** | **~1.668 EUR** (945 investiert + ~723 Cash) |
-| **Investiert** | ~945 EUR (4 Positionen) |
-| **Cash frei** | **~723 EUR** |
-| **Offene Positionen** | **4** |
-| **März P&L** | **-120 EUR (-6.7%)** ← verbessert durch ENR.DE! |
+| **Portfolio-Wert** | **~1.755 EUR** (1.023 investiert + 732 Cash) |
+| **Investiert** | ~1.023 EUR (5 Positionen) |
+| **Cash frei** | **~732 EUR** |
+| **Offene Positionen** | **5** (2 Runner + 2 aktiv + 1 Mini) |
+| **März P&L** | **~-33 EUR (-1,8%)** ← stark verbessert durch Teilverkäufe! |
 
 ---
 
@@ -22,10 +22,11 @@
 
 | # | Symbol | Richtung | Stück | Buy-In | Aktuell | P&L | KO | Stop/Limit | Notiz |
 |---|--------|----------|-------|--------|---------|-----|-----|------------|-------|
-| 1 | NVIDIA (Bruchteil) | LONG | 0.063 | ~11 EUR | ~9 EUR | ~-2 EUR | - | - | Mini-Position |
-| 2 | ENR.DE LONG Turbo KO 138,40 | LONG | 278 Stk | ~551 EUR (Buy-in ~1,98) | 617,16 EUR (+11,92%) | +66 EUR | KO 138,40€ | Stop 148€ / +20% Limit ~2,38€ für 139 Stk | Gekauft 04.03 |
-| 3 | DAX SHORT Turbo KO 25.009 | SHORT | 19 Stk | ~167 EUR (Buy-in 8,80) | 163,78 EUR (-2,07%) | -3 EUR | KO 25.009 | Stop 6,00€ / Limit 10,56€ | Gekauft 04.03, HSBC |
-| 4 | HOOD LONG Turbo KO 62,74 | LONG | 10 Stk | ~163 EUR (Buy-in 16,30) | 154,20 EUR (-5,40%) | -9 EUR | KO $62,74 | Stop 11,40€ / Limit 19,56€ | Gekauft 04.03 |
+| 1 | NVIDIA (Bruchteil) | LONG | 0.063 | ~11 EUR | ~10 EUR | ~-1 EUR | - | - | Mini-Position |
+| 2 | ENR.DE LONG Turbo KO 138,40 | LONG | 139 Stk (Runner) | ~275 EUR (Buy-in ~1,98) | 336,38 EUR (+22,00%) | +61 EUR | KO 138,40€ | Stop: Break-Even (~1,98€) | 50% bei +20% verkauft 05.03 ✅ |
+| 3 | DAX SHORT Turbo KO 25.009 | SHORT | 19 Stk | ~167 EUR (Buy-in 8,80) | 147,63 EUR (-11,73%) | -19 EUR | KO 25.009 | Stop 6,00€ | Gekauft 04.03, HSBC |
+| 4 | HOOD LONG Turbo KO 62,75 | LONG | 5 Stk (Runner) | ~82 EUR (Buy-in 16,30) | 98,40 EUR (+20,74%) | +16 EUR | KO $62,75 | Stop: Break-Even (16,30€) | 50% bei +20% verkauft 05.03 ✅ |
+| 5 | AMD LONG Turbo KO 174,36 | LONG | 185 Stk | ~431 EUR (Buy-in 2,38) | 431 EUR (-1,91%) | -8 EUR | KO $174,36 | Stop 1,66€ / +20% Limit 2,86€ für 93 Stk | Gekauft 05.03, HSBC, Hebel 7,32x |
 
 ---
 
@@ -39,7 +40,9 @@
 | GC=F LONG KO 5149$ (falsch) | 450,40 | 456,80 | **+6,40** | Falscher Turbo (KO=Stop), sofort korrigiert |
 | GC=F LONG KO 4975$ (richtig) | 443,00 | 258,42 | **-184,58** | Iran-Krieg Volatilität, -41.7% auf Turbo |
 | Zinsen 2% p.a. | — | 2,66 | **+2,66** | 01.03 |
-| **GESAMT** | | | **-173,02** | |
+| ENR.DE LONG KO 138,40 (50%) | ~275 (139 Stk) | ~330 | **~+55** | 50% bei +20% verkauft 05.03 ✅ |
+| HOOD LONG KO 62,75 (50%) | ~82 (5 Stk) | ~98 | **~+16** | 50% bei +20% verkauft 05.03 ✅ |
+| **GESAMT** | | | **~-101** | Verbessert von -173 auf -101! |
 
 ---
 
@@ -62,6 +65,8 @@
 | 04.03 | ENR.DE | LONG (TAKTISCH) | 68% | Entry EUR 155-160, KO EUR 139, Stop EUR 148, Exits EUR 170 (50%)/180 (30%)/195+ (Rest). Q1 Rekord (17.6B Aufträge, Gewinn 3x, FCF 2x). Turbo möglich (ATR 3.5%), Hebel ~7.6x |
 | 04.03 | ASML | WARTEN | 58% | Unter 60% Gate! KOSPI -12%, Semi-Sektor unter Druck, keine RSI-Divergenz. Entry-Trigger: RSI <35 + Divergenz ODER SMA50-Test ($1.322) + Hammer. KO $1.267, Stop $1.310 |
 | 04.03 | HOOD | LONG (SPEKULATIV) | 61% | Knapp über Gate. BULLISCHE RSI-Divergenz ($69/$73 vs RSI 30/38), MACD dreht. NUR Lotto 10% OHNE Hebel! Stop $69, Exits $80 (50%)/$90 (30%)/$99+ (Rest). Death Cross + Beta 2,48 = hohes Risiko |
+| 05.03 | AMD | LONG (TAKTISCH) | 66% | BULLISCHE DIVERGENZ ($194/RSI26→$188/RSI33), Doppelboden SMA200. KO $175, Stop $188, Exits $218 (50%)/$240 (30%)/$260+ (Rest). Meta 6GW Deal, PEG 0,55. Lotto 175€/Klein 440€ |
+| 05.03 | TSM | WARTEN | 55% | UNTER 60% Gate! RSI-Kollaps 84→39 OHNE Divergenz. Fundamentals TOP (PEG 0,57, Goldman Upgrade) aber kein Umkehrsignal. Entry-Trigger: Divergenz ODER SMA50-Test ($337)+Hammer ODER Breakout $375. KO $300-310 |
 
 ---
 
@@ -75,6 +80,7 @@
 | 15.04 | ASML Earnings | Mittel | Weit weg |
 | 16.04 | TSM Earnings | Mittel | Weit weg |
 | 29.04 | HOOD Earnings | Mittel | Vor Earnings min. 50% sichern! |
+| 05.05 | AMD Earnings | Mittel | Vor Earnings min. 50% sichern! |
 | 12.05 | ENR.DE Earnings Q2 | Mittel | Weit weg |
 
 ---
