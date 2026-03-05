@@ -68,6 +68,9 @@
 | 04.03 | HOOD | LONG (SPEKULATIV) | 61% | Knapp über Gate. BULLISCHE RSI-Divergenz ($69/$73 vs RSI 30/38), MACD dreht. NUR Lotto 10% OHNE Hebel! Stop $69, Exits $80 (50%)/$90 (30%)/$99+ (Rest). Death Cross + Beta 2,48 = hohes Risiko |
 | 05.03 | AMD | LONG (TAKTISCH) | 66% | BULLISCHE DIVERGENZ ($194/RSI26→$188/RSI33), Doppelboden SMA200. KO $175, Stop $188, Exits $218 (50%)/$240 (30%)/$260+ (Rest). Meta 6GW Deal, PEG 0,55. Lotto 175€/Klein 440€ |
 | 05.03 | TSM | WARTEN | 55% | UNTER 60% Gate! RSI-Kollaps 84→39 OHNE Divergenz. Fundamentals TOP (PEG 0,57, Goldman Upgrade) aber kein Umkehrsignal. Entry-Trigger: Divergenz ODER SMA50-Test ($337)+Hammer ODER Breakout $375. KO $300-310 |
+| 05.03 | TSLA | WARTEN (LONG BIAS) | 55% | UNTER 60% Gate! RSI 42,7, ATR 2,8%, Scorecard 34:31 LONG (<5pt Differenz). Robotaxi/Optimus Katalysatoren, aber Musk-Risiko + Auto-Marge unter Druck. Entry-Trigger: RSI <35 + Divergenz ODER SMA200-Test ($348) + Hammer. KO $377, Stop $390 |
+| 05.03 | ASML | WARTEN (LONG BIAS) | 57% | 3. Analyse März (52%→58%→57%). SMA50-Test ($1.329) läuft, ABER kein Hammer + keine RSI-Divergenz. RSI 42,8 (Kollaps 82→43), Scorecard 29:33 SHORT. ⚠️ Semi bei 25,6% (AMD) — nur Lotto/Klein! Entry-Trigger: RSI <35+Divergenz ODER SMA50-Hammer+grüne Kerze. KO $1.260, Stop $1.300 |
+| 05.03 | ENR.DE | LONG (TAKTISCH) | 62% | 🔥 Stärkste Katalysatoren März! EUR 2B Buyback ab 04.03, Stoxx50 Aufnahme 23.03, JPMorgan BUY EUR 200. RSI 42 (Delta -10,4!), Slope beschleunigt — NICHT HEUTE kaufen! Entry bei RSI-Wende oder SMA50-Hammer. KO EUR 137,50, Stop EUR 145, Exits EUR 170/185/200. Klein 25-35% |
 
 ---
 
