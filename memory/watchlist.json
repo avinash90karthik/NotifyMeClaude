@@ -3,79 +3,79 @@
     "symbol": "AAPL",
     "name": "Apple",
     "sector": "Technology",
-    "price": 259.955,
-    "change_pct": 0.97,
-    "rsi": 44.2,
+    "price": 259.88,
+    "change_pct": 0.94,
+    "rsi": 44.1,
     "sma50": 263.89,
     "sma200": 244.04,
-    "market_cap": 3820799131648,
+    "market_cap": 3819697078272,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-09T19:44:38.123519+00:00"
+    "last_updated": "2026-03-09T20:08:33.437049+00:00"
   },
   {
     "symbol": "ARM",
     "name": "ARM Holdings",
     "sector": "Technology",
-    "price": 117.355,
-    "change_pct": 2.6,
-    "rsi": 44.6,
+    "price": 117.63,
+    "change_pct": 2.84,
+    "rsi": 45.0,
     "sma50": 116.56,
-    "sma200": 138.39,
-    "market_cap": 124630851584,
+    "sma200": 138.4,
+    "market_cap": 124922888192,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-09T19:44:38.123519+00:00"
+    "last_updated": "2026-03-09T20:08:33.437049+00:00"
   },
   {
     "symbol": "NVDA",
     "name": "NVIDIA",
     "sector": "Technology",
-    "price": 181.84,
-    "change_pct": 2.22,
-    "rsi": 46.9,
-    "sma50": 185.86,
-    "sma200": 176.36,
-    "market_cap": 4419620962304,
+    "price": 182.65,
+    "change_pct": 2.68,
+    "rsi": 47.8,
+    "sma50": 185.87,
+    "sma200": 176.37,
+    "market_cap": 4439307976704,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-09T19:44:38.123519+00:00"
+    "last_updated": "2026-03-09T20:08:33.437049+00:00"
   },
   {
     "symbol": "GOOGL",
     "name": "Alphabet",
     "sector": "Technology",
-    "price": 305.17,
-    "change_pct": 2.31,
-    "rsi": 42.9,
-    "sma50": 319.6,
+    "price": 306.36,
+    "change_pct": 2.71,
+    "rsi": 44.2,
+    "sma50": 319.62,
     "sma200": 253.59,
-    "market_cap": 3691641831424,
+    "market_cap": 3706036944896,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-09T19:44:38.123519+00:00"
+    "last_updated": "2026-03-09T20:08:33.437049+00:00"
   },
   {
     "symbol": "QBTS",
     "name": "D-Wave Quantum",
     "sector": "Technology",
-    "price": 18.89,
-    "change_pct": 1.61,
-    "rsi": 43.3,
-    "sma50": 23.22,
+    "price": 19.04,
+    "change_pct": 2.42,
+    "rsi": 44.1,
+    "sma50": 23.23,
     "sma200": 22.5,
-    "market_cap": 6987669504,
+    "market_cap": 7043156992,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-09T19:44:38.123519+00:00"
+    "last_updated": "2026-03-09T20:08:33.437049+00:00"
   },
   {
     "symbol": "IREN",
     "name": "IREN",
     "sector": "Technology",
-    "price": 38.9201,
-    "change_pct": 6.05,
-    "rsi": 43.7,
+    "price": 38.84,
+    "change_pct": 5.83,
+    "rsi": 43.6,
     "sma50": 46.25,
     "sma200": 36.23,
-    "market_cap": 12912100352,
+    "market_cap": 12885526528,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-09T19:44:38.123519+00:00"
+    "last_updated": "2026-03-09T20:08:33.437049+00:00"
   },
   {
     "symbol": "APLD",
@@ -83,12 +83,12 @@
     "sector": "Technology",
     "price": 27.03,
     "change_pct": 7.52,
-    "rsi": 42.2,
+    "rsi": 42.3,
     "sma50": 32.23,
     "sma200": 22.78,
     "market_cap": 7557204992,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-09T19:44:38.123519+00:00"
+    "last_updated": "2026-03-09T20:08:33.437049+00:00"
   },
   {
     "symbol": "SAP.DE",
@@ -101,46 +101,46 @@
     "sma200": 223.0,
     "market_cap": 200172191744,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-09T19:44:38.123519+00:00"
+    "last_updated": "2026-03-09T20:08:33.437049+00:00"
   },
   {
     "symbol": "ASML",
     "name": "ASML Holding",
     "sector": "Technology",
-    "price": 1352.0,
-    "change_pct": 4.58,
-    "rsi": 45.4,
-    "sma50": 1344.78,
-    "sma200": 996.08,
-    "market_cap": 530874531840,
+    "price": 1357.42,
+    "change_pct": 5.0,
+    "rsi": 46.0,
+    "sma50": 1344.89,
+    "sma200": 996.11,
+    "market_cap": 533002780672,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-09T19:44:38.123519+00:00"
+    "last_updated": "2026-03-09T20:08:33.437049+00:00"
   },
   {
     "symbol": "VST",
     "name": "Vistra Energy",
     "sector": "Energy",
-    "price": 163.71,
-    "change_pct": 3.19,
-    "rsi": 48.7,
+    "price": 163.59,
+    "change_pct": 3.11,
+    "rsi": 48.6,
     "sma50": 163.39,
-    "sma200": 181.6,
-    "market_cap": 55469125632,
+    "sma200": 181.59,
+    "market_cap": 55428464640,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-09T19:44:38.123519+00:00"
+    "last_updated": "2026-03-09T20:08:33.437049+00:00"
   },
   {
     "symbol": "CEG",
     "name": "Constellation Energy",
     "sector": "Energy",
-    "price": 322.96,
-    "change_pct": 1.36,
+    "price": 322.99,
+    "change_pct": 1.37,
     "rsi": 57.5,
     "sma50": 310.38,
     "sma200": 329.04,
-    "market_cap": 116908392448,
+    "market_cap": 116919255040,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-09T19:44:38.123519+00:00"
+    "last_updated": "2026-03-09T20:08:33.437049+00:00"
   },
   {
     "symbol": "ENR.DE",
@@ -153,32 +153,32 @@
     "sma200": 110.44,
     "market_cap": 127232450560,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-09T19:44:38.123519+00:00"
+    "last_updated": "2026-03-09T20:08:33.437049+00:00"
   },
   {
     "symbol": "SI=F",
     "name": "Silver Futures",
     "sector": "Commodities",
-    "price": 86.805,
-    "change_pct": 2.96,
+    "price": 86.73,
+    "change_pct": 2.87,
     "rsi": 52.5,
-    "sma50": 84.64,
+    "sma50": 84.63,
     "sma200": 54.22,
     "market_cap": null,
     "analyst_rating": null,
-    "last_updated": "2026-03-09T19:44:38.123519+00:00"
+    "last_updated": "2026-03-09T20:08:33.437049+00:00"
   },
   {
     "symbol": "GC=F",
     "name": "Gold Futures",
     "sector": "Commodities",
-    "price": 5143.1,
-    "change_pct": -0.3,
-    "rsi": 55.4,
-    "sma50": 4854.68,
-    "sma200": 3990.09,
+    "price": 5149.1,
+    "change_pct": -0.19,
+    "rsi": 55.7,
+    "sma50": 4854.8,
+    "sma200": 3990.12,
     "market_cap": null,
     "analyst_rating": null,
-    "last_updated": "2026-03-09T19:44:38.123519+00:00"
+    "last_updated": "2026-03-09T20:08:33.437049+00:00"
   }
 ]
