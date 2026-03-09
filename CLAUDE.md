@@ -16,19 +16,49 @@ Each user runs their own independent instance: own Telegram bot, own GitHub Acti
 - **Plattform:** Trade Republic
 - **Gehandelte Assets:** Aktien, Rohstoffe (Gold, Silber) - alles via Turbos
 
-### TRADING-STRATEGIE (ab März 2026)
+### TRADING-STRATEGIE v3 (ab April 2026)
+
+> Ziel: +15% Baseline / +30% Stretch pro Monat
+> Wenn Baseline erreicht → konservativer werden, nicht aggressiver.
 
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║  KERN-STRATEGIE — IMMER EINHALTEN!  Ziel: +30%/Monat        ║
+║  KERN-STRATEGIE v3 — IMMER EINHALTEN!                        ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  1. 50% bei +20% SOFORT RAUS, Rest Trailing Stop laufen     ║
-║     lassen → Runner-Ziel +40-60% auf die zweite Hälfte      ║
+║  1. 50% bei +20% SOFORT RAUS, Rest Trailing Stop auf BE     ║
+║     → Runner-Ziel +40-60% auf die zweite Hälfte             ║
 ║  2. Rücksetzer abwarten → gleiche oder bessere Position rein ║
 ║  3. MAX 3 offene Positionen gleichzeitig                     ║
 ║  4. Stop IMMER beim Kauf setzen — keine Ausnahme             ║
 ║  5. Rücksetzer kommt immer — Geduld zahlt sich aus           ║
+║  6. ≥60% Konfidenz-Gate — KEINE Ausnahme, auch kein "Lotto" ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+### Hedge-System (NEU v3)
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  SITUATIVER HEDGE — 3. Slot als Absicherung                  ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  WANN HEDGEN:                                                ║
+║  • 2 LONG-Positionen offen UND                               ║
+║  • Makro-Risiko HOCH (Krieg, FOMC, CPI, Tariffs, Crash)     ║
+║  → 3. Slot = Index-SHORT (DAX oder Nasdaq) als Hedge         ║
+║                                                               ║
+║  HEDGE-REGELN:                                               ║
+║  • Größe: Lotto 10% — NIE größer als die kleinste LONG-Pos  ║
+║  • Gleiche Exit-Regeln: 50% bei +20%, Rest Trail             ║
+║  • Hedge SCHLIESSEN wenn Makro-Risiko sinkt                  ║
+║  • DAX SHORT bevorzugt (weniger ATR als Nasdaq, EU-Handel)   ║
+║                                                               ║
+║  WANN NICHT HEDGEN:                                          ║
+║  • Nur 1 LONG offen → 3. Slot für nächsten Trade nutzen     ║
+║  • Makro ruhig → Hedge kostet nur Performance                ║
+║  • Bereits 50%+ Cash → Cash IST der Hedge                   ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
@@ -44,21 +74,44 @@ Each user runs their own independent instance: own Telegram bot, own GitHub Acti
 | **Quantum** | QBTS, APLD-adjacent | Hochspekulativ, nur Mini-Positionen |
 | **Europa** | ASML, SAP.DE, ENR.DE | Diversifikation, EUR-denominiert |
 
-### Risk Management Regeln
+### Risk Management v3
 
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║  DIESE REGELN GELTEN IMMER - KEINE AUSNAHMEN!                ║
+║  DIESE REGELN GELTEN IMMER — KEINE AUSNAHMEN!                ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  1. Max. Verlust pro Trade:      15% des Portfolios          ║
-║  2. Max. gleichzeitig riskiert:  50% des Portfolios          ║
+║  1. Max. Verlust pro Trade:      10% des Portfolios          ║
+║     (zurück von 15% — bei 2 Verlusten = -20%, noch erholbar)║
+║  2. Max. gleichzeitig riskiert:  40% des Portfolios          ║
 ║  3. Max. Sektor-Konzentration:   60% in einem Sektor         ║
-║     (Ausnahme: bei klarem Makro-Event bewusst überschreitbar)║
 ║  4. Nach 2 Verlusten in Folge:   Positionsgröße halbieren    ║
 ║  5. Nach -20% Drawdown:          24h Trading-Pause           ║
+║  6. ATR >7%: NUR Lotto/Mini OHNE Hebel                       ║
+║  7. KO-Abstand: IMMER ≥2x ATR (Rohstoffe ≥3x ATR)          ║
 ║                                                               ║
 ║  Credentials NIEMALS in committed Files!                     ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+### ATR-Messung (Event-adjustiert, NEU v3)
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  ATR-CHECK VOR JEDEM TRADE                                   ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Basis:    ATR (14) — 14-Tage-Durchschnitt                   ║
+║  Event:    ATR (5) — letzte 5 Tage                           ║
+║                                                               ║
+║  WENN ATR(5) > ATR(14) × 1,5:                               ║
+║  → Volatilität ERHÖHT, eine Stufe höher absichern:           ║
+║    • Standard → Klein                                        ║
+║    • Klein → Lotto                                           ║
+║    • Lotto → Kein Trade oder ohne Hebel                      ║
+║                                                               ║
+║  VOR EARNINGS/EVENTS: IMMER ATR(5) checken!                  ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
@@ -69,14 +122,17 @@ Die konkreten Trading-Entscheidungen (Entry, Exit, Stop, KO-Abstand) kommen aus 
 
 **Kernprinzipien:**
 - **Gestaffelte Exits:** 50% bei +20% raus, Rest Trailing Stop auf Break-Even → Runner-Ziel +40-60%
-- **Konfidenz-Gate:** Nur Trades mit ≥60% Konfidenz aus der Analyse
+- **Konfidenz-Gate:** Nur Trades mit ≥60% Konfidenz aus der Analyse — KEINE Ausnahme
 - **Gewinne mitnehmen** wenn die Analyse es zeigt (D-Wave Lektion: waren +30% im Plus, nicht mitgenommen)
 - **LONG und SHORT sind gleichwertig** - die Analyse entscheidet die Richtung, nicht ein Bias
+- **Situativer Hedge** - bei 2 LONGs + hohem Makro-Risiko → 3. Slot als Index-SHORT (DAX bevorzugt)
 - **KO-Berechnung: ATR + Chart kombiniert** - KO liegt IMMER unter dem stärksten Support (LONG) bzw. über Resistance (SHORT). ATR-Multiplikator nach Asset-Klasse (Large Cap 2x, Small Cap 2.5x, Rohstoffe 3x)
+- **ATR Event-Check** - ATR(5) vs ATR(14) vor jedem Trade. Wenn ATR(5) > ATR(14) × 1,5 → Position eine Stufe kleiner
 - **Time-Stops einhalten** - nach 5 Tagen ohne Bewegung halbieren, nach 8 Tagen raus
 - **Korrelation prüfen** - vor jedem neuen Trade Sektor-Konzentration checken
 - **Vor Earnings absichern** - min. 50% der Position vor dem Event sichern oder ATR-Multiplikator erhöhen
 - **Keine festen EUR-Beträge** - Positionsgröße in % vom Portfolio (skaliert automatisch)
+- **Monatsziel darf nicht in Trades drängen** - +15% Baseline reicht, kein FOMO bei Stretch
 
 ### Harte Regeln für Analysen
 
@@ -154,7 +210,7 @@ Language defaults to German. Change `{{LANGUAGE}}` in `prompts/00_master.md` for
 - **ATR-Multiplikator nach Asset-Klasse:** Large Cap 2.0x, Small/Mid Cap 2.5x, Rohstoffe 3.0x, Krypto 3.0x
 - **SHORT-Trades werden gleichwertig bewertet** via LONG vs SHORT Scorecard in Schritt 2
 - Position sizing in % vom Portfolio (10% Lotto / 25% Klein / 35% Standard / 20% Ohne Hebel)
-- Risk-per-trade capped at 15% Portfolio
+- Risk-per-trade capped at 10% Portfolio
 - Time-stops: 5 Tage ohne Bewegung → halbieren, 8 Tage → raus
 - Correlation check against open positions before each new trade
 

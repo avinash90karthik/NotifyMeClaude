@@ -28,6 +28,7 @@ SYMBOLS = {
     'ARM':  {'name': 'ARM Holdings', 'emoji': '🧠'},
     'NVDA': {'name': 'NVIDIA', 'emoji': '🤖'},
     'ENR.DE': {'name': 'Siemens Energy', 'emoji': '🏭'},
+    'WIX':  {'name': 'Wix.com', 'emoji': '🌐'},
 }
 
 ALERT_RULES = {
@@ -80,6 +81,10 @@ ALERT_RULES = {
     'ENR.DE': {
         'above': [150, 156.70, 165, 175],
         'below': [138, 126, 115, 102],
+    },
+    'WIX': {
+        'above': [100, 110, 127],
+        'below': [87, 85, 83, 75],
     },
 }
 
@@ -304,6 +309,26 @@ TRADING_ZONES = {
              'note': 'SMA 200 Test! Letzter Support vor KO-Gefahr.'},
             {'type': 'DANGER', 'price': 160, 'dir': 'below',
              'note': 'KO-LEVEL! Turbo wertlos bei $160. MUSS bei $178 schon raus sein!'},
+        ],
+    },
+    'WIX': {
+        'bias': 'LONG_ON_DIP',
+        'context': 'RSI 79.7 OVERBOUGHT nach +54% V-Recovery von $60. FwdPE 11.4x, FCF Yield 11%, $2B Buyback (38% Mkt Cap!). Death Cross intakt, SMA200 $127. Signal WARTEN 58%. Entry bei Pullback $83-87 + RSI<60. Updated 06.03.2026.',
+        'zones': [
+            {'type': 'BUY', 'price': 87, 'dir': 'below',
+             'note': 'Erste Kaufzone! Pullback-Entry. RSI muss <60 sein. Position 25%.'},
+            {'type': 'BUY', 'price': 85, 'dir': 'below',
+             'note': 'Starke Kaufzone! 38.2% Fib-Retracement. Position 50% aufbauen. KO $68.'},
+            {'type': 'BUY', 'price': 83, 'dir': 'below',
+             'note': 'Aggressive Kaufzone! Gap-Fill Zone. Letzter starker Support. Position 25%.'},
+            {'type': 'DANGER', 'price': 75, 'dir': 'below',
+             'note': 'GEFAHR! Unter $75 = V-Recovery gescheitert. These invalidiert.'},
+            {'type': 'WATCH', 'price': 100, 'dir': 'above',
+             'note': 'Psychologische Marke. Wenn Long: Teilgewinne sichern.'},
+            {'type': 'SELL', 'price': 110, 'dir': 'above',
+             'note': 'Pre-Crash Konsolidierung. 50% Position schliessen.'},
+            {'type': 'SELL', 'price': 127, 'dir': 'above',
+             'note': 'SMA200 + Death Cross! Maximaler Widerstand. Komplett raus.'},
         ],
     },
     'ENR.DE': {
