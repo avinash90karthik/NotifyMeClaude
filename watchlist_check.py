@@ -16,6 +16,7 @@ WATCHLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memor
 PORTFOLIO_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'portfolio.md')
 
 FUTURES = {'SI=F', 'GC=F'}
+INDEX_FUTURES = ['ES=F', 'NQ=F', 'YM=F']  # S&P, Nasdaq, Dow — for pre-market sentiment
 MIN_VOLUME = 50_000
 MIN_SCORE = 20
 TOP_N = 5
@@ -700,7 +701,44 @@ def fmt_candidate(i, score, sym, sector, d, signals, direction, positions, name=
     return line
 
 
-def build_message(all_data, positions, sector_map, name_map, scan_time, total_symbols, total_ok):
+def get_futures_sentiment():
+    """Fetch US index futures for pre-market sentiment."""
+    import yfinance as yf
+    names = {'ES=F': 'S&P 500', 'NQ=F': 'Nasdaq', 'YM=F': 'Dow Jones'}
+    results = []
+    for sym in INDEX_FUTURES:
+        try:
+            t = yf.Ticker(sym)
+            fi = t.fast_info
+            price = fi.get('lastPrice', fi.get('last_price', None))
+            prev = fi.get('previousClose', fi.get('previous_close', None))
+            if price and prev and prev > 0:
+                chg = round((price - prev) / prev * 100, 2)
+                results.append({'symbol': sym, 'name': names.get(sym, sym), 'price': price, 'change_pct': chg})
+        except Exception:
+            continue
+    return results
+
+
+def fmt_futures_block(futures_data):
+    """Format futures sentiment as a compact block for the Telegram message."""
+    if not futures_data:
+        return ''
+    lines = ['<b>🇺🇸 US FUTURES</b>']
+    avg_chg = sum(f['change_pct'] for f in futures_data) / len(futures_data)
+    for f in futures_data:
+        arrow = '🟢' if f['change_pct'] > 0.1 else '🔴' if f['change_pct'] < -0.1 else '⚪'
+        lines.append(f'  {arrow} {f["name"]}: {f["change_pct"]:+.2f}%')
+    if avg_chg > 0.5:
+        lines.append('  → Tendenz: <b>Risk-On</b> 📈')
+    elif avg_chg < -0.5:
+        lines.append('  → Tendenz: <b>Risk-Off</b> 📉')
+    else:
+        lines.append('  → Tendenz: <b>Neutral</b> ↔️')
+    return '\n'.join(lines) + '\n'
+
+
+def build_message(all_data, positions, sector_map, name_map, scan_time, total_symbols, total_ok, futures_data=None):
     passed = {sym: d for sym, d in all_data.items() if passes_hard_gates(sym, d)}
 
     long_scores = []
@@ -726,6 +764,10 @@ def build_message(all_data, positions, sector_map, name_map, scan_time, total_sy
 
     msg = f'<b>📋 WATCHLIST CHECK</b> | {scan_time}\n'
     msg += f'{session} | {total_ok}/{total_symbols} Symbole\n'
+
+    # US Futures sentiment
+    if futures_data:
+        msg += '\n' + fmt_futures_block(futures_data)
 
     # Portfolio summary
     if positions:
@@ -870,8 +912,18 @@ def main():
         if sym in data and data[sym].get('sector'):
             sector_map.setdefault(sym, data[sym]['sector'])
 
-    # 7. Build + send message
-    msg = build_message(data, positions, sector_map, name_map, scan_time, total_symbols, total_ok)
+    # 7. Fetch US futures sentiment
+    print('  Fetching US futures...')
+    futures_data = get_futures_sentiment()
+    if futures_data:
+        avg = sum(f['change_pct'] for f in futures_data) / len(futures_data)
+        parts = ['{} {:+.2f}%'.format(f['name'], f['change_pct']) for f in futures_data]
+        print(f'  Futures: {", ".join(parts)} → avg {avg:+.2f}%')
+    else:
+        print('  Futures: keine Daten')
+
+    # 8. Build + send message
+    msg = build_message(data, positions, sector_map, name_map, scan_time, total_symbols, total_ok, futures_data)
     print(f'\n{msg}\n')
 
     result = send_telegram(msg)
