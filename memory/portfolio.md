@@ -1,8 +1,8 @@
 # Silver Hawk Portfolio - Single Source of Truth
 
-**Letzte Aktualisierung:** 07.03.2026 23:50 (MDB LONG 63% + HIMS LONG 62% Analysen für Montag.)
+**Letzte Aktualisierung:** 09.03.2026 11:00 (ASTS BE-Stop ausgelöst, Portfolio-Rebalancing auf 3 Positionen)
 **Startkapital März:** ~1.788 EUR (frisches Kapital eingezahlt)
-**Ziel März:** +30% (2.324 EUR)
+**Ziel März:** +15% Baseline (2.056 EUR) / +30% Stretch (2.324 EUR) — v3 Strategie
 
 ---
 
@@ -10,11 +10,13 @@
 
 | Metrik | Wert |
 |--------|------|
-| **Portfolio-Wert** | **~1.575 EUR** (10 investiert + 1.565 Cash) |
-| **Investiert** | ~10 EUR (NVIDIA Mini) |
-| **Cash frei** | **~1.565 EUR** |
-| **Offene Positionen** | **1** (NVIDIA Mini) |
-| **März P&L** | **~-187 EUR (-10,5%)** geschlossen + offene P&L |
+| **Portfolio-Wert** | **~1.468 EUR** (~504 investiert + ~964 Cash) |
+| **Investiert** | ~504 EUR (3 Positionen + NVDA Mini) |
+| **Cash frei** | **~964 EUR (66%)** |
+| **Offene Positionen** | **3** (DAX SHORT, Gold LONG, HIMS Aktie) + NVDA Mini |
+| **März P&L** | **~-320 EUR (-17,9%)** geschlossen + offene P&L |
+
+⚠️ **WARNUNG:** Nahe an -20% Drawdown-Regel (24h Trading-Pause)!
 
 ---
 
@@ -22,10 +24,13 @@
 
 | # | Symbol | Richtung | Stück | Buy-In | Aktuell | P&L | KO | Stop/Limit | Notiz |
 |---|--------|----------|-------|--------|---------|-----|-----|------------|-------|
-| 1 | NVIDIA (Bruchteil) | LONG | 0.063 | ~11 EUR | ~10 EUR | ~-1 EUR | - | - | Mini-Position |
-| ~~2~~ | ~~DAX SHORT Turbo KO 25.009~~ | ~~SHORT~~ | ~~10 Stk~~ | ~~88 EUR~~ | ~~VERKAUFT~~ | — | — | — | Runner bei +40% verkauft 05.03 abends ✅ → siehe Geschlossene Trades |
-| ~~3~~ | ~~AMD LONG Turbo KO 174,39~~ | ~~LONG~~ | ~~185 Stk~~ | ~~439 EUR~~ | ~~VERKAUFT~~ | — | — | — | Verkauft 06.03 Freitag Abend, -26% (~-114€). Wochenend-Risiko vermieden → siehe Geschlossene Trades |
-| ~~4~~ | ~~SI=F SHORT Turbo KO 97,10~~ | ~~SHORT~~ | ~~13 Stk~~ | ~~173 EUR~~ | ~~VERKAUFT~~ | — | — | — | Geschlossen 06.03, -18,5% → siehe Geschlossene Trades |
+| 1 | DAX SHORT Turbo KO 25.005 | SHORT | 12 Stk | ~246 EUR | ~212 EUR | ~-34 EUR (-15%) | 25.005 | **Stop 15,40€ Cert** (~DAX 23.465) | These: Industrie-Crash (-11,1% Orders). RSI 28 überverkauft → Bounce-Risiko. Verlust bei Stop: ~57€ (3,8% Portfolio) |
+| 2 | Gold LONG Turbo x14,84 | LONG | 5 Stk | 32,39€/Stk (162 EUR) | 28,16€/Stk (141 EUR) | ~-21 EUR (-13%) | 4.786 USD | **Stop 22,67€ Cert** (~Gold $5.033) | Über SMA20+50, RSI 63. Verlust bei Stop: ~49€ (3,3% Portfolio) |
+| 3 | HIMS Aktie (kein Hebel) | LONG | 7.14 | ~19,54€/Stk (140 EUR) | ~19,54€/Stk (140 EUR) | ~-11 EUR (-7,6%) | - | **Stop ~14,70€/Aktie** ($17 USD) | Squeeze-These: 44,1% Short Float + Novo Nordisk. Verlust bei Stop: ~35€ (2,4% Portfolio) |
+| 4 | NVIDIA (Bruchteil) | LONG | 0.063 | ~11 EUR | ~10 EUR | ~-1 EUR | - | - | Mini-Position, irrelevant |
+| ~~5~~ | ~~ASTS LONG Turbo x75~~ | ~~LONG~~ | ~~? Stk~~ | ~~~164 EUR~~ | ~~VERKAUFT~~ | — | — | — | Break-Even Stop ausgelöst 09.03 → siehe Geschlossene Trades |
+| ~~6~~ | ~~AMD LONG Turbo KO 174,39~~ | ~~LONG~~ | ~~185 Stk~~ | ~~439 EUR~~ | ~~VERKAUFT~~ | — | — | — | Verkauft 06.03 Freitag Abend, -26% (~-114€) → siehe Geschlossene Trades |
+| ~~7~~ | ~~SI=F SHORT Turbo KO 97,10~~ | ~~SHORT~~ | ~~13 Stk~~ | ~~173 EUR~~ | ~~VERKAUFT~~ | — | — | — | Geschlossen 06.03, -18,5% → siehe Geschlossene Trades |
 
 ---
 
@@ -47,7 +52,8 @@
 | DAX SHORT KO 25.009 (Runner 10 Stk) | ~88 (Buy-in 8,80) | ~123 (12,32€) | **~+35** | Runner bei +40% verkauft 05.03 abends! 🔥 |
 | SI=F SHORT KO 97,10 (13 Stk) | 173,12 | 141,09 | **-32,03** | Unter 60% Gate getradet (55%)! Learning: REGEL IST REGEL |
 | AMD LONG KO 174,39 (185 Stk) | 439,45 | 304,83 (261,28+43,55) | **-134,62** | Verkauft 06.03 Fr Abend bei -30,6%. Doppelte Divergenz war da, aber AMD fiel weiter. Wochenend-Gap-Risiko zu hoch |
-| **GESAMT** | | | **~-186** | Kern-Strategie 4x perfekt, aber SI=F Regelverstoß + AMD Timing schlecht |
+| ASTS LONG Turbo x75 | ~164 | ~164 | **~0** | Break-Even Stop ausgelöst 09.03. Score 7/7 aber x75 Hebel zu riskant → BE-Stop war richtig |
+| **GESAMT** | | | **~-186** | Kern-Strategie 4x perfekt, aber SI=F Regelverstoß + AMD Timing schlecht. DAX/Gold/HIMS noch offen! |
 
 ---
 
@@ -130,6 +136,10 @@
 - **Geopolitik-Trades können funktionieren** — Fr→Mo Gold-Call war goldrichtig, Ausführung war das Problem
 - **UNTER 60% Gate = KEIN TRADE, auch kein "Lotto"!** — SI=F SHORT 55% Konfidenz, -16% über Nacht. Regel ist Regel.
 - **Bei ATR >5% + Safe Haven KEINE Overnight-SHORTs** — Silber + Iran-Krieg = Hoch-Druck, SHORT über Nacht = Selbstmord
+- **NIEMALS Trades ohne 4-Schritt-Analyse!** — DAX SHORT Freitag Nacht = Lotterie. These mag stimmen, aber ohne Analyse kein kalkuliertes Risiko
+- **MAX 3 Positionen EINHALTEN!** — 5 Positionen = 0 Cash = 0 Kontrolle. Februar-Fehler wiederholt
+- **Break-Even Stop bei Gewinnern = RICHTIG** — ASTS +8% → BE-Stop ausgelöst bei 0%. Besser 0 als Minus
+- **Nahe -20% Drawdown = ALARMZONE** — Bei -17,9% im März. Nächster Fehler triggert 24h Pause
 
 ---
 
