@@ -10,7 +10,7 @@
     "sma200": 243.77,
     "market_cap": 3784127807488,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-09T11:13:20.677953+00:00"
+    "last_updated": "2026-03-09T12:07:31.278392+00:00"
   },
   {
     "symbol": "ARM",
@@ -23,7 +23,7 @@
     "sma200": 138.46,
     "market_cap": 121471393792,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-09T11:13:20.677953+00:00"
+    "last_updated": "2026-03-09T12:07:31.278392+00:00"
   },
   {
     "symbol": "NVDA",
@@ -36,7 +36,7 @@
     "sma200": 176.12,
     "market_cap": 4323494854656,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-09T11:13:20.677953+00:00"
+    "last_updated": "2026-03-09T12:07:31.278392+00:00"
   },
   {
     "symbol": "GOOGL",
@@ -49,7 +49,7 @@
     "sma200": 252.88,
     "market_cap": 3610712735744,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-09T11:13:20.677953+00:00"
+    "last_updated": "2026-03-09T12:07:31.278392+00:00"
   },
   {
     "symbol": "QBTS",
@@ -62,7 +62,7 @@
     "sma200": 22.49,
     "market_cap": 6876695552,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-09T11:13:20.677953+00:00"
+    "last_updated": "2026-03-09T12:07:31.278392+00:00"
   },
   {
     "symbol": "IREN",
@@ -75,7 +75,7 @@
     "sma200": 36.08,
     "market_cap": 12175561728,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-09T11:13:20.677953+00:00"
+    "last_updated": "2026-03-09T12:07:31.278392+00:00"
   },
   {
     "symbol": "APLD",
@@ -88,20 +88,20 @@
     "sma200": 22.68,
     "market_cap": 7028787200,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-09T11:13:20.677953+00:00"
+    "last_updated": "2026-03-09T12:07:31.278392+00:00"
   },
   {
     "symbol": "SAP.DE",
     "name": "SAP SE",
     "sector": "Technology",
-    "price": 171.78,
-    "change_pct": -0.56,
-    "rsi": 47.1,
+    "price": 171.86,
+    "change_pct": -0.51,
+    "rsi": 47.2,
     "sma50": 184.57,
     "sma200": 223.0,
-    "market_cap": 200055717888,
+    "market_cap": 200148893696,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-09T11:13:20.677953+00:00"
+    "last_updated": "2026-03-09T12:07:31.278392+00:00"
   },
   {
     "symbol": "ASML",
@@ -114,7 +114,7 @@
     "sma200": 993.05,
     "market_cap": 507629174784,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-09T11:13:20.677953+00:00"
+    "last_updated": "2026-03-09T12:07:31.278392+00:00"
   },
   {
     "symbol": "VST",
@@ -127,7 +127,7 @@
     "sma200": 181.56,
     "market_cap": 53754662912,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-09T11:13:20.677953+00:00"
+    "last_updated": "2026-03-09T12:07:31.278392+00:00"
   },
   {
     "symbol": "CEG",
@@ -140,45 +140,45 @@
     "sma200": 328.89,
     "market_cap": 115496632320,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-09T11:13:20.677953+00:00"
+    "last_updated": "2026-03-09T12:07:31.278392+00:00"
   },
   {
     "symbol": "ENR.DE",
     "name": "Siemens Energy",
     "sector": "Energy",
-    "price": 142.65,
-    "change_pct": -4.74,
-    "rsi": 39.3,
-    "sma50": 145.13,
+    "price": 142.9,
+    "change_pct": -4.57,
+    "rsi": 39.5,
+    "sma50": 145.14,
     "sma200": 110.41,
-    "market_cap": 122014842880,
+    "market_cap": 122228678656,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-09T11:13:20.677953+00:00"
+    "last_updated": "2026-03-09T12:07:31.278392+00:00"
   },
   {
     "symbol": "SI=F",
     "name": "Silver Futures",
     "sector": "Commodities",
-    "price": 83.4,
-    "change_pct": -1.08,
-    "rsi": 49.3,
+    "price": 83.48,
+    "change_pct": -0.99,
+    "rsi": 49.4,
     "sma50": 84.57,
     "sma200": 54.21,
     "market_cap": null,
     "analyst_rating": null,
-    "last_updated": "2026-03-09T11:13:20.677953+00:00"
+    "last_updated": "2026-03-09T12:07:31.278392+00:00"
   },
   {
     "symbol": "GC=F",
     "name": "Gold Futures",
     "sector": "Commodities",
-    "price": 5101.3,
-    "change_pct": -1.11,
+    "price": 5099.8,
+    "change_pct": -1.14,
     "rsi": 53.3,
-    "sma50": 4853.84,
+    "sma50": 4853.81,
     "sma200": 3989.88,
     "market_cap": null,
     "analyst_rating": null,
-    "last_updated": "2026-03-09T11:13:20.677953+00:00"
+    "last_updated": "2026-03-09T12:07:31.278392+00:00"
   }
 ]
