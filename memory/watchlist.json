@@ -10,7 +10,7 @@
     "sma200": 244.64,
     "market_cap": 3833366052864,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-11T20:09:59.478146+00:00"
+    "last_updated": "2026-03-11T20:44:01.716415+00:00"
   },
   {
     "symbol": "ARM",
@@ -23,20 +23,20 @@
     "sma200": 138.3,
     "market_cap": 127546032128,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-11T20:09:59.478146+00:00"
+    "last_updated": "2026-03-11T20:44:01.716415+00:00"
   },
   {
     "symbol": "NVDA",
     "name": "NVIDIA",
     "sector": "Technology",
-    "price": 185.997,
-    "change_pct": 0.66,
+    "price": 186.03,
+    "change_pct": 0.68,
     "rsi": 51.5,
     "sma50": 185.71,
     "sma200": 176.9,
-    "market_cap": 4520657027072,
+    "market_cap": 4521459187712,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-11T20:09:59.478146+00:00"
+    "last_updated": "2026-03-11T20:44:01.716415+00:00"
   },
   {
     "symbol": "GOOGL",
@@ -49,20 +49,20 @@
     "sma200": 254.8,
     "market_cap": 3734344302592,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-11T20:09:59.478146+00:00"
+    "last_updated": "2026-03-11T20:44:01.716415+00:00"
   },
   {
     "symbol": "QBTS",
     "name": "D-Wave Quantum",
     "sector": "Technology",
-    "price": 18.9,
-    "change_pct": 0.75,
+    "price": 18.91,
+    "change_pct": 0.8,
     "rsi": 43.8,
     "sma50": 22.92,
     "sma200": 22.52,
-    "market_cap": 6991368704,
+    "market_cap": 6995067904,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-11T20:09:59.478146+00:00"
+    "last_updated": "2026-03-11T20:44:01.716415+00:00"
   },
   {
     "symbol": "IREN",
@@ -75,7 +75,7 @@
     "sma200": 36.54,
     "market_cap": 13927249920,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-11T20:09:59.478146+00:00"
+    "last_updated": "2026-03-11T20:44:01.716415+00:00"
   },
   {
     "symbol": "APLD",
@@ -88,7 +88,7 @@
     "sma200": 22.99,
     "market_cap": 7973787648,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-11T20:09:59.478146+00:00"
+    "last_updated": "2026-03-11T20:44:01.716415+00:00"
   },
   {
     "symbol": "SAP.DE",
@@ -101,7 +101,7 @@
     "sma200": 222.03,
     "market_cap": 193160970240,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-11T20:09:59.478146+00:00"
+    "last_updated": "2026-03-11T20:44:01.716415+00:00"
   },
   {
     "symbol": "ASML",
@@ -114,20 +114,20 @@
     "sma200": 1002.61,
     "market_cap": 544491962368,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-11T20:09:59.478146+00:00"
+    "last_updated": "2026-03-11T20:44:01.716415+00:00"
   },
   {
     "symbol": "VST",
     "name": "Vistra Energy",
     "sector": "Energy",
-    "price": 159.105,
-    "change_pct": -3.22,
-    "rsi": 44.6,
+    "price": 159.16,
+    "change_pct": -3.19,
+    "rsi": 44.7,
     "sma50": 163.39,
     "sma200": 181.68,
-    "market_cap": 53908832256,
+    "market_cap": 53927469056,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-11T20:09:59.478146+00:00"
+    "last_updated": "2026-03-11T20:44:01.716415+00:00"
   },
   {
     "symbol": "CEG",
@@ -140,7 +140,7 @@
     "sma200": 328.81,
     "market_cap": 108846874624,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-11T20:09:59.478146+00:00"
+    "last_updated": "2026-03-11T20:44:01.716415+00:00"
   },
   {
     "symbol": "ENR.DE",
@@ -153,32 +153,32 @@
     "sma200": 111.15,
     "market_cap": 132236214272,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-11T20:09:59.478146+00:00"
+    "last_updated": "2026-03-11T20:44:01.716415+00:00"
   },
   {
     "symbol": "SI=F",
     "name": "Silver Futures",
     "sector": "Commodities",
-    "price": 86.21,
-    "change_pct": -3.77,
-    "rsi": 51.7,
-    "sma50": 85.14,
+    "price": 85.9,
+    "change_pct": -4.12,
+    "rsi": 51.4,
+    "sma50": 85.13,
     "sma200": 54.75,
     "market_cap": null,
     "analyst_rating": null,
-    "last_updated": "2026-03-11T20:09:59.478146+00:00"
+    "last_updated": "2026-03-11T20:44:01.716415+00:00"
   },
   {
     "symbol": "GC=F",
     "name": "Gold Futures",
     "sector": "Commodities",
-    "price": 5190.8,
-    "change_pct": -0.98,
-    "rsi": 56.3,
-    "sma50": 4881.87,
-    "sma200": 4008.66,
+    "price": 5184.4,
+    "change_pct": -1.1,
+    "rsi": 56.0,
+    "sma50": 4881.73,
+    "sma200": 4008.62,
     "market_cap": null,
     "analyst_rating": null,
-    "last_updated": "2026-03-11T20:09:59.478146+00:00"
+    "last_updated": "2026-03-11T20:44:01.716415+00:00"
   }
 ]
