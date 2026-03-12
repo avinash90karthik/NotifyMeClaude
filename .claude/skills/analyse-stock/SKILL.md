@@ -23,7 +23,7 @@ argument-hint: "<SYMBOL> [LANGUAGE]"
 ║  Max. Verlust pro Trade:      10% des Portfolios             ║
 ║  Max. gleichzeitig riskiert:  40% des Portfolios             ║
 ║  Max. Sektor-Konzentration:   60% in einem Sektor            ║
-║  Time-Stop: 5 Tage kein +5% → halbieren, 8 Tage → raus     ║
+║  Time-Stop: 3 Tage kein +5% → halbieren, 5 Tage → raus     ║
 ║  Vor Earnings: min. 50% sichern oder KO-Abstand erhöhen     ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
@@ -48,6 +48,7 @@ Lies und führe aus: `prompts/01_data_collection.md`
 - Short Interest analysieren
 - **NEU: Korrelations-Check gegen offene Positionen aus Supabase (PFLICHT!)**
 - **NEU: Event-Kalender (Earnings, Fed, CPI) mit Impact-Bewertung**
+- **JSON-Block am Ende generieren (PFLICHT!)**
 
 ### Schritt 2: Investment Debate
 Lies und führe aus: `prompts/02_investment_debate.md`
@@ -56,6 +57,7 @@ Lies und führe aus: `prompts/02_investment_debate.md`
 - Konkrete Preisziele pro Seite
 - **NEU: SHORT-Trade Scorecard (LONG vs SHORT, je 0-10 über 6 Kriterien)**
 - **NEU: Wenn SHORT Score >= LONG Score → SHORT-Setup ausarbeiten**
+- **JSON-Block am Ende generieren (PFLICHT!)**
 
 ### Schritt 3: Judge, Risk & Positionierung
 Lies und führe aus: `prompts/03_judge_risk.md`
@@ -67,8 +69,9 @@ Lies und führe aus: `prompts/03_judge_risk.md`
   - C) Finales KO = das WEITER ENTFERNTE von A und B
 - **NEU: Earnings/Event-Warnung** (ATR-Multiplikator +0.5 wenn Event < 5 Tage)
 - **NEU: Risk-per-Trade Check** (10% max, 40% gleichzeitig, gegen Portfolio aus Supabase)
-- **NEU: Time-Stops** (5 Tage → halbieren, 8 Tage → raus, vor Earnings → 50% sichern)
+- **NEU: Time-Stops** (3 Tage → halbieren, 5 Tage → raus, vor Earnings → 50% sichern)
 - Positions-Matrix: 4 Szenarien in % vom Portfolio (Mini 5% / Klein 15% / Standard 30% / Ohne Hebel 20%)
+- **JSON-Block am Ende generieren (PFLICHT!)**
 - Stop-Loss Strategie (mentaler Stop ÜBER KO)
 
 ### Schritt 4: Zusammenfassung & Versand

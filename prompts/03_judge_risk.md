@@ -9,6 +9,8 @@ Referenziere die JSON-Blöcke aus Schritt 1 und 2 fuer strukturierte Datenpunkte
 
 Konsultiere `memory/reflections.md` fuer historische Performance-Daten (Win-Rate, Muster, Risk/Reward).
 
+**ACHTUNG:** Pruefe das Datum in reflections.md. Wenn aelter als 7 Tage → `python reflect.py` ausfuehren!
+
 ---
 
 ## INVESTMENT JUDGE
@@ -81,6 +83,20 @@ Analysiere die Bull vs Bear Argumente aus Schritt 2:
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
+
+### REFLECTION-BASED ADJUSTMENT
+
+Lies `memory/reflections.md` und passe an:
+
+| Reflection-Befund | Adjustment |
+|---|---|
+| Win-Rate Konfidenz-Bracket < 30% | Konfidenz -5% fuer dieses Bracket |
+| Win-Rate LONG < 40% UND Signal=LONG | Warnung: "LONG historisch schwach" |
+| Win-Rate SHORT < 40% UND Signal=SHORT | Warnung: "SHORT historisch schwach" |
+| Pattern DISCIPLINE_VIOLATION > 2x | Zusaetzlicher Enforcement-Check |
+| Avg Duration Gewinner < 3 Tage | Time-Stop verschaerfen auf 3/5 Tage |
+
+**Angewandte Adjustments:** [Liste hier alle angewandten Adjustments auf oder "Keine"]
 
 ### ENTSCHEIDUNG
 
@@ -231,8 +247,8 @@ Identifiziere die relevanten Chart-Levels aus Schritt 1:
 ### Time-Stops
 | Bedingung | Aktion |
 |-----------|--------|
-| Nach 5 Handelstagen <5% im Plus | Position halbieren |
-| Nach 8 Handelstagen seitwaerts | Position schliessen |
+| Nach 3 Handelstagen <5% im Plus | Position halbieren |
+| Nach 5 Handelstagen seitwaerts | Position schliessen |
 | Earnings < 2 Tage entfernt | Min. 50% sichern |
 
 ### Watch Zones
@@ -292,6 +308,7 @@ Identifiziere die relevanten Chart-Levels aus Schritt 1:
 - ✅ Stop-Levels basierend auf Support-Zonen
 - ✅ **Risk Audit: Alle 5 VETO-Regeln + 4 WARNUNGs explizit geprueft (PFLICHT!)**
 - ✅ **Regime-Adjustment angewandt (Konfidenz vor/nach dokumentiert)**
+- ✅ **Reflection-Based Adjustment geprueft**
 
 ---
 

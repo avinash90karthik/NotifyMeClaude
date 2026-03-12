@@ -323,7 +323,7 @@ Dokumentiere was du im Chart siehst:
 
 ---
 
-## 1.1b INTRADAY-KONTEXT (Optional)
+## 1.1b INTRADAY-KONTEXT (PFLICHT fuer Aktien)
 
 **NUR als Kontext, NICHT fuer Indikator-Berechnung!**
 
@@ -368,7 +368,7 @@ except Exception as e:
     print(f'INTRADAY-KONTEXT: Nicht verfuegbar ({e})')
 ```
 
-> **Hinweis:** Intraday-Daten dienen NUR als zusaetzlicher Kontext fuer Entry-Timing. Alle technischen Indikatoren (RSI, MACD, ATR etc.) werden ausschliesslich auf Daily-Basis berechnet. Futures und einige Assets liefern keine Intraday-Daten — das ist OK.
+> **Hinweis:** Intraday-Daten dienen NUR als zusaetzlicher Kontext fuer Entry-Timing. Alle technischen Indikatoren (RSI, MACD, ATR etc.) werden ausschliesslich auf Daily-Basis berechnet. Wenn Intraday-Daten nicht verfuegbar (manche Futures/Rohstoffe, Wochenende) → ueberspringen.
 
 ---
 
@@ -736,6 +736,7 @@ Wenn ein relevantes Makro-Event ansteht (FOMC, ECB, CPI, etc.), pruefe die Markt
 - ✅ Korrelations-Check gegen bestehende Positionen (PFLICHT!)
 - ✅ Event-Kalender mit Earnings und Makro-Terminen
 - ✅ **Regime-Erkennung durchgefuehrt (TRENDING/RANGE/CHOPPY/TRANSITIONAL)**
+- ✅ **Intraday-Kontext fuer Aktien ausgefuehrt (PFLICHT!)**
 
 ---
 

@@ -137,6 +137,65 @@ def _detect_patterns(notiz, pnl_eur):
     return patterns
 
 
+def calc_duration_stats(trades):
+    """Calculate trade duration statistics from date info in trade notes.
+    Parses 'Kauf DD.MM', 'Entry DD.MM', 'Verkauf DD.MM' patterns.
+    Returns dict with avg/median durations or None if insufficient data."""
+    durations_win = []
+    durations_loss = []
+
+    for t in trades:
+        notiz = t.get('notiz', '')
+        full = t.get('full_name', '') + ' ' + notiz
+
+        # Try to find entry and exit dates (DD.MM or DD.MM.YY format)
+        entry_match = re.search(r'(?:Kauf|Entry|Einstieg)[:\s]+(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?', full, re.IGNORECASE)
+        exit_match = re.search(r'(?:Verkauf|Exit|Ausstieg|Stop)[:\s]+(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?', full, re.IGNORECASE)
+
+        if not entry_match or not exit_match:
+            continue
+
+        try:
+            entry_day, entry_month = int(entry_match.group(1)), int(entry_match.group(2))
+            exit_day, exit_month = int(exit_match.group(1)), int(exit_match.group(2))
+            year = 2026  # Current year default
+            if entry_match.group(3):
+                y = int(entry_match.group(3))
+                year = y if y > 100 else 2000 + y
+
+            entry_date = datetime(year, entry_month, entry_day)
+            exit_year = year
+            if exit_month < entry_month:
+                exit_year = year + 1
+            exit_date = datetime(exit_year, exit_month, exit_day)
+
+            days = (exit_date - entry_date).days
+            if days < 0 or days > 365:
+                continue
+
+            if t['pnl_eur'] > 0:
+                durations_win.append(days)
+            elif t['pnl_eur'] < 0:
+                durations_loss.append(days)
+        except (ValueError, OverflowError):
+            continue
+
+    all_durations = durations_win + durations_loss
+    if not all_durations:
+        return None
+
+    all_durations.sort()
+    median = all_durations[len(all_durations) // 2]
+
+    return {
+        'avg_days': round(sum(all_durations) / len(all_durations), 1),
+        'median_days': median,
+        'avg_days_winners': round(sum(durations_win) / len(durations_win), 1) if durations_win else None,
+        'avg_days_losers': round(sum(durations_loss) / len(durations_loss), 1) if durations_loss else None,
+        'n_parsed': len(all_durations),
+    }
+
+
 def parse_analyses(content):
     """Parse completed analyses for confidence data."""
     analyses = []
@@ -250,6 +309,8 @@ def analyze_trades(trades, analyses):
     discipline_violations = len([t for t in trades if 'DISCIPLINE_VIOLATION' in t['patterns']])
     below_gate = len([t for t in trades if 'BELOW_GATE' in t['patterns']])
 
+    duration = calc_duration_stats(trades)
+
     return {
         'total_trades': total,
         'wins': len(wins),
@@ -266,6 +327,7 @@ def analyze_trades(trades, analyses):
         'v3_partial_exits': v3_exits,
         'discipline_violations': discipline_violations,
         'below_gate_trades': below_gate,
+        'duration': duration,
     }
 
 
@@ -357,6 +419,30 @@ def generate_reflections_md(stats, trades):
         emoji = '🟢' if ps['total_pnl'] > 0 else '🔴' if ps['total_pnl'] < 0 else '🟡'
         lines.append(f'| {emoji} {pattern} | {ps["count"]} | {ps["total_pnl"]:+.2f} EUR | {meaning} |')
 
+    # Trade-Duration section
+    dur = stats.get('duration')
+    if dur:
+        lines.extend([
+            '',
+            '---',
+            '',
+            '## Trade-Duration',
+            '',
+            f'| Metrik | Wert |',
+            f'|--------|------|',
+            f'| Trades mit Datums-Info | {dur["n_parsed"]} |',
+            f'| Durchschnitt | {dur["avg_days"]} Tage |',
+            f'| Median | {dur["median_days"]} Tage |',
+        ])
+        if dur['avg_days_winners'] is not None:
+            lines.append(f'| Avg Gewinner | {dur["avg_days_winners"]} Tage |')
+        if dur['avg_days_losers'] is not None:
+            lines.append(f'| Avg Verlierer | {dur["avg_days_losers"]} Tage |')
+        lines.extend([
+            '',
+            f'> **Empfehlung:** Gewinner laufen ~{dur.get("avg_days_winners", "?")} Tage → Time-Stop bei 3/5 Tagen sinnvoll.',
+        ])
+
     lines.extend([
         '',
         '---',
@@ -420,6 +506,13 @@ def format_telegram(stats):
         if ds:
             emoji = '🟢' if direction == 'LONG' else '🔴'
             msg += f'{emoji} {direction}: {ds["win_rate"]}% ({ds["wins"]}/{ds["total"]}) {ds["total_pnl"]:+.0f}€\n'
+
+    dur = stats.get('duration')
+    if dur:
+        msg += f'\n⏱ Avg Duration: {dur["avg_days"]} Tage'
+        if dur['avg_days_winners'] is not None:
+            msg += f' (Gewinner: {dur["avg_days_winners"]}, Verlierer: {dur.get("avg_days_losers", "?")})'
+        msg += '\n'
 
     msg += f'\nv3: {stats["v3_partial_exits"]} Teilverkäufe'
     if stats['discipline_violations'] > 0:

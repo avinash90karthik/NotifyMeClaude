@@ -127,8 +127,8 @@ EXITS — IMMER EINHALTEN:
 
 TIME-STOPS:
 ━━━━━━━━━━
-5 Tage ohne +5% Bewegung  → Position halbieren
-8 Tage seitwärts           → Position schließen
+3 Tage ohne +5% Bewegung  → Position halbieren
+5 Tage seitwärts           → Position schließen
 Earnings < 2 Tage          → Min. 50% sichern
 ```
 

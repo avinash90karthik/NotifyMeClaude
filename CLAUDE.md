@@ -128,7 +128,7 @@ Die konkreten Trading-Entscheidungen (Entry, Exit, Stop, KO-Abstand) kommen aus 
 - **Situativer Hedge** - bei 2 LONGs + hohem Makro-Risiko → 3. Slot als Index-SHORT (DAX bevorzugt)
 - **KO-Berechnung: ATR + Chart kombiniert** - KO liegt IMMER unter dem stärksten Support (LONG) bzw. über Resistance (SHORT). ATR-Multiplikator nach Asset-Klasse (Large Cap 2x, Small Cap 2.5x, Rohstoffe 3x)
 - **ATR Event-Check** - ATR(5) vs ATR(14) vor jedem Trade. Wenn ATR(5) > ATR(14) × 1,5 → Position eine Stufe kleiner
-- **Time-Stops einhalten** - nach 5 Tagen ohne Bewegung halbieren, nach 8 Tagen raus
+- **Time-Stops einhalten** - nach 3 Tagen ohne +5% halbieren, nach 5 Tagen raus
 - **Korrelation prüfen** - vor jedem neuen Trade Sektor-Konzentration checken
 - **Vor Earnings absichern** - min. 50% der Position vor dem Event sichern oder ATR-Multiplikator erhöhen
 - **Keine festen EUR-Beträge** - Positionsgröße in % vom Portfolio (skaliert automatisch)
@@ -296,6 +296,7 @@ Curated watchlist managed via `admin_stocks.py`, updated automatically via GitHu
 | Portfolio Check | `portfolio_check.yml` | 3x daily (08:00, 15:00, 21:00 CET) | RSI alerts, stop/KO proximity |
 | Morning Screener | `morning_screener.yml` | 08:00 CET (weekdays) | LONG/SHORT scoring, top picks |
 | Reddit Gems | `reddit_gems.yml` | 07:00 CET (weekdays) | Reddit trending stocks via ApeWisdom |
+| Weekly Reflection | `reflect.yml` | Freitag 20:00 CET | Trade-Statistiken, Duration, Patterns |
 | ~~Price Tracker~~ | `tracker.yml` | ~~Every 10 min~~ DEPRECATED | Replaced by Watchlist Check |
 
 Secrets needed: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
