@@ -137,10 +137,39 @@ def _detect_patterns(notiz, pnl_eur):
     return patterns
 
 
-def calc_duration_stats(trades):
+def calc_duration_stats(trades, analyses=None):
     """Calculate trade duration statistics from date info in trade notes.
-    Parses 'Kauf DD.MM', 'Entry DD.MM', 'Verkauf DD.MM' patterns.
+    Uses robust patterns matching real portfolio.md notation.
+    Falls back to analysis dates for entry when not found in notes.
     Returns dict with avg/median durations or None if insufficient data."""
+
+    # Build analysis date lookup: symbol → earliest analysis date (DD.MM)
+    analysis_dates = {}
+    if analyses:
+        for a in analyses:
+            sym = a.get('symbol', '')
+            datum = a.get('datum', '')
+            date_match = re.search(r'(\d{1,2})\.(\d{1,2})', datum)
+            if date_match and sym and sym not in analysis_dates:
+                analysis_dates[sym] = (int(date_match.group(1)), int(date_match.group(2)))
+
+    # Robust exit patterns matching real portfolio.md notation
+    EXIT_PATTERNS = [
+        r'[Vv]erkauft?\s+(\d{1,2})\.(\d{1,2})',            # "Verkauft 06.03", "verkauft 05.03"
+        r'[Gg]eschlossen\s+(\d{1,2})\.(\d{1,2})',           # "Geschlossen 12.03"
+        r'ausgelöst\s+(\d{1,2})\.(\d{1,2})',                 # "ausgelöst 10.03", "ausgelöst 11.03"
+        r'ausgeloest\s+(\d{1,2})\.(\d{1,2})',                # ASCII variant
+        r'Stop-Sell\s+(\d{1,2})\.(\d{1,2})',                 # "Stop-Sell 02.03"
+        r'(\d{1,2})\.(\d{1,2})\s+(?:bei|Fr|abends|Break)',  # "06.03 Fr Abend", "05.03 abends"
+    ]
+
+    ENTRY_PATTERNS = [
+        r'[Kk]auf\s+(\d{1,2})\.(\d{1,2})',                  # "Kauf 02.03"
+        r'[Ee]instieg\s+(\d{1,2})\.(\d{1,2})',              # "Einstieg 05.03"
+        r'[Gg]ekauft\s+(\d{1,2})\.(\d{1,2})',               # "Gekauft 18.02"
+        r'[Ee]ntry\s+(\d{1,2})\.(\d{1,2})',                 # "Entry 02.03"
+    ]
+
     durations_win = []
     durations_loss = []
 
@@ -148,21 +177,34 @@ def calc_duration_stats(trades):
         notiz = t.get('notiz', '')
         full = t.get('full_name', '') + ' ' + notiz
 
-        # Try to find entry and exit dates (DD.MM or DD.MM.YY format)
-        entry_match = re.search(r'(?:Kauf|Entry|Einstieg)[:\s]+(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?', full, re.IGNORECASE)
-        exit_match = re.search(r'(?:Verkauf|Exit|Ausstieg|Stop)[:\s]+(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?', full, re.IGNORECASE)
+        # Find exit date (first matching pattern wins)
+        exit_day, exit_month = None, None
+        for pat in EXIT_PATTERNS:
+            m = re.search(pat, full)
+            if m:
+                exit_day, exit_month = int(m.group(1)), int(m.group(2))
+                break
 
-        if not entry_match or not exit_match:
+        if exit_day is None:
+            continue
+
+        # Find entry date: try notiz patterns first, then analysis table
+        entry_day, entry_month = None, None
+        for pat in ENTRY_PATTERNS:
+            m = re.search(pat, full)
+            if m:
+                entry_day, entry_month = int(m.group(1)), int(m.group(2))
+                break
+
+        # Fallback: use analysis date for this symbol
+        if entry_day is None and t['symbol'] in analysis_dates:
+            entry_day, entry_month = analysis_dates[t['symbol']]
+
+        if entry_day is None:
             continue
 
         try:
-            entry_day, entry_month = int(entry_match.group(1)), int(entry_match.group(2))
-            exit_day, exit_month = int(exit_match.group(1)), int(exit_match.group(2))
-            year = 2026  # Current year default
-            if entry_match.group(3):
-                y = int(entry_match.group(3))
-                year = y if y > 100 else 2000 + y
-
+            year = 2026
             entry_date = datetime(year, entry_month, entry_day)
             exit_year = year
             if exit_month < entry_month:
@@ -309,7 +351,7 @@ def analyze_trades(trades, analyses):
     discipline_violations = len([t for t in trades if 'DISCIPLINE_VIOLATION' in t['patterns']])
     below_gate = len([t for t in trades if 'BELOW_GATE' in t['patterns']])
 
-    duration = calc_duration_stats(trades)
+    duration = calc_duration_stats(trades, analyses)
 
     return {
         'total_trades': total,

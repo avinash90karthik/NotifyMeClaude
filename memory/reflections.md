@@ -1,6 +1,6 @@
 # Silver Hawk Trading - Reflections
 
-**Generiert:** 12.03.2026 16:32 UTC
+**Generiert:** 12.03.2026 18:57 UTC
 **Quelle:** memory/portfolio.md
 
 ---
@@ -54,6 +54,20 @@
 | 🟢 EXECUTION_ERROR | 1 | +6.40 EUR | Ausführungsfehler |
 | 🟢 RUNNER | 4 | +15.80 EUR | Runner-Position (Rest nach Teilverkauf) |
 | 🟢 V3_PARTIAL_EXIT | 7 | +134.40 EUR | 50% bei +20% verkauft (v3 Regel) |
+
+---
+
+## Trade-Duration
+
+| Metrik | Wert |
+|--------|------|
+| Trades mit Datums-Info | 10 |
+| Durchschnitt | 41.1 Tage |
+| Median | 3 Tage |
+| Avg Gewinner | 76.6 Tage |
+| Avg Verlierer | 5.6 Tage |
+
+> **Empfehlung:** Gewinner laufen ~76.6 Tage → Time-Stop bei 3/5 Tagen sinnvoll.
 
 ---
 

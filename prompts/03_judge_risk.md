@@ -251,6 +251,26 @@ Identifiziere die relevanten Chart-Levels aus Schritt 1:
 | Nach 5 Handelstagen seitwaerts | Position schliessen |
 | Earnings < 2 Tage entfernt | Min. 50% sichern |
 
+### Trade-Duration-Erwartung (PFLICHT!)
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  ERWARTETE TRADE-DAUER                                       ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Historisch: Gewinner laufen 2-3 Tage (Median)              ║
+║  → Wenn ein Trade nach 3 Tagen nicht +5% im Plus ist,       ║
+║    stimmt die These wahrscheinlich NICHT.                     ║
+║                                                               ║
+║  TRADE-DAUER-EINSCHAETZUNG:                                  ║
+║  Trage hier ein:                                             ║
+║  • Erwartete Dauer: [X Tage]                                ║
+║  • Begruendung: [Catalyst-Timing, Event-Abstand, etc.]      ║
+║  • Wenn > 5 Tage erwartet: WARNUNG — passt nicht zu Turbos  ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
 ### Watch Zones
 | Zone | Preis-Range | Was tun? |
 |------|-------------|----------|

@@ -370,6 +370,32 @@ except Exception as e:
 
 > **Hinweis:** Intraday-Daten dienen NUR als zusaetzlicher Kontext fuer Entry-Timing. Alle technischen Indikatoren (RSI, MACD, ATR etc.) werden ausschliesslich auf Daily-Basis berechnet. Wenn Intraday-Daten nicht verfuegbar (manche Futures/Rohstoffe, Wochenende) → ueberspringen.
 
+### MARKET-MAKER-PRICING CHECK (PFLICHT bei Aktien!)
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  ACHTUNG: Ist der Markt OFFEN oder GESCHLOSSEN?              ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Pruefe die Analyse-Zeit (UTC) gegen Handelszeiten:          ║
+║                                                               ║
+║  US-Aktien:   14:30-21:00 UTC (NYSE/NASDAQ)                 ║
+║  EU-Aktien:   07:00-15:30 UTC (XETRA)                       ║
+║  Futures:     ~23:00-22:00 UTC (fast 24h)                    ║
+║                                                               ║
+║  WENN Markt GESCHLOSSEN:                                     ║
+║  → Spread beim Market Maker DEUTLICH hoeher (2-5x)          ║
+║  → Turbo-Preise koennen vom Fair Value abweichen             ║
+║  → WARNUNG im Trade-Plan ausgeben:                           ║
+║    "Markt geschlossen — Turbo-Spread erhoeht,               ║
+║     Limit-Order statt Market-Order nutzen!"                  ║
+║                                                               ║
+║  WENN Markt OFFEN:                                           ║
+║  → Normale Spreads, Market-Order akzeptabel                  ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
 ---
 
 ## 1.2 Preis & Markt
@@ -737,6 +763,7 @@ Wenn ein relevantes Makro-Event ansteht (FOMC, ECB, CPI, etc.), pruefe die Markt
 - ✅ Event-Kalender mit Earnings und Makro-Terminen
 - ✅ **Regime-Erkennung durchgefuehrt (TRENDING/RANGE/CHOPPY/TRANSITIONAL)**
 - ✅ **Intraday-Kontext fuer Aktien ausgefuehrt (PFLICHT!)**
+- ✅ **Market-Maker-Pricing Check: Handelszeiten geprueft, Spread-Warnung bei geschlossenem Markt**
 
 ---
 
