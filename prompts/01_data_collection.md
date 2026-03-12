@@ -370,30 +370,47 @@ except Exception as e:
 
 > **Hinweis:** Intraday-Daten dienen NUR als zusaetzlicher Kontext fuer Entry-Timing. Alle technischen Indikatoren (RSI, MACD, ATR etc.) werden ausschliesslich auf Daily-Basis berechnet. Wenn Intraday-Daten nicht verfuegbar (manche Futures/Rohstoffe, Wochenende) → ueberspringen.
 
-### MARKET-MAKER-PRICING CHECK (PFLICHT bei Aktien!)
+### MARKET-MAKER-PRICING CHECK (automatisch!)
 
-```
-╔═══════════════════════════════════════════════════════════════╗
-║  ACHTUNG: Ist der Markt OFFEN oder GESCHLOSSEN?              ║
-╠═══════════════════════════════════════════════════════════════╣
-║                                                               ║
-║  Pruefe die Analyse-Zeit (UTC) gegen Handelszeiten:          ║
-║                                                               ║
-║  US-Aktien:   14:30-21:00 UTC (NYSE/NASDAQ)                 ║
-║  EU-Aktien:   07:00-15:30 UTC (XETRA)                       ║
-║  Futures:     ~23:00-22:00 UTC (fast 24h)                    ║
-║                                                               ║
-║  WENN Markt GESCHLOSSEN:                                     ║
-║  → Spread beim Market Maker DEUTLICH hoeher (2-5x)          ║
-║  → Turbo-Preise koennen vom Fair Value abweichen             ║
-║  → WARNUNG im Trade-Plan ausgeben:                           ║
-║    "Markt geschlossen — Turbo-Spread erhoeht,               ║
-║     Limit-Order statt Market-Order nutzen!"                  ║
-║                                                               ║
-║  WENN Markt OFFEN:                                           ║
-║  → Normale Spreads, Market-Order akzeptabel                  ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
+```python
+# Market-Status-Check: Automatische Warnung bei geschlossenem Markt
+from datetime import datetime, timezone
+
+_now_utc = datetime.now(timezone.utc)
+_hour = _now_utc.hour + _now_utc.minute / 60
+_weekday = _now_utc.weekday()  # 0=Mon, 6=Sun
+
+# Handelszeiten (UTC)
+_market_hours = {
+    'US': (14.5, 21.0),   # NYSE/NASDAQ 14:30-21:00 UTC
+    'EU': (7.0, 15.5),    # XETRA 07:00-15:30 UTC
+    'FUT': (23.0, 22.0),  # Futures ~23:00-22:00 UTC (fast 24h)
+}
+
+# Bestimme Boerse nach Symbol
+_sym = "{{SYMBOL}}"
+if _sym.endswith('.DE') or _sym.endswith('.PA') or _sym.endswith('.AS'):
+    _exchange = 'EU'
+elif '=F' in _sym:
+    _exchange = 'FUT'
+else:
+    _exchange = 'US'
+
+_open_h, _close_h = _market_hours[_exchange]
+if _exchange == 'FUT':
+    _is_open = _weekday < 5 and not (_hour >= 22.0 and _hour < 23.0)
+else:
+    _is_open = _weekday < 5 and _open_h <= _hour < _close_h
+
+print(f'\nMARKET-STATUS ({_exchange})')
+print(f'  Zeit:     {_now_utc.strftime("%H:%M UTC")} ({["Mo","Di","Mi","Do","Fr","Sa","So"][_weekday]})')
+if _is_open:
+    print(f'  Status:   ✅ MARKT OFFEN — normale Spreads')
+else:
+    print(f'  Status:   ⚠️ MARKT GESCHLOSSEN')
+    print(f'  → Turbo-Spread beim Market Maker 2-5x hoeher!')
+    print(f'  → LIMIT-ORDER statt Market-Order nutzen!')
+    print(f'  → Preise koennen vom Fair Value abweichen')
 ```
 
 ---

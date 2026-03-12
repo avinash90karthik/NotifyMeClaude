@@ -143,15 +143,17 @@ def calc_duration_stats(trades, analyses=None):
     Falls back to analysis dates for entry when not found in notes.
     Returns dict with avg/median durations or None if insufficient data."""
 
-    # Build analysis date lookup: symbol → earliest analysis date (DD.MM)
+    # Build analysis date lookup: symbol → list of ALL analysis dates (DD, MM)
     analysis_dates = {}
     if analyses:
         for a in analyses:
             sym = a.get('symbol', '')
             datum = a.get('datum', '')
             date_match = re.search(r'(\d{1,2})\.(\d{1,2})', datum)
-            if date_match and sym and sym not in analysis_dates:
-                analysis_dates[sym] = (int(date_match.group(1)), int(date_match.group(2)))
+            if date_match and sym:
+                analysis_dates.setdefault(sym, []).append(
+                    (int(date_match.group(1)), int(date_match.group(2)))
+                )
 
     # Robust exit patterns matching real portfolio.md notation
     EXIT_PATTERNS = [
@@ -196,9 +198,22 @@ def calc_duration_stats(trades, analyses=None):
                 entry_day, entry_month = int(m.group(1)), int(m.group(2))
                 break
 
-        # Fallback: use analysis date for this symbol
+        # Fallback: use closest analysis date BEFORE exit for this symbol
         if entry_day is None and t['symbol'] in analysis_dates:
-            entry_day, entry_month = analysis_dates[t['symbol']]
+            year = 2026
+            try:
+                exit_dt = datetime(year, exit_month, exit_day)
+                best = None
+                for ad, am in analysis_dates[t['symbol']]:
+                    a_dt = datetime(year, am, ad)
+                    diff = (exit_dt - a_dt).days
+                    if 0 <= diff <= 30:  # analysis must be before exit, max 30 days
+                        if best is None or diff < best[0]:
+                            best = (diff, ad, am)
+                if best:
+                    entry_day, entry_month = best[1], best[2]
+            except (ValueError, OverflowError):
+                pass
 
         if entry_day is None:
             continue

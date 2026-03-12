@@ -264,12 +264,26 @@ Identifiziere die relevanten Chart-Levels aus Schritt 1:
 ║                                                               ║
 ║  TRADE-DAUER-EINSCHAETZUNG:                                  ║
 ║  Trage hier ein:                                             ║
+║  • Setup-Typ: [aus Tabelle unten]                            ║
 ║  • Erwartete Dauer: [X Tage]                                ║
 ║  • Begruendung: [Catalyst-Timing, Event-Abstand, etc.]      ║
 ║  • Wenn > 5 Tage erwartet: WARNUNG — passt nicht zu Turbos  ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
+
+**Setup-Typ → erwartete Dauer:**
+
+| Setup-Typ | Erwartete Dauer | Beispiel |
+|-----------|----------------|----------|
+| **Momentum-Breakout** | 1-3 Tage | Ausbruch ueber Resistance mit Volume |
+| **Pullback-Entry** | 2-4 Tage | Ruecksetzer an SMA50 im Aufwaertstrend |
+| **Mean Reversion** | 1-2 Tage | RSI <30 Bounce, kurzfristiger Snap-Back |
+| **Event/Earnings** | 1-2 Tage | Catalyst-getrieben (CPI, FOMC, Earnings) |
+| **Hedge (Index-SHORT)** | 3-7 Tage | Absicherung waehrend Makro-Risiko |
+| **Trend-Following** | 5-10 Tage | Laengerer Trend, eher OHNE Hebel |
+
+> **Wenn Setup-Typ "Trend-Following" → WARNUNG: Turbo-Hebel ungeeignet fuer >5 Tage. Aktie direkt oder ohne Hebel erwaegen!**
 
 ### Watch Zones
 | Zone | Preis-Range | Was tun? |

@@ -1,6 +1,6 @@
 # Silver Hawk Trading - Reflections
 
-**Generiert:** 12.03.2026 18:57 UTC
+**Generiert:** 12.03.2026 19:11 UTC
 **Quelle:** memory/portfolio.md
 
 ---
@@ -62,12 +62,12 @@
 | Metrik | Wert |
 |--------|------|
 | Trades mit Datums-Info | 10 |
-| Durchschnitt | 41.1 Tage |
-| Median | 3 Tage |
-| Avg Gewinner | 76.6 Tage |
-| Avg Verlierer | 5.6 Tage |
+| Durchschnitt | 1.0 Tage |
+| Median | 1 Tage |
+| Avg Gewinner | 0.8 Tage |
+| Avg Verlierer | 1.2 Tage |
 
-> **Empfehlung:** Gewinner laufen ~76.6 Tage → Time-Stop bei 3/5 Tagen sinnvoll.
+> **Empfehlung:** Gewinner laufen ~0.8 Tage → Time-Stop bei 3/5 Tagen sinnvoll.
 
 ---
 
