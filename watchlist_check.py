@@ -12,7 +12,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
-from indicators import calc_technicals, detect_regime, detect_rsi_divergence
+from indicators import calc_technicals
 from risk_audit import risk_audit, parse_portfolio_summary
 
 WATCHLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'watchlist.md')
@@ -104,11 +104,13 @@ def get_open_positions():
             continue
         sym_clean = base_sym.group(1)
 
-        direction = 'LONG' if 'LONG' in dir_col.upper() else ('SHORT' if 'SHORT' in dir_col.upper() else '?')
-        if direction == '?' and 'LONG' in sym_col.upper():
+        combined = dir_col.upper() + ' ' + sym_col.upper()
+        if 'LONG' in combined:
             direction = 'LONG'
-        elif direction == '?' and 'SHORT' in sym_col.upper():
+        elif 'SHORT' in combined:
             direction = 'SHORT'
+        else:
+            direction = '?'
 
         # Extract P&L percentage
         pnl_pct = None

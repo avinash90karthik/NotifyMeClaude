@@ -11,7 +11,6 @@ Usage:
 """
 
 import argparse
-import json
 import os
 import sys
 from datetime import datetime, timezone
@@ -62,7 +61,11 @@ def backtest_symbol(symbol, period='2y', forward_days=None):
         forward_days = [1, 5, 20]
 
     print(f'  Downloading {symbol} ({period})...')
-    df = yf.download(symbol, period=period, progress=False)
+    try:
+        df = yf.download(symbol, period=period, progress=False)
+    except Exception as e:
+        print(f'  {symbol}: download failed — {e}')
+        return None
     # Flatten MultiIndex columns from yf.download single symbol
     if df is not None and df.columns.nlevels > 1:
         df.columns = df.columns.get_level_values(0)
@@ -80,6 +83,7 @@ def backtest_symbol(symbol, period='2y', forward_days=None):
         return None
 
     records = []
+    errors = 0
     total_days = backtest_end - backtest_start
     print(f'  Backtesting {symbol}: {total_days} days...')
 
@@ -119,8 +123,12 @@ def backtest_symbol(symbol, period='2y', forward_days=None):
                 'short_score': ss,
                 'forward_returns': fwd,
             })
-        except Exception:
+        except (KeyError, ValueError, ZeroDivisionError, IndexError):
+            errors += 1
             continue
+
+    if errors > 0:
+        print(f'  {symbol}: {errors}/{total_days} days had calc errors')
 
     if not records:
         print(f'  {symbol}: no valid backtest records')
@@ -136,8 +144,6 @@ def analyze_results(symbol, records, forward_days):
     # Signal distribution
     long_signals = [r for r in records if r['long_score'] >= SCORE_THRESHOLD]
     short_signals = [r for r in records if r['short_score'] >= SCORE_THRESHOLD]
-    neutral = total - len(long_signals) - len(short_signals) + len(
-        [r for r in records if r['long_score'] >= SCORE_THRESHOLD and r['short_score'] >= SCORE_THRESHOLD])
 
     # Hit rates per forward window
     hit_rates = {}
@@ -293,20 +299,9 @@ def main():
         print(f'Average LONG 5d hit rate: {avg_hit:.1f}%')
 
     if args.telegram:
-        import urllib.parse
-        import urllib.request
-
+        from send_telegram import send_message
         msg = format_telegram(results)
-        token = os.environ['TELEGRAM_BOT_TOKEN']
-        chat_id = os.environ['TELEGRAM_CHAT_ID']
-        api = f'https://api.telegram.org/bot{token}/sendMessage'
-        body = urllib.parse.urlencode({
-            'chat_id': chat_id, 'parse_mode': 'HTML', 'text': msg,
-        }).encode()
-        req = urllib.request.Request(api, data=body)
-        resp = urllib.request.urlopen(req)
-        result = json.loads(resp.read())
-        print(f'Telegram sent: {result.get("ok", False)}')
+        send_message(msg)
 
 
 if __name__ == '__main__':

@@ -223,7 +223,7 @@ def calc_technicals(batch_data, symbols, single=False):
                         adx_val = None
                     else:
                         adx_val = round(adx_val, 1)
-                except Exception:
+                except (ValueError, ZeroDivisionError):
                     pass
 
             # SMAs + distance
@@ -280,6 +280,6 @@ def calc_technicals(batch_data, symbols, single=False):
                 'analyst_rating': None, 'short_pct': None,
                 'earnings_date': None, 'market_cap': None, 'sector': None,
             }
-        except Exception:
+        except (KeyError, ValueError, ZeroDivisionError, IndexError):
             continue
     return results

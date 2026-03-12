@@ -3,21 +3,15 @@
 Independent risk check with veto power. Runs after scoring, before output.
 Any single VETO blocks the trade candidate from appearing as recommended."""
 
-import re
 import os
+import re
 
 PORTFOLIO_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'portfolio.md')
-
-# Sector correlation pairs (high correlation = warning)
-CORRELATED_SECTORS = {
-    ('Technology', 'Semiconductors'), ('Technology', 'AI Cloud'),
-    ('Semiconductors', 'AI Cloud'), ('Energy', 'Nuclear'),
-}
-
 
 def parse_portfolio_summary():
     """Parse portfolio.md for current state: positions, value, monthly P&L."""
     if not os.path.exists(PORTFOLIO_FILE):
+        print('  risk_audit: portfolio.md nicht gefunden — alle Veto-Regeln deaktiviert')
         return {'positions': [], 'portfolio_value': 0, 'cash': 0, 'monthly_pnl_pct': 0}
 
     with open(PORTFOLIO_FILE) as f:
@@ -29,7 +23,14 @@ def parse_portfolio_summary():
     monthly_pnl_pct = 0
 
     # Extract portfolio value from "Aktueller Stand" table
+    in_stand = False
     for line in content.splitlines():
+        if 'Aktueller Stand' in line:
+            in_stand = True
+        elif line.startswith('## ') and in_stand:
+            break
+        if not in_stand:
+            continue
         if 'Portfolio-Wert' in line and '~' in line:
             m = re.search(r'~([\d.,]+)\s*EUR', line)
             if m:
@@ -38,7 +39,7 @@ def parse_portfolio_summary():
             m = re.search(r'~([\d.,]+)\s*EUR', line)
             if m:
                 cash = float(m.group(1).replace('.', '').replace(',', '.'))
-        if 'März P&L' in line or 'P&L' in line:
+        if 'P&L' in line and '%' in line:
             m = re.search(r'([+-]?\d+(?:[.,]\d+)?)\s*%', line)
             if m:
                 monthly_pnl_pct = float(m.group(1).replace(',', '.'))
@@ -77,8 +78,13 @@ def parse_portfolio_summary():
         if sym_clean in ('Symbol', '#'):
             continue
 
-        direction = 'LONG' if 'LONG' in dir_col.upper() or 'LONG' in sym_col.upper() else (
-            'SHORT' if 'SHORT' in dir_col.upper() or 'SHORT' in sym_col.upper() else '?')
+        combined = dir_col.upper() + ' ' + sym_col.upper()
+        if 'LONG' in combined:
+            direction = 'LONG'
+        elif 'SHORT' in combined:
+            direction = 'SHORT'
+        else:
+            direction = '?'
 
         positions.append({
             'symbol': sym_clean,
@@ -135,9 +141,9 @@ def risk_audit(symbol, data_dict, portfolio_state=None, sector=None):
 
     # V4: Sector concentration > 60%
     if sector and positions:
-        same_sector = sum(1 for p in positions if sector.lower() in p.get('raw', '').lower())
+        same_sector = sum(1 for p in positions if p.get('sector', '').lower() == sector.lower())
         if active_count > 0 and (same_sector + 1) / (active_count + 1) > 0.60:
-            vetoes.append(f'V4: Sektor {sector} wäre >{60}%')
+            vetoes.append(f'V4: Sektor {sector} wäre >60%')
 
     # V5: Monthly drawdown > 20%
     if pnl_pct <= -20:

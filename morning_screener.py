@@ -13,9 +13,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
-import re
-
-from indicators import calc_technicals, detect_regime, detect_rsi_divergence
+from indicators import calc_technicals
 from risk_audit import risk_audit, parse_portfolio_summary
 
 WATCHLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'watchlist.json')
