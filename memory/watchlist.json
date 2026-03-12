@@ -10,7 +10,7 @@
     "sma200": 244.64,
     "market_cap": 3833366052864,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-11T23:04:20.830911+00:00"
+    "last_updated": "2026-03-12T07:17:49.522550+00:00"
   },
   {
     "symbol": "ARM",
@@ -23,7 +23,7 @@
     "sma200": 138.3,
     "market_cap": 127546032128,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-11T23:04:20.830911+00:00"
+    "last_updated": "2026-03-12T07:17:49.522550+00:00"
   },
   {
     "symbol": "NVDA",
@@ -32,11 +32,11 @@
     "price": 186.03,
     "change_pct": 0.68,
     "rsi": 51.5,
-    "sma50": 185.71,
-    "sma200": 176.9,
+    "sma50": 185.7,
+    "sma200": 176.89,
     "market_cap": 4521459187712,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-11T23:04:20.830911+00:00"
+    "last_updated": "2026-03-12T07:17:49.522550+00:00"
   },
   {
     "symbol": "GOOGL",
@@ -49,7 +49,7 @@
     "sma200": 254.8,
     "market_cap": 3734344302592,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-11T23:04:20.830911+00:00"
+    "last_updated": "2026-03-12T07:17:49.522550+00:00"
   },
   {
     "symbol": "QBTS",
@@ -62,7 +62,7 @@
     "sma200": 22.52,
     "market_cap": 6995067904,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-11T23:04:20.830911+00:00"
+    "last_updated": "2026-03-12T07:17:49.522550+00:00"
   },
   {
     "symbol": "IREN",
@@ -75,7 +75,7 @@
     "sma200": 36.54,
     "market_cap": 13927249920,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-11T23:04:20.830911+00:00"
+    "last_updated": "2026-03-12T07:17:49.522550+00:00"
   },
   {
     "symbol": "APLD",
@@ -88,7 +88,7 @@
     "sma200": 22.99,
     "market_cap": 7973787648,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-11T23:04:20.830911+00:00"
+    "last_updated": "2026-03-12T07:17:49.522550+00:00"
   },
   {
     "symbol": "SAP.DE",
@@ -101,7 +101,7 @@
     "sma200": 222.03,
     "market_cap": 193160970240,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-11T23:04:20.830911+00:00"
+    "last_updated": "2026-03-12T07:17:49.522550+00:00"
   },
   {
     "symbol": "ASML",
@@ -113,8 +113,8 @@
     "sma50": 1357.58,
     "sma200": 1002.61,
     "market_cap": 544491962368,
-    "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-11T23:04:20.830911+00:00"
+    "analyst_rating": "Buy",
+    "last_updated": "2026-03-12T07:17:49.522550+00:00"
   },
   {
     "symbol": "VST",
@@ -127,7 +127,7 @@
     "sma200": 181.68,
     "market_cap": 53927469056,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-11T23:04:20.830911+00:00"
+    "last_updated": "2026-03-12T07:17:49.522550+00:00"
   },
   {
     "symbol": "CEG",
@@ -140,7 +140,7 @@
     "sma200": 328.81,
     "market_cap": 108846874624,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-11T23:04:20.830911+00:00"
+    "last_updated": "2026-03-12T07:17:49.522550+00:00"
   },
   {
     "symbol": "ENR.DE",
@@ -153,32 +153,32 @@
     "sma200": 111.15,
     "market_cap": 132236214272,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-11T23:04:20.830911+00:00"
+    "last_updated": "2026-03-12T07:17:49.522550+00:00"
   },
   {
     "symbol": "SI=F",
     "name": "Silver Futures",
     "sector": "Commodities",
-    "price": 85.22,
-    "change_pct": -0.37,
-    "rsi": 50.7,
-    "sma50": 85.12,
-    "sma200": 54.75,
+    "price": 86.165,
+    "change_pct": 0.74,
+    "rsi": 51.7,
+    "sma50": 85.44,
+    "sma200": 55.01,
     "market_cap": null,
     "analyst_rating": null,
-    "last_updated": "2026-03-11T23:04:20.830911+00:00"
+    "last_updated": "2026-03-12T07:17:49.522550+00:00"
   },
   {
     "symbol": "GC=F",
     "name": "Gold Futures",
     "sector": "Commodities",
-    "price": 5162.8,
-    "change_pct": -0.31,
-    "rsi": 55.0,
-    "sma50": 4881.3,
-    "sma200": 4008.52,
+    "price": 5172.9,
+    "change_pct": -0.12,
+    "rsi": 55.4,
+    "sma50": 4898.35,
+    "sma200": 4017.91,
     "market_cap": null,
     "analyst_rating": null,
-    "last_updated": "2026-03-11T23:04:20.830911+00:00"
+    "last_updated": "2026-03-12T07:17:49.522550+00:00"
   }
 ]
