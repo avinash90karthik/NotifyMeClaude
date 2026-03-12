@@ -28,7 +28,8 @@
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
-**Input:** Daten aus Schritt 1 (Preis, Technicals, Chart, News, Makro, Fundamentals, **RSI-Divergenz**, **NSI**)
+**Input:** Daten aus Schritt 1 (Preis, Technicals, Chart, News, Makro, Fundamentals, **RSI-Divergenz**, **NSI**, **Regime**)
+Referenziere auch den JSON-Block aus Schritt 1 fuer strukturierte Datenpunkte.
 
 ---
 
@@ -265,6 +266,41 @@ Differenz:   XX Punkte zugunsten [LONG/SHORT]
 
 ---
 
+## REGIME-KONTEXT FUER DEBATE
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  REGIME beeinflusst die Argument-Gewichtung!                  ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  TRENDING:                                                    ║
+║  → Technische Trend-Argumente (SMA, MACD) STAERKER gewichten ║
+║  → RSI-Oversold/Overbought weniger relevant                  ║
+║  → "Der Trend ist dein Freund" — gegen den Trend braucht     ║
+║    SEHR starke Gegenargumente                                ║
+║                                                               ║
+║  RANGE:                                                       ║
+║  → Oszillator-Argumente (RSI, BB) STAERKER gewichten         ║
+║  → Trend-Argumente weniger relevant (Ausbruch nicht gestartet)║
+║  → Support/Resistance-Levels besonders wichtig               ║
+║                                                               ║
+║  CHOPPY:                                                      ║
+║  → ALLE technischen Argumente SCHWAECHER gewichten           ║
+║  → News + Fundamentals gewinnen an Gewicht                   ║
+║  → Konfidenz grundsaetzlich niedriger ansetzen               ║
+║                                                               ║
+║  TRANSITIONAL:                                                ║
+║  → Standard-Gewichtung, auf Regime-Wechsel achten            ║
+║  → Fruehe Trend-Signale beobachten (MACD Crossover, ADX >20) ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Aktuelles Regime (aus Schritt 1): [TRENDING/RANGE/CHOPPY/TRANSITIONAL]**
+→ Argument-Gewichtung entsprechend anpassen!
+
+---
+
 ## ENFORCEMENT
 
 - ✅ Minimum 4-6 Saetze pro Argument mit konkreten Zahlen
@@ -277,6 +313,35 @@ Differenz:   XX Punkte zugunsten [LONG/SHORT]
 - ✅ Keine generischen Aussagen - nur konkrete Daten
 - ✅ SHORT-Trade Scorecard ausgefuellt
 - ✅ SHORT-Setup ausgearbeitet wenn Score es verlangt
+- ✅ **Regime-Kontext beruecksichtigt (Argument-Gewichtung angepasst)**
+
+---
+
+## OUTPUT JSON
+
+**WICHTIG: Der JSON-Block ist ZUSAETZLICH zur Prosa. Er ersetzt NICHTS.**
+
+Generiere am Ende von Schritt 2 diesen strukturierten Output:
+
+```json
+{
+  "step": 2,
+  "symbol": "{{SYMBOL}}",
+  "bull_target_usd": 0.00,
+  "bear_target_usd": 0.00,
+  "bull_confidence_pct": 0,
+  "bear_confidence_pct": 0,
+  "scorecard": {
+    "long_total": 0,
+    "short_total": 0
+  },
+  "strongest_bull_arg": "...",
+  "strongest_bear_arg": "...",
+  "recommended_direction": "LONG|SHORT|BOTH"
+}
+```
+
+Fuelle ALLE Felder mit den tatsaechlichen Werten aus der Debate!
 
 ```
 ✅ [SCHRITT 2: INVESTMENT DEBATE ABGESCHLOSSEN]

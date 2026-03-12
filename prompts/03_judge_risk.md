@@ -5,6 +5,9 @@
 ---
 
 **Input:** Daten aus Schritt 1 + Debate aus Schritt 2 (inkl. Finale Konfidenz aus Runde 3) + Chart
+Referenziere die JSON-Blöcke aus Schritt 1 und 2 fuer strukturierte Datenpunkte.
+
+Konsultiere `memory/reflections.md` fuer historische Performance-Daten (Win-Rate, Muster, Risk/Reward).
 
 ---
 
@@ -48,12 +51,36 @@ Analysiere die Bull vs Bear Argumente aus Schritt 2:
 | 📊 Chart | X/10 | [Was sagt der Chart?] |
 | 📈 RSI-Divergenz | [Bullisch/Bearisch/Keine] | [Staerke des Signals] |
 | 📰 News Sentiment (NSI) | [X.XX] | [Stark bullisch / Leicht bullisch / Neutral / Bearisch] |
+| 🔄 Regime | [TRENDING/RANGE/CHOPPY/TRANSITIONAL] | [Signal aligned mit Regime?] |
 | 🩳 Short Interest | X% Float / X Tage | [Squeeze-Potential oder bearishes Signal?] |
 
 **Entscheidende Faktoren:**
 1. [Wichtigster Faktor]
 2. [Zweitwichtigster Faktor]
 3. [Drittwichtigster Faktor]
+
+### REGIME-ADJUSTMENT
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  KONFIDENZ-ADJUSTMENT basierend auf Regime                    ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  TRENDING + Signal MIT Trend:     Konfidenz +5%              ║
+║  TRENDING + Signal GEGEN Trend:   Konfidenz -10%             ║
+║  RANGE + Signal an S/R-Level:     Konfidenz +3%              ║
+║  RANGE + Signal in Range-Mitte:   Konfidenz -5%              ║
+║  CHOPPY:                          Konfidenz -5% bis -10%     ║
+║  TRANSITIONAL:                    Kein Adjustment             ║
+║                                                               ║
+║  Regime: [TRENDING/RANGE/CHOPPY/TRANSITIONAL]                ║
+║  Signal-Richtung vs Trend: [MIT/GEGEN/NEUTRAL]               ║
+║  → Adjustment: [+X% / -X% / 0%]                             ║
+║  → Konfidenz vor Adjustment: XX%                             ║
+║  → Konfidenz nach Adjustment: XX%                            ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
 
 ### ENTSCHEIDUNG
 
@@ -264,6 +291,42 @@ Identifiziere die relevanten Chart-Levels aus Schritt 1:
 - ✅ Time-Stops definiert
 - ✅ Stop-Levels basierend auf Support-Zonen
 - ✅ **Risk Audit: Alle 5 VETO-Regeln + 4 WARNUNGs explizit geprueft (PFLICHT!)**
+- ✅ **Regime-Adjustment angewandt (Konfidenz vor/nach dokumentiert)**
+
+---
+
+## OUTPUT JSON
+
+**WICHTIG: Der JSON-Block ist ZUSAETZLICH zur Prosa. Er ersetzt NICHTS.**
+
+Generiere am Ende von Schritt 3 diesen strukturierten Output:
+
+```json
+{
+  "step": 3,
+  "symbol": "{{SYMBOL}}",
+  "signal": "LONG|SHORT|HOLD",
+  "confidence_pct": 0,
+  "regime": "TRENDING|RANGE|CHOPPY|TRANSITIONAL",
+  "regime_adjustment_pct": 0,
+  "ko_level_usd": 0.00,
+  "ko_method": "ATR|CHART",
+  "entry_usd": 0.00,
+  "exits": [
+    {"price_usd": 0.00, "pct": 50},
+    {"price_usd": 0.00, "pct": 30},
+    {"price_usd": 0.00, "pct": 20}
+  ],
+  "stops": [
+    {"price_usd": 0.00, "pct": 100}
+  ],
+  "risk_per_trade_pct": 0.0,
+  "vetoes": [],
+  "warnings": []
+}
+```
+
+Fuelle ALLE Felder mit den tatsaechlichen Werten aus der Analyse!
 
 ```
 ✅ [SCHRITT 3: JUDGE & RISK ABGESCHLOSSEN]

@@ -175,7 +175,8 @@ def score_long(d, regime=None):
     """Score LONG potential (0-100). v4 Trend/Momentum scoring.
     Rewards: uptrend + pullback + momentum resuming.
     Penalizes: falling knives, no trend, overextended.
-    regime: optional dict with 'trend', 'oscillator', 'overall' weight multipliers."""
+    regime: optional dict with 'trend', 'oscillator', 'overall' weight multipliers.
+    # Weight calibration: see memory/backtest_results.md"""
     trend_pts = 0   # SMA200, SMA50, MACD, ADX
     osc_pts = 0     # RSI, RSI delta, RSI divergence, BB
     other_pts = 0   # ATR, volume, extras
@@ -322,7 +323,8 @@ def score_long(d, regime=None):
 def score_short(d, regime=None):
     """Score SHORT potential (0-100). v4 Trend/Momentum scoring.
     Rewards: downtrend + bounce to resistance + momentum fading.
-    Penalizes: strong uptrends, oversold bounces."""
+    Penalizes: strong uptrends, oversold bounces.
+    # Weight calibration: see memory/backtest_results.md"""
     trend_pts = 0
     osc_pts = 0
     other_pts = 0

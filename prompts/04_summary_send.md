@@ -5,6 +5,7 @@
 ---
 
 **Input:** ALLE Outputs der vorherigen Schritte (Daten, Debate, Judge, Risk)
+Referenziere die JSON-Blöcke aus Schritt 1, 2 und 3 fuer strukturierte Datenpunkte.
 
 ---
 

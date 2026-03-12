@@ -323,6 +323,55 @@ Dokumentiere was du im Chart siehst:
 
 ---
 
+## 1.1b INTRADAY-KONTEXT (Optional)
+
+**NUR als Kontext, NICHT fuer Indikator-Berechnung!**
+
+```python
+# Intraday-Daten (1h, letzte 5 Tage)
+try:
+    intraday = yf.download("{{SYMBOL}}", period='5d', interval='1h', progress=False)
+    if intraday is not None and len(intraday) > 0:
+        # Flatten MultiIndex if needed
+        if intraday.columns.nlevels > 1:
+            intraday.columns = intraday.columns.get_level_values(0)
+
+        # Volume-Profil: Top 3 Preis-Zonen nach Volumen
+        price_bins = pd.cut(intraday['Close'], bins=20)
+        vol_profile = intraday.groupby(price_bins, observed=True)['Volume'].sum().sort_values(ascending=False)
+        print('INTRADAY-KONTEXT (5d, 1h)')
+        print('  Volume-Profil (Top 3 Zonen):')
+        for i, (zone, vol) in enumerate(vol_profile.head(3).items()):
+            print(f'    {i+1}. ${zone.left:.2f}-${zone.right:.2f}: {vol:,.0f}')
+
+        # VWAP Approximation (5d)
+        vwap = (intraday['Close'] * intraday['Volume']).sum() / intraday['Volume'].sum()
+        print(f'  VWAP (5d):          ${vwap:.2f}')
+        print(f'  Preis vs VWAP:      {((price/vwap)-1)*100:+.1f}%')
+
+        # Intraday Range (5d)
+        intra_high = float(intraday['High'].max())
+        intra_low = float(intraday['Low'].min())
+        print(f'  5d Intraday-Range:  ${intra_low:.2f} - ${intra_high:.2f}')
+
+        # Momentum: letzte 6h vs vorherige 6h
+        if len(intraday) >= 12:
+            recent_6h = intraday['Close'].iloc[-6:]
+            prior_6h = intraday['Close'].iloc[-12:-6]
+            recent_chg = (float(recent_6h.iloc[-1]) - float(recent_6h.iloc[0])) / float(recent_6h.iloc[0]) * 100
+            prior_chg = (float(prior_6h.iloc[-1]) - float(prior_6h.iloc[0])) / float(prior_6h.iloc[0]) * 100
+            momentum = 'BESCHLEUNIGEND' if abs(recent_chg) > abs(prior_chg) and recent_chg * prior_chg > 0 else 'VERLANGSAMEND' if abs(recent_chg) < abs(prior_chg) else 'WECHSELND'
+            print(f'  Momentum (6h):      {momentum} (letzte {recent_chg:+.2f}% vs vorher {prior_chg:+.2f}%)')
+    else:
+        print('INTRADAY-KONTEXT: Keine Daten verfuegbar (Futures/Wochenende)')
+except Exception as e:
+    print(f'INTRADAY-KONTEXT: Nicht verfuegbar ({e})')
+```
+
+> **Hinweis:** Intraday-Daten dienen NUR als zusaetzlicher Kontext fuer Entry-Timing. Alle technischen Indikatoren (RSI, MACD, ATR etc.) werden ausschliesslich auf Daily-Basis berechnet. Futures und einige Assets liefern keine Intraday-Daten — das ist OK.
+
+---
+
 ## 1.2 Preis & Markt
 
 | Datenpunkt | Wert | Quelle |
@@ -422,6 +471,23 @@ Dokumentiere was du im Chart siehst:
 
 ATR wird in Schritt 3 fuer die KO-Berechnung genutzt. Hier nur den Wert dokumentieren.
 
+**ATR Event-Check (v3 PFLICHT!):**
+
+```python
+# ATR Event-Check: ATR(5) vs ATR(14)
+atr5_data = (hist['High'] - hist['Low']).rolling(5).mean().iloc[-1]
+atr14_data = (hist['High'] - hist['Low']).rolling(14).mean().iloc[-1]
+atr5_pct = (atr5_data / price) * 100
+atr14_pct = (atr14_data / price) * 100
+atr_ratio = atr5_data / atr14_data if atr14_data > 0 else 1.0
+
+print(f'  ATR (5):            ${atr5_data:.2f} ({atr5_pct:.1f}%)')
+print(f'  ATR (14):           ${atr14_data:.2f} ({atr14_pct:.1f}%)')
+print(f'  ATR(5)/ATR(14):     {atr_ratio:.2f}x')
+if atr_ratio > 1.5:
+    print('  ⚠️ VOLATILITAET ERHOEHT! Position eine Stufe kleiner!')
+```
+
 **Volatilitaets-Einordnung:**
 
 | ATR % | Einordnung | Bedeutung fuer Turbos |
@@ -430,6 +496,82 @@ ATR wird in Schritt 3 fuer die KO-Berechnung genutzt. Hier nur den Wert dokument
 | 2-4% | Mittel | Standard-Turbos gut geeignet |
 | 4-7% | Hoch | Weiter KO noetig, hoeheres Risiko |
 | > 7% | Sehr hoch | Nur mit kleiner Position, weiter KO PFLICHT |
+
+---
+
+## 1.6b REGIME-ERKENNUNG (PFLICHT!)
+
+```python
+# Regime-Erkennung: ADX, BB-Width-Percentile, DI-Spread
+# (ADX, +DI, -DI bereits in 1.0 berechnet)
+import pandas as pd
+
+# Bollinger Band Width Percentile
+sma20 = hist['Close'].rolling(20).mean()
+std20 = hist['Close'].rolling(20).std()
+bb_upper = sma20 + 2 * std20
+bb_lower = sma20 - 2 * std20
+bb_width = (bb_upper - bb_lower) / sma20
+bb_width_clean = bb_width.dropna()
+current_bb_width = float(bb_width.iloc[-1])
+bb_pctl = round(float((bb_width_clean.tail(120) < current_bb_width).sum() / min(len(bb_width_clean), 120) * 100), 1)
+
+# ADX + DI (aus yfinance-Daten)
+def calc_adx_manual(high, low, close, period=14):
+    plus_dm = high.diff().copy()
+    minus_dm = (-low.diff()).copy()
+    plus_dm[plus_dm < 0] = 0
+    minus_dm[minus_dm < 0] = 0
+    both = (plus_dm > 0) & (minus_dm > 0)
+    plus_dm[both & (plus_dm < minus_dm)] = 0
+    minus_dm[both & (minus_dm < plus_dm)] = 0
+    tr = pd.Series(np.maximum(
+        (high - low).values,
+        np.maximum(abs((high - close.shift()).values), abs((low - close.shift()).values))
+    ), index=high.index)
+    alpha = 1.0 / period
+    atr_s = tr.ewm(alpha=alpha, min_periods=period).mean()
+    s_plus = plus_dm.ewm(alpha=alpha, min_periods=period).mean()
+    s_minus = minus_dm.ewm(alpha=alpha, min_periods=period).mean()
+    pdi = 100 * s_plus / atr_s
+    mdi = 100 * s_minus / atr_s
+    dx = 100 * (pdi - mdi).abs() / (pdi + mdi).replace(0, 1)
+    adx_s = dx.ewm(alpha=alpha, min_periods=period).mean()
+    return float(adx_s.iloc[-1]), float(pdi.iloc[-1]), float(mdi.iloc[-1])
+
+import numpy as np
+adx_val, plus_di, minus_di = calc_adx_manual(hist['High'], hist['Low'], hist['Close'])
+di_spread = abs(plus_di - minus_di)
+
+# Regime bestimmen
+if adx_val >= 25 and di_spread > 10:
+    regime = 'TRENDING'
+elif adx_val < 20 and bb_pctl < 30:
+    regime = 'RANGE'
+elif adx_val < 20 and bb_pctl > 60:
+    regime = 'CHOPPY'
+else:
+    regime = 'TRANSITIONAL'
+
+print(f'\nREGIME-ERKENNUNG')
+print(f'  ADX:                {adx_val:.1f}')
+print(f'  +DI:                {plus_di:.1f}')
+print(f'  -DI:                {minus_di:.1f}')
+print(f'  DI-Spread:          {di_spread:.1f}')
+print(f'  BB-Width-Pctl:      {bb_pctl:.0f}%')
+print(f'  → REGIME:           {regime}')
+```
+
+**Regime-Tabelle:**
+
+| Regime | Bedingung | Bedeutung | Gewichtung |
+|--------|-----------|-----------|------------|
+| **TRENDING** | ADX ≥ 25 + DI-Spread > 10 | Klarer Trend, Trend-Indikatoren (SMA, MACD) dominieren | Trend ×1.3, Oszillatoren ×0.7 |
+| **RANGE** | ADX < 20 + BB-Pctl < 30 | Seitwaerts, Oszillatoren (RSI, BB) dominieren | Trend ×0.7, Oszillatoren ×1.3 |
+| **CHOPPY** | ADX < 20 + BB-Pctl > 60 | Unruhig ohne Richtung, ALLE Signale schwaecher | Gesamt ×0.7 |
+| **TRANSITIONAL** | Alles andere | Uebergang, Standardgewichtung | Alles ×1.0 |
+
+> **Regime fließt in Schritt 2 (Debate Gewichtung) und Schritt 3 (Konfidenz-Adjustment) ein!**
 
 ---
 
@@ -593,6 +735,38 @@ Wenn ein relevantes Makro-Event ansteht (FOMC, ECB, CPI, etc.), pruefe die Markt
 - ✅ **News Intelligence Scoring: Alle News auf 7 Achsen bewertet, NSI berechnet (PFLICHT!)**
 - ✅ Korrelations-Check gegen bestehende Positionen (PFLICHT!)
 - ✅ Event-Kalender mit Earnings und Makro-Terminen
+- ✅ **Regime-Erkennung durchgefuehrt (TRENDING/RANGE/CHOPPY/TRANSITIONAL)**
+
+---
+
+## OUTPUT JSON
+
+**WICHTIG: Der JSON-Block ist ZUSAETZLICH zur Prosa. Er ersetzt NICHTS.**
+
+Generiere am Ende von Schritt 1 diesen strukturierten Output:
+
+```json
+{
+  "step": 1,
+  "symbol": "{{SYMBOL}}",
+  "price_usd": 0.00,
+  "price_eur": 0.00,
+  "rsi": 0.0,
+  "rsi_delta_5d": 0.0,
+  "rsi_divergence": "none|bullish|bearish",
+  "macd_hist": 0.00,
+  "atr_pct": 0.0,
+  "regime": "TRENDING|RANGE|CHOPPY|TRANSITIONAL",
+  "nsi": 0.00,
+  "sma200_dist_pct": 0.0,
+  "adx": 0.0,
+  "earnings_date": null,
+  "support_levels": [0.00, 0.00, 0.00],
+  "resistance_levels": [0.00, 0.00, 0.00]
+}
+```
+
+Fuelle ALLE Felder mit den tatsaechlichen Werten aus der Analyse!
 
 ```
 ✅ [SCHRITT 1: DATENSAMMLUNG ABGESCHLOSSEN]

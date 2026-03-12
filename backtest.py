@@ -44,14 +44,15 @@ def parse_watchlist_symbols():
     return symbols
 
 
-def backtest_symbol(symbol, period='2y', forward_days=None):
+def backtest_symbol(symbol, period='2y', forward_days=None, capture_components=False):
     """Backtest v4 scoring for a symbol over a historical period.
 
     Rolling-window approach: for each trading day in the backtest period,
     compute technicals using only data up to that day, score long + short,
     then compare with actual forward returns.
 
-    Returns dict with results or None on error.
+    If capture_components=True, also decomposes score into individual components.
+    Returns (analysis_dict, records) if capture_components else analysis_dict.
     """
     import yfinance as yf
     from indicators import calc_technicals
@@ -114,7 +115,7 @@ def backtest_symbol(symbol, period='2y', forward_days=None):
                     if current_price > 0:
                         fwd[fd] = round((future_price - current_price) / current_price * 100, 4)
 
-            records.append({
+            record = {
                 'date': str(df.index[i].date()),
                 'price': d['price'],
                 'rsi': d['rsi'],
@@ -122,7 +123,12 @@ def backtest_symbol(symbol, period='2y', forward_days=None):
                 'long_score': ls,
                 'short_score': ss,
                 'forward_returns': fwd,
-            })
+            }
+
+            if capture_components:
+                record['components'] = decompose_score_long(d, regime=rw)
+
+            records.append(record)
         except (KeyError, ValueError, ZeroDivisionError, IndexError):
             errors += 1
             continue
@@ -132,9 +138,220 @@ def backtest_symbol(symbol, period='2y', forward_days=None):
 
     if not records:
         print(f'  {symbol}: no valid backtest records')
-        return None
+        return (None, []) if capture_components else None
 
-    return analyze_results(symbol, records, forward_days)
+    analysis = analyze_results(symbol, records, forward_days)
+    if capture_components:
+        return (analysis, records)
+    return analysis
+
+
+def decompose_score_long(d, regime=None):
+    """Decompose LONG score into individual component contributions.
+    Uses the same logic as morning_screener.score_long() but returns components."""
+    rsi = d.get('rsi', 50)
+    dist200 = d.get('sma200_distance_pct')
+    dist50 = d.get('sma50_distance_pct')
+    adx = d.get('adx')
+    rd = d.get('rsi_delta')
+    rw = regime or {'trend': 1.0, 'oscillator': 1.0, 'overall': 1.0}
+
+    components = {}
+
+    # SMA200 trend (0-15)
+    sma200_pts = 0
+    if dist200 is not None:
+        if dist200 < 0:
+            sma200_pts = -15
+        elif 0 <= dist200 <= 5:
+            sma200_pts = 15
+        elif 5 < dist200 <= 15:
+            sma200_pts = 12
+        elif 15 < dist200 <= 30:
+            sma200_pts = 8
+        else:
+            sma200_pts = 4
+    components['sma200'] = sma200_pts
+
+    # SMA50 pullback (0-12)
+    sma50_pts = 0
+    if dist50 is not None and dist200 is not None and dist200 >= 0:
+        if -3 <= dist50 <= 1:
+            sma50_pts = 12
+        elif -5 <= dist50 <= 3:
+            sma50_pts = 8
+        elif dist50 > 3:
+            sma50_pts = 4
+    components['sma50'] = sma50_pts
+
+    # RSI (0-12)
+    rsi_pts = 0
+    if 35 <= rsi <= 45:
+        rsi_pts = 12
+    elif 45 < rsi <= 55:
+        rsi_pts = 10
+    elif 30 <= rsi < 35:
+        rsi_pts = 6
+    elif 55 < rsi <= 65:
+        rsi_pts = 5
+    elif rsi > 70:
+        rsi_pts = -5
+    elif rsi < 30:
+        rsi_pts = -8
+    components['rsi'] = rsi_pts
+
+    # MACD (0-10)
+    macd_pts = 0
+    mc = d.get('macd_hist')
+    mp = d.get('macd_hist_prev')
+    m_dir = d.get('macd_hist_direction')
+    if mc is not None and mp is not None:
+        if mp < 0 and mc > 0:
+            macd_pts = 10
+        elif mc > 0 and m_dir == 'increasing':
+            macd_pts = 8
+        elif mc > 0:
+            macd_pts = 5
+        elif mp < 0 and mc < 0 and m_dir == 'increasing':
+            macd_pts = 3
+    components['macd'] = macd_pts
+
+    # ADX (0-10)
+    adx_pts = 0
+    if adx is not None:
+        if adx >= 35:
+            adx_pts = 10
+        elif adx >= 25:
+            adx_pts = 7
+        elif adx >= 20:
+            adx_pts = 3
+        else:
+            adx_pts = -2
+    components['adx'] = adx_pts
+
+    # ATR (0-18)
+    atr_pts = 0
+    atr = d.get('atr_pct')
+    if atr is not None:
+        if atr >= 5.0:
+            atr_pts = 18
+        elif atr >= 3.5:
+            atr_pts = 14
+        elif atr >= 2.5:
+            atr_pts = 9
+        elif atr >= 1.5:
+            atr_pts = 4
+    components['atr'] = atr_pts
+
+    # Volume (0-8)
+    vol_pts = 0
+    vr = d.get('vol_ratio') or 0
+    chg = d.get('change_pct', 0)
+    if vr >= 2.5 and chg > 0:
+        vol_pts = 8
+    elif vr >= 1.5 and chg > 0:
+        vol_pts = 5
+    elif vr >= 1.5 and chg < -1:
+        vol_pts = -3
+    components['volume'] = vol_pts
+
+    return components
+
+
+def analyze_feature_importance(records, forward_days=None):
+    """Analyze which score components best predict forward returns.
+    Returns dict with per-component correlation and predictive spread."""
+    if forward_days is None:
+        forward_days = [5]
+
+    results = {}
+    for fd in forward_days:
+        # Filter records with both components and forward returns
+        valid = [r for r in records if r.get('components') and fd in r.get('forward_returns', {})]
+        if len(valid) < 20:
+            continue
+
+        component_names = list(valid[0]['components'].keys())
+        for comp in component_names:
+            vals = np.array([r['components'][comp] for r in valid])
+            fwd_rets = np.array([r['forward_returns'][fd] for r in valid])
+
+            # Correlation
+            if np.std(vals) > 0 and np.std(fwd_rets) > 0:
+                corr = float(np.corrcoef(vals, fwd_rets)[0, 1])
+            else:
+                corr = 0.0
+
+            # Split at median
+            median_val = np.median(vals)
+            high_mask = vals > median_val
+            low_mask = vals <= median_val
+
+            avg_high = float(np.mean(fwd_rets[high_mask])) if high_mask.sum() > 0 else 0
+            avg_low = float(np.mean(fwd_rets[low_mask])) if low_mask.sum() > 0 else 0
+            spread = avg_high - avg_low
+
+            # Signal strength
+            if abs(corr) >= 0.15 and spread > 0.3:
+                signal = 'STARK'
+            elif abs(corr) >= 0.08 or spread > 0.15:
+                signal = 'MITTEL'
+            else:
+                signal = 'SCHWACH'
+
+            key = f'{comp}_{fd}d'
+            results[key] = {
+                'component': comp,
+                'forward_days': fd,
+                'correlation': round(corr, 4),
+                'avg_high': round(avg_high, 3),
+                'avg_low': round(avg_low, 3),
+                'spread': round(spread, 3),
+                'signal': signal,
+            }
+
+    return results
+
+
+def generate_weight_report(symbol, feature_results):
+    """Generate memory/backtest_results.md with feature importance data."""
+    report_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'backtest_results.md')
+
+    lines = [
+        '# Backtest Feature Importance',
+        '',
+        f'**Generiert:** {datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")}',
+        f'**Symbol:** {symbol}',
+        '',
+        '## Component Analysis',
+        '',
+        '| Component | Correlation | Avg High | Avg Low | Spread | Signal |',
+        '|-----------|-------------|----------|---------|--------|--------|',
+    ]
+
+    for key, fr in sorted(feature_results.items()):
+        emoji = '🟢' if fr['signal'] == 'STARK' else '🟡' if fr['signal'] == 'MITTEL' else '⚪'
+        lines.append(
+            f'| {emoji} {fr["component"]} ({fr["forward_days"]}d) | '
+            f'{fr["correlation"]:+.4f} | {fr["avg_high"]:+.3f}% | '
+            f'{fr["avg_low"]:+.3f}% | {fr["spread"]:+.3f}% | {fr["signal"]} |'
+        )
+
+    lines.extend([
+        '',
+        '## Empfehlungen',
+        '',
+        '- **STARK:** Komponente hat hohe Vorhersagekraft, Gewichtung beibehalten oder erhöhen',
+        '- **MITTEL:** Beitrag vorhanden, Gewichtung angemessen',
+        '- **SCHWACH:** Wenig Vorhersagekraft, Gewichtung prüfen',
+        '',
+        '> Diese Daten werden von `score_long()`/`score_short()` in morning_screener.py referenziert.',
+        '',
+    ])
+
+    with open(report_file, 'w') as f:
+        f.write('\n'.join(lines))
+    print(f'  Written: {report_file}')
 
 
 def analyze_results(symbol, records, forward_days):
@@ -265,6 +482,7 @@ def main():
     parser.add_argument('--watchlist', action='store_true', help='Backtest all watchlist symbols')
     parser.add_argument('--telegram', action='store_true', help='Send results via Telegram')
     parser.add_argument('--period', default='2y', help='Data period (default: 2y)')
+    parser.add_argument('--feature-importance', action='store_true', help='Analyze feature importance')
     args = parser.parse_args()
 
     if args.watchlist:
@@ -280,12 +498,21 @@ def main():
         sys.exit(1)
 
     results = []
+    all_records = {}
     for sym in symbols:
         print(f'\n{"="*50}')
-        result = backtest_symbol(sym, period=args.period)
-        if result:
-            print(format_results(result))
-            results.append(result)
+        if args.feature_importance:
+            out = backtest_symbol(sym, period=args.period, capture_components=True)
+            if out and out[0]:
+                result, records = out
+                print(format_results(result))
+                results.append(result)
+                all_records[sym] = records
+        else:
+            result = backtest_symbol(sym, period=args.period)
+            if result:
+                print(format_results(result))
+                results.append(result)
 
     if not results:
         print('No valid backtest results.')
@@ -297,6 +524,19 @@ def main():
     avg_hit = np.mean([r['hit_rates'].get('LONG_5d', {}).get('hit_rate', 0) for r in results if r['hit_rates'].get('LONG_5d')])
     if not np.isnan(avg_hit):
         print(f'Average LONG 5d hit rate: {avg_hit:.1f}%')
+
+    # Feature importance analysis
+    if args.feature_importance and all_records:
+        print(f'\n{"="*50}')
+        print('FEATURE IMPORTANCE ANALYSIS')
+        for sym, recs in all_records.items():
+            fi = analyze_feature_importance(recs, forward_days=[5])
+            if fi:
+                print(f'\n{sym}:')
+                for key, fr in sorted(fi.items()):
+                    print(f'  {fr["component"]:8s} corr={fr["correlation"]:+.4f} '
+                          f'spread={fr["spread"]:+.3f}% {fr["signal"]}')
+                generate_weight_report(sym, fi)
 
     if args.telegram:
         from send_telegram import send_message
