@@ -21,6 +21,7 @@ def get_active_symbols():
 def fetch_stock_data(symbols):
     import yfinance as yf
     import numpy as np
+    from wavelet_utils import wavelet_denoise
 
     results = {}
     for sym in symbols:
@@ -32,7 +33,8 @@ def fetch_stock_data(symbols):
             rsi = sma50 = sma200 = None
 
             if len(hist) >= 14:
-                delta = hist['Close'].diff()
+                close_d = wavelet_denoise(hist['Close'])
+                delta = close_d.diff()
                 gain = delta.where(delta > 0, 0).ewm(alpha=1/14, min_periods=14).mean()
                 loss = (-delta.where(delta < 0, 0)).ewm(alpha=1/14, min_periods=14).mean()
                 rsi_val = float((100 - (100 / (1 + gain / loss))).iloc[-1])

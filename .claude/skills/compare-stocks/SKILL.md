@@ -38,10 +38,10 @@ for sym in symbols:
         atr14 = (hist['High'] - hist['Low']).rolling(14).mean().iloc[-1]
         atr_pct = (atr14 / price * 100) if price > 0 else 0
 
-        # RSI berechnen
+        # RSI berechnen (Wilder's smoothing)
         delta = hist['Close'].diff()
-        gain = delta.where(delta > 0, 0).rolling(14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+        gain = delta.where(delta > 0, 0).ewm(alpha=1/14, min_periods=14).mean()
+        loss = (-delta.where(delta < 0, 0)).ewm(alpha=1/14, min_periods=14).mean()
         rs = gain / loss
         rsi = (100 - (100 / (1 + rs))).iloc[-1]
 

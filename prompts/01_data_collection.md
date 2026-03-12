@@ -48,20 +48,27 @@ Falls der User seit der letzten Aktualisierung einen Trade gemacht hat (neue Pos
 import yfinance as yf
 import pandas as pd
 
-def calculate_rsi(data, periods=14):
-    delta = data['Close'].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=periods).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=periods).mean()
+def calculate_rsi(close, periods=14):
+    delta = close.diff()
+    gain = delta.where(delta > 0, 0).ewm(alpha=1/periods, min_periods=periods).mean()
+    loss = (-delta.where(delta < 0, 0)).ewm(alpha=1/periods, min_periods=periods).mean()
     rs = gain / loss
     return 100 - (100 / (1 + rs))
 
-def calculate_macd(data):
-    exp1 = data['Close'].ewm(span=12, adjust=False).mean()
-    exp2 = data['Close'].ewm(span=26, adjust=False).mean()
+def calculate_macd(close):
+    exp1 = close.ewm(span=12, adjust=False).mean()
+    exp2 = close.ewm(span=26, adjust=False).mean()
     macd = exp1 - exp2
     signal = macd.ewm(span=9, adjust=False).mean()
     histogram = macd - signal
     return macd, signal, histogram
+
+# Wavelet denoising (graceful fallback)
+try:
+    from wavelet_utils import wavelet_denoise
+    HAS_WAVELET = True
+except ImportError:
+    HAS_WAVELET = False
 
 from datetime import datetime
 
@@ -82,13 +89,15 @@ info = ticker.info
 proxy_symbol = FUTURES_ETF_PROXY.get("{{SYMBOL}}")
 if proxy_symbol:
     proxy_hist = yf.Ticker(proxy_symbol).history(period='3mo')
-    rsi = calculate_rsi(proxy_hist)
-    macd, signal, histogram = calculate_macd(proxy_hist)
-    technicals_source = f'{proxy_symbol} (ETF-Proxy, rollover-frei)'
+    close_for_ta = wavelet_denoise(proxy_hist['Close']) if HAS_WAVELET else proxy_hist['Close']
+    rsi = calculate_rsi(close_for_ta)
+    macd, signal, histogram = calculate_macd(close_for_ta)
+    technicals_source = f'{proxy_symbol} (ETF-Proxy, rollover-frei, wavelet-denoised)'
 else:
-    rsi = calculate_rsi(hist)
-    macd, signal, histogram = calculate_macd(hist)
-    technicals_source = '{{SYMBOL}}'
+    close_for_ta = wavelet_denoise(hist['Close']) if HAS_WAVELET else hist['Close']
+    rsi = calculate_rsi(close_for_ta)
+    macd, signal, histogram = calculate_macd(close_for_ta)
+    technicals_source = '{{SYMBOL}} (wavelet-denoised)' if HAS_WAVELET else '{{SYMBOL}}'
 
 # EXAKTER TIMESTAMP
 now = datetime.utcnow()
@@ -461,6 +470,18 @@ Suchquellen:
 - Inflation: [Letzter CPI Wert + Datum]
 - Treasury 10Y: [Aktueller Yield]
 - Geopolitik: [Aktuelle Konflikte/Events die relevant sind]
+
+**Polymarket-Check (PFLICHT bei Makro-Events!):**
+Wenn ein relevantes Makro-Event ansteht (FOMC, ECB, CPI, etc.), pruefe die Markt-Erwartungen auf Polymarket:
+- Suche: `https://polymarket.com/search?query=[EVENT]`
+- Dokumentiere die Odds (z.B. "ECB Hold: 99%, Cut: <1%")
+- NICHT raten was passiert — Polymarket zeigt was der Markt ERWARTET
+- Wenn Markt-Erwartung ≠ deine Annahme → Annahme korrigieren!
+
+| Event | Polymarket Odds | Bedeutung fuer Trade |
+|-------|-----------------|----------------------|
+| [Event 1] | [XX% Szenario A / XX% Szenario B] | [Impact auf These] |
+| [Event 2] | [XX% Szenario A / XX% Szenario B] | [Impact auf These] |
 
 ## 1.9 Fundamentaldaten
 

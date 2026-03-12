@@ -67,6 +67,7 @@ def get_watchlist_symbols():
 def fetch_yfinance_data(symbols):
     import yfinance as yf
     import numpy as np
+    from wavelet_utils import wavelet_denoise
 
     data = {}
     for sym in symbols:
@@ -75,9 +76,11 @@ def fetch_yfinance_data(symbols):
             info = t.info
             hist = t.history(period='3mo')
 
+            close_d = wavelet_denoise(hist['Close']) if len(hist) >= 14 else hist['Close']
+
             rsi = None
             if len(hist) >= 14:
-                delta = hist['Close'].diff()
+                delta = close_d.diff()
                 gain = delta.where(delta > 0, 0).ewm(alpha=1/14, min_periods=14).mean()
                 loss = (-delta.where(delta < 0, 0)).ewm(alpha=1/14, min_periods=14).mean()
                 rsi_val = float((100 - (100 / (1 + gain / loss))).iloc[-1])
@@ -86,8 +89,8 @@ def fetch_yfinance_data(symbols):
 
             macd_hist = None
             if len(hist) >= 26:
-                exp12 = hist['Close'].ewm(span=12, adjust=False).mean()
-                exp26 = hist['Close'].ewm(span=26, adjust=False).mean()
+                exp12 = close_d.ewm(span=12, adjust=False).mean()
+                exp26 = close_d.ewm(span=26, adjust=False).mean()
                 macd = exp12 - exp26
                 signal = macd.ewm(span=9, adjust=False).mean()
                 macd_hist = round(float((macd - signal).iloc[-1]), 2)

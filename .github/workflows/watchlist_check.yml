@@ -20,7 +20,7 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install yfinance numpy pandas
+        run: pip install yfinance numpy pandas PyWavelets
 
       - name: Run watchlist check
         env:
