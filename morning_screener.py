@@ -15,7 +15,8 @@ from datetime import datetime, timezone
 
 import re
 
-from indicators import calc_technicals, detect_rsi_divergence
+from indicators import calc_technicals, detect_regime, detect_rsi_divergence
+from risk_audit import risk_audit, parse_portfolio_summary
 
 WATCHLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'watchlist.json')
 PORTFOLIO_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'portfolio.md')
@@ -172,11 +173,14 @@ def passes_hard_gates(sym, d):
     return True
 
 
-def score_long(d):
+def score_long(d, regime=None):
     """Score LONG potential (0-100). v4 Trend/Momentum scoring.
     Rewards: uptrend + pullback + momentum resuming.
-    Penalizes: falling knives, no trend, overextended."""
-    score = 0
+    Penalizes: falling knives, no trend, overextended.
+    regime: optional dict with 'trend', 'oscillator', 'overall' weight multipliers."""
+    trend_pts = 0   # SMA200, SMA50, MACD, ADX
+    osc_pts = 0     # RSI, RSI delta, RSI divergence, BB
+    other_pts = 0   # ATR, volume, extras
     signals = []
     rsi = d['rsi']
     price = d['price']
@@ -184,60 +188,59 @@ def score_long(d):
     dist50 = d.get('sma50_distance_pct')
     adx = d.get('adx')
     rd = d.get('rsi_delta')
+    rw = regime or {'trend': 1.0, 'oscillator': 1.0, 'overall': 1.0}
 
     # Trend alignment: SMA200 (0-15)
     if dist200 is not None:
         if dist200 < 0:
-            # Below SMA200: heavy penalty, kills the setup
-            score -= 15
-            signals.append('UNTER SMA200')
+            trend_pts -= 15; signals.append('UNTER SMA200')
         elif 0 <= dist200 <= 5:
-            score += 15; signals.append('Uptrend nah SMA200')
+            trend_pts += 15; signals.append('Uptrend nah SMA200')
         elif 5 < dist200 <= 15:
-            score += 12; signals.append('Uptrend')
+            trend_pts += 12; signals.append('Uptrend')
         elif 15 < dist200 <= 30:
-            score += 8
+            trend_pts += 8
         else:
-            score += 4  # Very extended above SMA200
+            trend_pts += 4
 
     # SMA50 pullback timing (0-12)
     if dist50 is not None and dist200 is not None and dist200 >= 0:
         if -3 <= dist50 <= 1:
-            score += 12; signals.append('SMA50 Pullback')
+            trend_pts += 12; signals.append('SMA50 Pullback')
         elif -5 <= dist50 <= 3:
-            score += 8; signals.append('Nahe SMA50')
+            trend_pts += 8; signals.append('Nahe SMA50')
         elif dist50 > 3:
-            score += 4  # Above SMA50, trending
+            trend_pts += 4
 
     # RSI sweet spot (0-12)
     if 35 <= rsi <= 45:
-        score += 12; signals.append(f'RSI {rsi:.0f} Pullback-Zone')
+        osc_pts += 12; signals.append(f'RSI {rsi:.0f} Pullback-Zone')
     elif 45 < rsi <= 55:
-        score += 10; signals.append(f'RSI {rsi:.0f} neutral')
+        osc_pts += 10; signals.append(f'RSI {rsi:.0f} neutral')
     elif 30 <= rsi < 35:
-        score += 6; signals.append(f'RSI {rsi:.0f} niedrig')
+        osc_pts += 6; signals.append(f'RSI {rsi:.0f} niedrig')
     elif 55 < rsi <= 65:
-        score += 5  # Still ok, momentum
+        osc_pts += 5
     elif rsi > 70:
-        score -= 5  # Overbought = bad entry for LONG
+        osc_pts -= 5
     elif rsi < 30:
-        score -= 8  # Falling knife territory
+        osc_pts -= 8
 
     # RSI delta: momentum resuming (0-8)
     if rd is not None:
         if rd > 5 and 30 <= rsi <= 55:
-            score += 8; signals.append(f'RSI dreht +{rd:.0f}')
+            osc_pts += 8; signals.append(f'RSI dreht +{rd:.0f}')
         elif rd > 3 and rsi <= 55:
-            score += 5
+            osc_pts += 5
         elif rd > 0:
-            score += 2
+            osc_pts += 2
         elif rd < -5:
-            score -= 3  # Momentum fading
+            osc_pts -= 3
 
     # RSI divergence (0-5)
     div = d.get('rsi_divergence')
     if div == 'bullish' and dist200 is not None and dist200 >= 0:
-        score += 5; signals.append('DIV bullish')
+        osc_pts += 5; signals.append('DIV bullish')
 
     # MACD confirmation (0-13)
     mc = d.get('macd_hist')
@@ -245,81 +248,86 @@ def score_long(d):
     m_dir = d.get('macd_hist_direction')
     if mc is not None and mp is not None:
         if mp < 0 and mc > 0:
-            score += 10; signals.append('MACD Cross UP')
+            trend_pts += 10; signals.append('MACD Cross UP')
         elif mc > 0 and m_dir == 'increasing':
-            score += 8; signals.append('MACD steigend')
+            trend_pts += 8; signals.append('MACD steigend')
         elif mc > 0:
-            score += 5
+            trend_pts += 5
         elif mp < 0 and mc < 0 and m_dir == 'increasing':
-            score += 3  # Converging from below = potential cross
+            trend_pts += 3
 
     # ATR% volatility (0-18)
     atr = d.get('atr_pct')
     if atr is not None:
         if atr >= 5.0:
-            score += 18; signals.append(f'ATR {atr:.1f}%')
+            other_pts += 18; signals.append(f'ATR {atr:.1f}%')
         elif atr >= 3.5:
-            score += 14
+            other_pts += 14
         elif atr >= 2.5:
-            score += 9
+            other_pts += 9
         elif atr >= 1.5:
-            score += 4
+            other_pts += 4
 
     # ADX trend strength (0-10)
     if adx is not None:
         if adx >= 35:
-            score += 10; signals.append(f'ADX {adx:.0f} stark')
+            trend_pts += 10; signals.append(f'ADX {adx:.0f} stark')
         elif adx >= 25:
-            score += 7; signals.append(f'ADX {adx:.0f}')
+            trend_pts += 7; signals.append(f'ADX {adx:.0f}')
         elif adx >= 20:
-            score += 3
+            trend_pts += 3
         else:
-            score -= 2  # No trend = bad for momentum
+            trend_pts -= 2
 
     # Volume confirmation (0-8)
     vr = d.get('vol_ratio') or 0
     chg = d.get('change_pct', 0)
     if vr >= 2.5 and chg > 0:
-        score += 8; signals.append(f'Vol {vr:.1f}x')
+        other_pts += 8; signals.append(f'Vol {vr:.1f}x')
     elif vr >= 1.5 and chg > 0:
-        score += 5
+        other_pts += 5
     elif vr >= 1.5 and chg < -1:
-        score -= 3  # High vol on red = distribution
+        other_pts -= 3
 
     # Bollinger squeeze (0-5)
     bb_pct = d.get('bb_width_percentile')
     bb_pos = d.get('bb_position')
     if bb_pct is not None and bb_pos is not None:
         if bb_pct < 15 and adx and adx >= 20:
-            score += 5; signals.append('BB Squeeze')
+            osc_pts += 5; signals.append('BB Squeeze')
         elif bb_pct < 25:
-            score += 2
+            osc_pts += 2
 
     # Extras (0-7)
     si = d.get('short_pct') or 0
     if si >= 0.20:
-        score += 4; signals.append(f'SI {si*100:.0f}%')
+        other_pts += 4; signals.append(f'SI {si*100:.0f}%')
     elif si >= 0.10:
-        score += 2
+        other_pts += 2
 
     rating = d.get('analyst_rating') or ''
     if rating in ('strong_buy', 'strongBuy'):
-        score += 3
+        other_pts += 3
     elif rating in ('buy',):
-        score += 2
+        other_pts += 2
 
     c5d = d.get('change_5d')
     if c5d is not None and -8 <= c5d <= -2 and dist200 is not None and dist200 >= 0:
-        score += 5; signals.append('5d Pullback im Uptrend')
+        other_pts += 5; signals.append('5d Pullback im Uptrend')
 
+    # Apply regime weight multipliers
+    score = int(trend_pts * rw['trend'] + osc_pts * rw['oscillator'] + other_pts)
+    score = int(score * rw['overall'])
     return max(0, min(100, score)), signals
 
 
-def score_short(d):
+def score_short(d, regime=None):
     """Score SHORT potential (0-100). v4 Trend/Momentum scoring.
     Rewards: downtrend + bounce to resistance + momentum fading.
     Penalizes: strong uptrends, oversold bounces."""
-    score = 0
+    trend_pts = 0
+    osc_pts = 0
+    other_pts = 0
     signals = []
     rsi = d['rsi']
     price = d['price']
@@ -327,60 +335,59 @@ def score_short(d):
     dist50 = d.get('sma50_distance_pct')
     adx = d.get('adx')
     rd = d.get('rsi_delta')
+    rw = regime or {'trend': 1.0, 'oscillator': 1.0, 'overall': 1.0}
 
     # Trend alignment: SMA200 (0-15)
     if dist200 is not None:
         if dist200 > 0:
-            # Above SMA200: heavy penalty, kills the setup
-            score -= 15
-            signals.append('UEBER SMA200')
+            trend_pts -= 15; signals.append('UEBER SMA200')
         elif -5 <= dist200 < 0:
-            score += 15; signals.append('Downtrend nah SMA200')
+            trend_pts += 15; signals.append('Downtrend nah SMA200')
         elif -15 <= dist200 < -5:
-            score += 12; signals.append('Downtrend')
+            trend_pts += 12; signals.append('Downtrend')
         elif -30 <= dist200 < -15:
-            score += 8
+            trend_pts += 8
         else:
-            score += 4  # Very extended below SMA200
+            trend_pts += 4
 
     # SMA50 rejection timing (0-12)
     if dist50 is not None and dist200 is not None and dist200 < 0:
         if -1 <= dist50 <= 3:
-            score += 12; signals.append('SMA50 Abprall')
+            trend_pts += 12; signals.append('SMA50 Abprall')
         elif -3 <= dist50 <= 5:
-            score += 8; signals.append('Nahe SMA50')
+            trend_pts += 8; signals.append('Nahe SMA50')
         elif dist50 < -3:
-            score += 4  # Below SMA50, trending down
+            trend_pts += 4
 
     # RSI sweet spot (0-12)
     if 55 <= rsi <= 65:
-        score += 12; signals.append(f'RSI {rsi:.0f} Bounce-Zone')
+        osc_pts += 12; signals.append(f'RSI {rsi:.0f} Bounce-Zone')
     elif 50 <= rsi < 55:
-        score += 10; signals.append(f'RSI {rsi:.0f} neutral')
+        osc_pts += 10; signals.append(f'RSI {rsi:.0f} neutral')
     elif 65 < rsi <= 70:
-        score += 6; signals.append(f'RSI {rsi:.0f} hoch')
+        osc_pts += 6; signals.append(f'RSI {rsi:.0f} hoch')
     elif 40 <= rsi < 50:
-        score += 5  # Still ok
+        osc_pts += 5
     elif rsi < 30:
-        score -= 5  # Oversold = bad entry for SHORT
+        osc_pts -= 5
     elif rsi > 75:
-        score -= 8  # Extreme = could be strong momentum, risky short
+        osc_pts -= 8
 
     # RSI delta: momentum fading (0-8)
     if rd is not None:
         if rd < -5 and 45 <= rsi <= 70:
-            score += 8; signals.append(f'RSI faellt {rd:.0f}')
+            osc_pts += 8; signals.append(f'RSI faellt {rd:.0f}')
         elif rd < -3 and rsi >= 45:
-            score += 5
+            osc_pts += 5
         elif rd < 0:
-            score += 2
+            osc_pts += 2
         elif rd > 5:
-            score -= 3  # Momentum picking up = bad for short
+            osc_pts -= 3
 
     # RSI divergence (0-5)
     div = d.get('rsi_divergence')
     if div == 'bearish' and dist200 is not None and dist200 < 0:
-        score += 5; signals.append('DIV bearish')
+        osc_pts += 5; signals.append('DIV bearish')
 
     # MACD confirmation (0-13)
     mc = d.get('macd_hist')
@@ -388,75 +395,78 @@ def score_short(d):
     m_dir = d.get('macd_hist_direction')
     if mc is not None and mp is not None:
         if mp > 0 and mc < 0:
-            score += 10; signals.append('MACD Cross DOWN')
+            trend_pts += 10; signals.append('MACD Cross DOWN')
         elif mc < 0 and m_dir == 'decreasing':
-            score += 8; signals.append('MACD fallend')
+            trend_pts += 8; signals.append('MACD fallend')
         elif mc < 0:
-            score += 5
+            trend_pts += 5
         elif mp > 0 and mc > 0 and m_dir == 'decreasing':
-            score += 3  # Converging from above = potential cross down
+            trend_pts += 3
 
     # ATR% volatility (0-18)
     atr = d.get('atr_pct')
     if atr is not None:
         if atr >= 5.0:
-            score += 18; signals.append(f'ATR {atr:.1f}%')
+            other_pts += 18; signals.append(f'ATR {atr:.1f}%')
         elif atr >= 3.5:
-            score += 14
+            other_pts += 14
         elif atr >= 2.5:
-            score += 9
+            other_pts += 9
         elif atr >= 1.5:
-            score += 4
+            other_pts += 4
 
     # ADX trend strength (0-10)
     if adx is not None:
         if adx >= 35:
-            score += 10; signals.append(f'ADX {adx:.0f} stark')
+            trend_pts += 10; signals.append(f'ADX {adx:.0f} stark')
         elif adx >= 25:
-            score += 7; signals.append(f'ADX {adx:.0f}')
+            trend_pts += 7; signals.append(f'ADX {adx:.0f}')
         elif adx >= 20:
-            score += 3
+            trend_pts += 3
         else:
-            score -= 2  # No trend = bad for momentum
+            trend_pts -= 2
 
     # Volume confirmation (0-8)
     vr = d.get('vol_ratio') or 0
     chg = d.get('change_pct', 0)
     if vr >= 2.5 and chg < 0:
-        score += 8; signals.append(f'Vol {vr:.1f}x')
+        other_pts += 8; signals.append(f'Vol {vr:.1f}x')
     elif vr >= 1.5 and chg < 0:
-        score += 5
+        other_pts += 5
     elif vr >= 1.5 and chg > 1:
-        score -= 3  # High vol on green = accumulation
+        other_pts -= 3
 
     # Bollinger squeeze (0-5)
     bb_pct = d.get('bb_width_percentile')
     bb_pos = d.get('bb_position')
     if bb_pct is not None and bb_pos is not None:
         if bb_pct < 15 and adx and adx >= 20:
-            score += 5; signals.append('BB Squeeze')
+            osc_pts += 5; signals.append('BB Squeeze')
         elif bb_pct < 25:
-            score += 2
+            osc_pts += 2
 
     # Extras (0-7)
     si = d.get('short_pct') or 0
     if si >= 0.25:
-        score -= 5  # Too crowded, squeeze risk
+        other_pts -= 5
     elif si >= 0.15:
-        score -= 2
+        other_pts -= 2
     elif si < 0.05:
-        score += 2  # Low SI = room to short
+        other_pts += 2
 
     rating = d.get('analyst_rating') or ''
     if rating in ('sell', 'strong_sell', 'strongSell'):
-        score += 3
+        other_pts += 3
     elif rating in ('underperform',):
-        score += 2
+        other_pts += 2
 
     c5d = d.get('change_5d')
     if c5d is not None and 2 <= c5d <= 8 and dist200 is not None and dist200 < 0:
-        score += 5; signals.append('5d Bounce im Downtrend')
+        other_pts += 5; signals.append('5d Bounce im Downtrend')
 
+    # Apply regime weight multipliers
+    score = int(trend_pts * rw['trend'] + osc_pts * rw['oscillator'] + other_pts)
+    score = int(score * rw['overall'])
     return max(0, min(100, score)), signals
 
 
@@ -536,8 +546,17 @@ def build_message(all_data, positions, sector_map, scan_time, total_scanned, pos
     long_scores = []
     short_scores = []
     for sym, d in passed.items():
-        ls, lsig = score_long(d)
-        ss, ssig = score_short(d)
+        rw = d.get('regime_weights')
+        ls, lsig = score_long(d, regime=rw)
+        ss, ssig = score_short(d, regime=rw)
+        regime = d.get('regime', '?')
+        if regime == 'CHOPPY':
+            lsig.insert(0, 'CHOPPY')
+            ssig.insert(0, 'CHOPPY')
+        elif regime == 'TRENDING':
+            lsig.insert(0, 'TREND')
+        elif regime == 'RANGE':
+            lsig.insert(0, 'RANGE')
         sector = sector_map.get(sym, d.get('sector') or '?')
         long_scores.append((ls, sym, sector, d, lsig))
         short_scores.append((ss, sym, sector, d, ssig))
@@ -549,8 +568,16 @@ def build_message(all_data, positions, sector_map, scan_time, total_scanned, pos
 
     sector_conc = calc_sector_concentration(positions, sector_map)
 
-    msg = f'<b>MORNING SCREENER v3</b> | {scan_time}\n'
+    # Count regimes for summary
+    regime_counts = {}
+    for sym, d in passed.items():
+        r = d.get('regime', 'TRANSITIONAL')
+        regime_counts[r] = regime_counts.get(r, 0) + 1
+
+    msg = f'<b>MORNING SCREENER v4</b> | {scan_time}\n'
     msg += f'Gescannt: {total_scanned} | Bestanden: {len(passed)}\n'
+    regime_str = ' '.join(f'{r[0]}:{c}' for r, c in sorted(regime_counts.items()))
+    msg += f'Regimes: {regime_str}\n'
 
     if positions:
         msg += f'\n<b>PORTFOLIO</b>\n'
@@ -558,11 +585,21 @@ def build_message(all_data, positions, sector_map, scan_time, total_scanned, pos
             warn = ' WARNUNG!' if pct > SECTOR_LIMIT * 100 else ''
             msg += f'  {sec}: {pct:.0f}%{warn}\n'
 
+    # Risk audit
+    pf_state = parse_portfolio_summary()
+
     msg += f'\n<b>TOP LONG</b>\n'
     if top_long and top_long[0][0] >= MIN_SCORE:
         for i, (sc, sym, sec, d, sig) in enumerate(top_long, 1):
             if sc < MIN_SCORE:
                 break
+            d['_score_long'] = sc
+            d['_score_short'] = 0
+            approved, vetoes, warns = risk_audit(sym, d, pf_state, sector=sec)
+            if vetoes:
+                sig.insert(0, f'VETO: {vetoes[0].split(":")[0]}')
+            for w in warns:
+                sig.append(f'⚠️{w.split(":")[0]}')
             msg += fmt_candidate(i, sc, sym, sec, d, sig, 'LONG', pos_dirs, name_map.get(sym, ''))
     else:
         msg += '  Keine starken Setups\n'
@@ -572,6 +609,13 @@ def build_message(all_data, positions, sector_map, scan_time, total_scanned, pos
         for i, (sc, sym, sec, d, sig) in enumerate(top_short, 1):
             if sc < MIN_SCORE:
                 break
+            d['_score_long'] = 0
+            d['_score_short'] = sc
+            approved, vetoes, warns = risk_audit(sym, d, pf_state, sector=sec)
+            if vetoes:
+                sig.insert(0, f'VETO: {vetoes[0].split(":")[0]}')
+            for w in warns:
+                sig.append(f'⚠️{w.split(":")[0]}')
             msg += fmt_candidate(i, sc, sym, sec, d, sig, 'SHORT', pos_dirs, name_map.get(sym, ''))
     else:
         msg += '  Keine starken Setups\n'
@@ -667,8 +711,8 @@ def main():
     passed = {sym: d for sym, d in data.items() if passes_hard_gates(sym, d)}
     print(f'  Hard gates: {len(passed)} passed')
 
-    long_pre = sorted([(score_long(d)[0], sym) for sym, d in passed.items()], reverse=True)
-    short_pre = sorted([(score_short(d)[0], sym) for sym, d in passed.items()], reverse=True)
+    long_pre = sorted([(score_long(d, regime=d.get('regime_weights'))[0], sym) for sym, d in passed.items()], reverse=True)
+    short_pre = sorted([(score_short(d, regime=d.get('regime_weights'))[0], sym) for sym, d in passed.items()], reverse=True)
 
     enrich_syms = {sym for _, sym in long_pre[:ENRICH_N]} | {sym for _, sym in short_pre[:ENRICH_N]}
     enrich_syms |= (FUTURES | position_syms) & set(data.keys())

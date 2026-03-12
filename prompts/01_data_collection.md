@@ -462,6 +462,43 @@ Suchquellen:
 - News 4: [Erklaerung]
 - News 5: [Erklaerung]
 
+## 1.7b NEWS INTELLIGENCE SCORING (PFLICHT!)
+
+Bewerte JEDE der 5+ gesammelten News auf diesen 7 Achsen (-2 bis +2):
+
+| # | Headline (kurz) | Relevanz | Sentiment | Preis-Impact | Trend | Earnings | Investoren-Vertrauen | Risiko-Profil | SCORE |
+|---|-----------------|----------|-----------|--------------|-------|----------|---------------------|---------------|-------|
+| 1 | [Headline] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | Σ/7 |
+| 2 | [Headline] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | Σ/7 |
+| 3 | [Headline] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | Σ/7 |
+| 4 | [Headline] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | Σ/7 |
+| 5 | [Headline] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | Σ/7 |
+
+**Achsen-Definitionen:**
+- `Relevanz`: Wie relevant ist die News fuer {{SYMBOL}}? (-2 = irrelevant, +2 = direkt)
+- `Sentiment`: Grundstimmung der Nachricht (-2 = sehr negativ, +2 = sehr positiv)
+- `Preis-Impact`: Wird die News den Preis bewegen? (-2 = starker Druck runter, +2 = starker Druck hoch)
+- `Trend`: Unterstuetzt die News den aktuellen Trend? (-2 = stark dagegen, +2 = stark dafuer)
+- `Earnings`: Wirkt sich auf Earnings/Umsatz aus? (-2 = stark negativ, +2 = stark positiv)
+- `Investoren-Vertrauen`: Effekt auf Investoren-Vertrauen? (-2 = Panik, +2 = Euphorie)
+- `Risiko-Profil`: Aendert sich das Risiko-Profil? (-2 = viel riskanter, +2 = sicherer)
+
+**News Sentiment Index (NSI) = Durchschnitt aller SCORE-Werte:**
+
+```
+NSI > +1.0:         Stark bullisch
+NSI +0.3 bis +1.0:  Leicht bullisch
+NSI -0.3 bis +0.3:  Neutral
+NSI -1.0 bis -0.3:  Leicht bearisch
+NSI < -1.0:         Stark bearisch
+```
+
+**NSI = X.XX → [Einordnung]**
+
+→ NSI wird in Schritt 2 (Debate) und Schritt 3 (Judge) referenziert!
+
+---
+
 ## 1.8 Makro-Faktoren
 
 **Aktuelle Werte via Web-Suche:**
@@ -553,6 +590,7 @@ Wenn ein relevantes Makro-Event ansteht (FOMC, ECB, CPI, etc.), pruefe die Markt
 - ✅ Jeder Datenpunkt mit Quelle
 - ✅ Mindestens 5 News-Headlines mit Datum
 - ✅ **RSI-Delta, Divergenz und Momentum berechnet (PFLICHT!)**
+- ✅ **News Intelligence Scoring: Alle News auf 7 Achsen bewertet, NSI berechnet (PFLICHT!)**
 - ✅ Korrelations-Check gegen bestehende Positionen (PFLICHT!)
 - ✅ Event-Kalender mit Earnings und Makro-Terminen
 

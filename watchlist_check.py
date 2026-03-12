@@ -12,7 +12,8 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
-from indicators import calc_technicals, detect_rsi_divergence
+from indicators import calc_technicals, detect_regime, detect_rsi_divergence
+from risk_audit import risk_audit, parse_portfolio_summary
 
 WATCHLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'watchlist.md')
 PORTFOLIO_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'portfolio.md')
@@ -174,258 +175,16 @@ def passes_hard_gates(sym, d):
     return True
 
 
-def score_long(d):
-    score = 0
-    signals = []
-    rsi = d['rsi']
-    dist200 = d.get('sma200_distance_pct')
-    dist50 = d.get('sma50_distance_pct')
-    adx = d.get('adx')
-    rd = d.get('rsi_delta')
-
-    if dist200 is not None:
-        if dist200 < 0:
-            score -= 15; signals.append('UNTER SMA200')
-        elif 0 <= dist200 <= 5:
-            score += 15; signals.append('Uptrend nah SMA200')
-        elif 5 < dist200 <= 15:
-            score += 12; signals.append('Uptrend')
-        elif 15 < dist200 <= 30:
-            score += 8
-        else:
-            score += 4
-
-    if dist50 is not None and dist200 is not None and dist200 >= 0:
-        if -3 <= dist50 <= 1:
-            score += 12; signals.append('SMA50 Pullback')
-        elif -5 <= dist50 <= 3:
-            score += 8; signals.append('Nahe SMA50')
-        elif dist50 > 3:
-            score += 4
-
-    if 35 <= rsi <= 45:
-        score += 12; signals.append(f'RSI {rsi:.0f} Pullback-Zone')
-    elif 45 < rsi <= 55:
-        score += 10; signals.append(f'RSI {rsi:.0f} neutral')
-    elif 30 <= rsi < 35:
-        score += 6; signals.append(f'RSI {rsi:.0f} niedrig')
-    elif 55 < rsi <= 65:
-        score += 5
-    elif rsi > 70:
-        score -= 5
-    elif rsi < 30:
-        score -= 8
-
-    if rd is not None:
-        if rd > 5 and 30 <= rsi <= 55:
-            score += 8; signals.append(f'RSI dreht +{rd:.0f}')
-        elif rd > 3 and rsi <= 55:
-            score += 5
-        elif rd > 0:
-            score += 2
-        elif rd < -5:
-            score -= 3
-
-    div = d.get('rsi_divergence')
-    if div == 'bullish' and dist200 is not None and dist200 >= 0:
-        score += 5; signals.append('DIV bullish')
-
-    mc = d.get('macd_hist')
-    mp = d.get('macd_hist_prev')
-    m_dir = d.get('macd_hist_direction')
-    if mc is not None and mp is not None:
-        if mp < 0 and mc > 0:
-            score += 10; signals.append('MACD Cross UP')
-        elif mc > 0 and m_dir == 'increasing':
-            score += 8; signals.append('MACD steigend')
-        elif mc > 0:
-            score += 5
-        elif mp < 0 and mc < 0 and m_dir == 'increasing':
-            score += 3
-
-    atr = d.get('atr_pct')
-    if atr is not None:
-        if atr >= 5.0:
-            score += 18; signals.append(f'ATR {atr:.1f}%')
-        elif atr >= 3.5:
-            score += 14
-        elif atr >= 2.5:
-            score += 9
-        elif atr >= 1.5:
-            score += 4
-
-    if adx is not None:
-        if adx >= 35:
-            score += 10; signals.append(f'ADX {adx:.0f} stark')
-        elif adx >= 25:
-            score += 7; signals.append(f'ADX {adx:.0f}')
-        elif adx >= 20:
-            score += 3
-        else:
-            score -= 2
-
-    vr = d.get('vol_ratio') or 0
-    chg = d.get('change_pct', 0)
-    if vr >= 2.5 and chg > 0:
-        score += 8; signals.append(f'Vol {vr:.1f}x')
-    elif vr >= 1.5 and chg > 0:
-        score += 5
-    elif vr >= 1.5 and chg < -1:
-        score -= 3
-
-    bb_pct = d.get('bb_width_percentile')
-    bb_pos = d.get('bb_position')
-    if bb_pct is not None and bb_pos is not None:
-        if bb_pct < 15 and adx and adx >= 20:
-            score += 5; signals.append('BB Squeeze')
-        elif bb_pct < 25:
-            score += 2
-
-    si = d.get('short_pct') or 0
-    if si >= 0.20:
-        score += 4; signals.append(f'SI {si*100:.0f}%')
-    elif si >= 0.10:
-        score += 2
-
-    rating = d.get('analyst_rating') or ''
-    if rating in ('strong_buy', 'strongBuy'):
-        score += 3
-    elif rating in ('buy',):
-        score += 2
-
-    c5d = d.get('change_5d')
-    if c5d is not None and -8 <= c5d <= -2 and dist200 is not None and dist200 >= 0:
-        score += 5; signals.append('5d Pullback im Uptrend')
-
-    return max(0, min(100, score)), signals
+def score_long(d, regime=None):
+    """Identical scoring to morning_screener.py with regime support."""
+    from morning_screener import score_long as _score_long
+    return _score_long(d, regime=regime)
 
 
-def score_short(d):
-    score = 0
-    signals = []
-    rsi = d['rsi']
-    dist200 = d.get('sma200_distance_pct')
-    dist50 = d.get('sma50_distance_pct')
-    adx = d.get('adx')
-    rd = d.get('rsi_delta')
-
-    if dist200 is not None:
-        if dist200 > 0:
-            score -= 15; signals.append('UEBER SMA200')
-        elif -5 <= dist200 < 0:
-            score += 15; signals.append('Downtrend nah SMA200')
-        elif -15 <= dist200 < -5:
-            score += 12; signals.append('Downtrend')
-        elif -30 <= dist200 < -15:
-            score += 8
-        else:
-            score += 4
-
-    if dist50 is not None and dist200 is not None and dist200 < 0:
-        if -1 <= dist50 <= 3:
-            score += 12; signals.append('SMA50 Abprall')
-        elif -3 <= dist50 <= 5:
-            score += 8; signals.append('Nahe SMA50')
-        elif dist50 < -3:
-            score += 4
-
-    if 55 <= rsi <= 65:
-        score += 12; signals.append(f'RSI {rsi:.0f} Bounce-Zone')
-    elif 50 <= rsi < 55:
-        score += 10; signals.append(f'RSI {rsi:.0f} neutral')
-    elif 65 < rsi <= 70:
-        score += 6; signals.append(f'RSI {rsi:.0f} hoch')
-    elif 40 <= rsi < 50:
-        score += 5
-    elif rsi < 30:
-        score -= 5
-    elif rsi > 75:
-        score -= 8
-
-    if rd is not None:
-        if rd < -5 and 45 <= rsi <= 70:
-            score += 8; signals.append(f'RSI fällt {rd:.0f}')
-        elif rd < -3 and rsi >= 45:
-            score += 5
-        elif rd < 0:
-            score += 2
-        elif rd > 5:
-            score -= 3
-
-    div = d.get('rsi_divergence')
-    if div == 'bearish' and dist200 is not None and dist200 < 0:
-        score += 5; signals.append('DIV bearish')
-
-    mc = d.get('macd_hist')
-    mp = d.get('macd_hist_prev')
-    m_dir = d.get('macd_hist_direction')
-    if mc is not None and mp is not None:
-        if mp > 0 and mc < 0:
-            score += 10; signals.append('MACD Cross DOWN')
-        elif mc < 0 and m_dir == 'decreasing':
-            score += 8; signals.append('MACD fallend')
-        elif mc < 0:
-            score += 5
-        elif mp > 0 and mc > 0 and m_dir == 'decreasing':
-            score += 3
-
-    atr = d.get('atr_pct')
-    if atr is not None:
-        if atr >= 5.0:
-            score += 18; signals.append(f'ATR {atr:.1f}%')
-        elif atr >= 3.5:
-            score += 14
-        elif atr >= 2.5:
-            score += 9
-        elif atr >= 1.5:
-            score += 4
-
-    if adx is not None:
-        if adx >= 35:
-            score += 10; signals.append(f'ADX {adx:.0f} stark')
-        elif adx >= 25:
-            score += 7; signals.append(f'ADX {adx:.0f}')
-        elif adx >= 20:
-            score += 3
-        else:
-            score -= 2
-
-    vr = d.get('vol_ratio') or 0
-    chg = d.get('change_pct', 0)
-    if vr >= 2.5 and chg < 0:
-        score += 8; signals.append(f'Vol {vr:.1f}x')
-    elif vr >= 1.5 and chg < 0:
-        score += 5
-    elif vr >= 1.5 and chg > 1:
-        score -= 3
-
-    bb_pct = d.get('bb_width_percentile')
-    bb_pos = d.get('bb_position')
-    if bb_pct is not None and bb_pos is not None:
-        if bb_pct < 15 and adx and adx >= 20:
-            score += 5; signals.append('BB Squeeze')
-        elif bb_pct < 25:
-            score += 2
-
-    si = d.get('short_pct') or 0
-    if si >= 0.25:
-        score -= 5
-    elif si >= 0.15:
-        score -= 2
-    elif si < 0.05:
-        score += 2
-
-    rating = d.get('analyst_rating') or ''
-    if rating in ('sell', 'strong_sell', 'strongSell'):
-        score += 3
-    elif rating in ('underperform',):
-        score += 2
-
-    c5d = d.get('change_5d')
-    if c5d is not None and 2 <= c5d <= 8 and dist200 is not None and dist200 < 0:
-        score += 5; signals.append('5d Bounce im Downtrend')
-
-    return max(0, min(100, score)), signals
+def score_short(d, regime=None):
+    """Identical scoring to morning_screener.py with regime support."""
+    from morning_screener import score_short as _score_short
+    return _score_short(d, regime=regime)
 
 
 # ---------------------------------------------------------------------------
@@ -532,8 +291,17 @@ def build_message(all_data, positions, sector_map, name_map, scan_time, total_sy
     long_scores = []
     short_scores = []
     for sym, d in passed.items():
-        ls, lsig = score_long(d)
-        ss, ssig = score_short(d)
+        rw = d.get('regime_weights')
+        ls, lsig = score_long(d, regime=rw)
+        ss, ssig = score_short(d, regime=rw)
+        regime = d.get('regime', '?')
+        if regime == 'CHOPPY':
+            lsig.insert(0, 'CHOPPY')
+            ssig.insert(0, 'CHOPPY')
+        elif regime == 'TRENDING':
+            lsig.insert(0, 'TREND')
+        elif regime == 'RANGE':
+            lsig.insert(0, 'RANGE')
         sector = sector_map.get(sym, d.get('sector') or '?')
         long_scores.append((ls, sym, sector, d, lsig))
         short_scores.append((ss, sym, sector, d, ssig))
@@ -550,8 +318,16 @@ def build_message(all_data, positions, sector_map, name_map, scan_time, total_sy
     else:
         session = 'Post-Close'
 
+    # Count regimes for summary
+    regime_counts = {}
+    for sym, d in passed.items():
+        r = d.get('regime', 'TRANSITIONAL')
+        regime_counts[r] = regime_counts.get(r, 0) + 1
+
     msg = f'<b>📋 WATCHLIST CHECK</b> | {scan_time}\n'
     msg += f'{session} | {total_ok}/{total_symbols} Symbole\n'
+    regime_str = ' '.join(f'{r[0]}:{c}' for r, c in sorted(regime_counts.items()))
+    msg += f'Regimes: {regime_str}\n'
 
     # US Futures sentiment
     if futures_data:
@@ -576,12 +352,22 @@ def build_message(all_data, positions, sector_map, name_map, scan_time, total_sy
         sector_str = ', '.join(f'{s} {n}' for s, n in sorted(sectors.items(), key=lambda x: x[1], reverse=True))
         msg += f'  Sektoren: {sector_str}\n'
 
+    # Risk audit
+    pf_state = parse_portfolio_summary()
+
     # TOP LONG
     msg += f'\n<b>🟢 TOP {TOP_N} LONG</b>\n'
     long_shown = 0
     for i, (sc, sym, sec, d, sig) in enumerate(top_long, 1):
         if sc < MIN_SCORE:
             break
+        d['_score_long'] = sc
+        d['_score_short'] = 0
+        approved, vetoes, warns = risk_audit(sym, d, pf_state, sector=sec)
+        if vetoes:
+            sig.insert(0, f'VETO: {vetoes[0].split(":")[0]}')
+        for w in warns:
+            sig.append(f'⚠️{w.split(":")[0]}')
         msg += fmt_candidate(i, sc, sym, sec, d, sig, 'LONG', positions, name_map.get(sym, ''))
         long_shown += 1
     if long_shown == 0:
@@ -593,6 +379,13 @@ def build_message(all_data, positions, sector_map, name_map, scan_time, total_sy
     for i, (sc, sym, sec, d, sig) in enumerate(top_short, 1):
         if sc < MIN_SCORE:
             break
+        d['_score_long'] = 0
+        d['_score_short'] = sc
+        approved, vetoes, warns = risk_audit(sym, d, pf_state, sector=sec)
+        if vetoes:
+            sig.insert(0, f'VETO: {vetoes[0].split(":")[0]}')
+        for w in warns:
+            sig.append(f'⚠️{w.split(":")[0]}')
         msg += fmt_candidate(i, sc, sym, sec, d, sig, 'SHORT', positions, name_map.get(sym, ''))
         short_shown += 1
     if short_shown == 0:
@@ -610,7 +403,7 @@ def build_message(all_data, positions, sector_map, name_map, scan_time, total_sy
     if rest > 0:
         msg += f'\n💤 {rest} weitere im Normalbereich\n'
 
-    msg += f'\n<i>Min Score {MIN_SCORE} | Watchlist Check v1</i>'
+    msg += f'\n<i>Min Score {MIN_SCORE} | Watchlist Check v2</i>'
     return msg
 
 
@@ -686,8 +479,8 @@ def main():
     passed = {sym: d for sym, d in data.items() if passes_hard_gates(sym, d)}
     print(f'  Hard gates: {len(passed)} bestanden')
 
-    long_pre = sorted([(score_long(d)[0], sym) for sym, d in passed.items()], reverse=True)
-    short_pre = sorted([(score_short(d)[0], sym) for sym, d in passed.items()], reverse=True)
+    long_pre = sorted([(score_long(d, regime=d.get('regime_weights'))[0], sym) for sym, d in passed.items()], reverse=True)
+    short_pre = sorted([(score_short(d, regime=d.get('regime_weights'))[0], sym) for sym, d in passed.items()], reverse=True)
 
     enrich_syms = {sym for _, sym in long_pre[:ENRICH_N]} | {sym for _, sym in short_pre[:ENRICH_N]}
     enrich_syms |= FUTURES & set(data.keys())

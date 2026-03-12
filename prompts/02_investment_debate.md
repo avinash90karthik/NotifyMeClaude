@@ -15,7 +15,7 @@
 ║  ✅ JEDER Analyst MUSS den Chart referenzieren               ║
 ║  ✅ Bear MUSS Bull-Argumente explizit widerlegen             ║
 ║  ✅ Kursziel mit Begruendung (Chart-Level referenzieren)     ║
-║  ✅ 2 vollstaendige Runden (nicht abkuerzen!)                ║
+║  ✅ 3 vollstaendige Runden inkl. Finale Synthese!             ║
 ║  ✅ SHORT-Trade Bewertung am Ende (PFLICHT!)                 ║
 ║  ✅ RSI-Divergenz in technischer Argumentation nutzen!       ║
 ║                                                               ║
@@ -28,7 +28,7 @@
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
-**Input:** Daten aus Schritt 1 (Preis, Technicals, Chart, News, Makro, Fundamentals, **RSI-Divergenz**)
+**Input:** Daten aus Schritt 1 (Preis, Technicals, Chart, News, Makro, Fundamentals, **RSI-Divergenz**, **NSI**)
 
 ---
 
@@ -57,6 +57,7 @@
 
 ### Argument 2: NEWS & KATALYSATOREN
 > Erklaere ausfuehrlich: Welche aktuellen Events treiben den Preis?
+> - **Nutze den News Sentiment Index (NSI) aus Schritt 1.7b als Datengrundlage!**
 > - Nenne konkrete News-Headlines mit Datum
 > - Erklaere den Zusammenhang zum Preis
 > - Quantifiziere den Impact wenn moeglich
@@ -186,6 +187,32 @@
 
 ---
 
+## RUNDE 3: FINALE SYNTHESE
+
+### BULL FINAL (Pflicht: 4-6 Saetze!)
+> Nach 2 Runden Debatte: Was ist dein STAERKSTES verbleibendes Argument?
+> - Welches Bear-Argument konntest du NICHT widerlegen? Wie gehst du damit um?
+> - Was ist dein finales Kursziel nach Beruecksichtigung aller Gegenargumente?
+> - Wie hoch ist deine Konfidenz (0-100%) fuer den LONG-Trade?
+
+**Bull Finale Konfidenz:** XX%
+**Angepasstes Kursziel:** $XX.XX
+
+### BEAR FINAL (Pflicht: 4-6 Saetze!)
+> Nach 2 Runden Debatte: Was ist dein STAERKSTES verbleibendes Argument?
+> - Welches Bull-Argument konntest du NICHT widerlegen? Wie gehst du damit um?
+> - Was ist dein finales Kursziel nach Beruecksichtigung aller Gegenargumente?
+> - Wie hoch ist deine Konfidenz (0-100%) fuer den SHORT-Trade?
+
+**Bear Finale Konfidenz:** XX%
+**Angepasstes Kursziel:** $XX.XX
+
+```
+✅ [RUNDE 3: FINALE SYNTHESE ABGESCHLOSSEN]
+```
+
+---
+
 ## SHORT-TRADE BEWERTUNG
 
 ```
@@ -245,7 +272,8 @@ Differenz:   XX Punkte zugunsten [LONG/SHORT]
 - ✅ Bear MUSS Bull-Argumente explizit widerlegen
 - ✅ **RSI-Delta und Divergenz in technischen Argumenten verwenden!**
 - ✅ Kursziel mit Begruendung (Chart-Level referenzieren)
-- ✅ 2 vollstaendige Runden durchgefuehrt
+- ✅ 3 vollstaendige Runden durchgefuehrt (inkl. Finale Synthese)
+- ✅ Finale Konfidenz-Werte angegeben (Bull + Bear)
 - ✅ Keine generischen Aussagen - nur konkrete Daten
 - ✅ SHORT-Trade Scorecard ausgefuellt
 - ✅ SHORT-Setup ausgearbeitet wenn Score es verlangt

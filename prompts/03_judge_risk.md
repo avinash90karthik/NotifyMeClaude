@@ -4,7 +4,7 @@
 
 ---
 
-**Input:** Daten aus Schritt 1 + Debate aus Schritt 2 + Chart
+**Input:** Daten aus Schritt 1 + Debate aus Schritt 2 (inkl. Finale Konfidenz aus Runde 3) + Chart
 
 ---
 
@@ -42,9 +42,12 @@ Analysiere die Bull vs Bear Argumente aus Schritt 2:
 | Seite | Staerke | Beste Argumente |
 |-------|---------|-----------------|
 | 🐂 Bull | X/10 | [Top 2 Argumente] |
+| 🐂 Bull Finale Konfidenz | XX% | [Aus Runde 3] |
 | 🐻 Bear | X/10 | [Top 2 Argumente] |
+| 🐻 Bear Finale Konfidenz | XX% | [Aus Runde 3] |
 | 📊 Chart | X/10 | [Was sagt der Chart?] |
 | 📈 RSI-Divergenz | [Bullisch/Bearisch/Keine] | [Staerke des Signals] |
+| 📰 News Sentiment (NSI) | [X.XX] | [Stark bullisch / Leicht bullisch / Neutral / Bearisch] |
 | 🩳 Short Interest | X% Float / X Tage | [Squeeze-Potential oder bearishes Signal?] |
 
 **Entscheidende Faktoren:**
@@ -213,6 +216,40 @@ Identifiziere die relevanten Chart-Levels aus Schritt 1:
 
 ---
 
+## RISK AUDIT (VETO-CHECK)
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  UNABHAENGIGER RISK AUDIT — KANN TRADE BLOCKIEREN!           ║
+╠═══════════════════════════════════════════════════════════════╣
+║  Jede einzelne VETO-Regel kann den Trade verhindern.         ║
+║  Pruefe JEDE Regel explizit mit ✅ oder ❌!                  ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+| # | Regel | Pruefung | Status |
+|---|-------|----------|--------|
+| V1 | ATR > 7%? | ATR = X.X% | ✅/❌ VETO |
+| V2 | Regime CHOPPY + Score < 50? | Regime = [X], Score = [X] | ✅/❌ VETO |
+| V3 | >= 3 offene Positionen? | Aktuell: X/3 | ✅/❌ VETO |
+| V4 | Sektor > 60% nach neuem Trade? | [Sektor]: X% | ✅/❌ VETO |
+| V5 | Monats-Drawdown > 20%? | März P&L: X% | ✅/❌ VETO |
+| W1 | Earnings < 5 Handelstage? | [Datum oder "Nein"] | ✅/⚠️ |
+| W2 | Korrelation mit offener Position? | [Ja/Nein — welche?] | ✅/⚠️ |
+| W3 | KO-Abstand < 2x ATR? (Rohstoffe < 3x) | KO-Abstand = X.Xx ATR | ✅/⚠️ |
+| W4 | Signal gegen SMA200-Richtung? | SMA200-Trend = [UP/DOWN] | ✅/⚠️ |
+
+**Risk Audit Ergebnis:**
+
+```
+╔═══════════════════════════════════════╗
+║  ✅ TRADE FREIGEGEBEN                 ║  (wenn alle VETOs bestanden)
+║  ⛔ TRADE BLOCKIERT — [Grund]        ║  (wenn mindestens 1 VETO)
+╚═══════════════════════════════════════╝
+```
+
+---
+
 ## ENFORCEMENT
 
 - ✅ Judge analysiert Chart UNABHAENGIG von Bull/Bear
@@ -226,6 +263,7 @@ Identifiziere die relevanten Chart-Levels aus Schritt 1:
 - ✅ Gestaffelter Sell-Plan mit konkreten Preisen und Prozenten
 - ✅ Time-Stops definiert
 - ✅ Stop-Levels basierend auf Support-Zonen
+- ✅ **Risk Audit: Alle 5 VETO-Regeln + 4 WARNUNGs explizit geprueft (PFLICHT!)**
 
 ```
 ✅ [SCHRITT 3: JUDGE & RISK ABGESCHLOSSEN]

@@ -8,6 +8,29 @@ import numpy as np
 from wavelet_utils import denoise_ohlcv
 
 
+def detect_regime(adx, atr_pct, bb_width_percentile, plus_di, minus_di):
+    """Classify market regime: TRENDING, CHOPPY, RANGE, or TRANSITIONAL.
+
+    Returns (regime, weight_adjustments) tuple where weight_adjustments is a dict
+    with multipliers for 'trend' (SMA, MACD) and 'oscillator' (RSI, BB) signals."""
+    if adx is None:
+        return 'TRANSITIONAL', {'trend': 1.0, 'oscillator': 1.0, 'overall': 1.0}
+
+    di_spread = abs(plus_di - minus_di) if plus_di is not None and minus_di is not None else 0
+
+    if adx >= 25 and di_spread > 10:
+        return 'TRENDING', {'trend': 1.3, 'oscillator': 0.7, 'overall': 1.0}
+
+    if adx < 20:
+        bb_pctl = bb_width_percentile if bb_width_percentile is not None else 50
+        if bb_pctl < 30:
+            return 'RANGE', {'trend': 0.7, 'oscillator': 1.3, 'overall': 1.0}
+        if bb_pctl > 60:
+            return 'CHOPPY', {'trend': 1.0, 'oscillator': 1.0, 'overall': 0.7}
+
+    return 'TRANSITIONAL', {'trend': 1.0, 'oscillator': 1.0, 'overall': 1.0}
+
+
 def detect_rsi_divergence(close_vals, rsi_vals, lookback=20):
     """Detect bullish or bearish RSI divergence over last N bars."""
     if len(close_vals) < lookback or len(rsi_vals) < lookback:
@@ -219,6 +242,11 @@ def calc_technicals(batch_data, symbols, single=False):
             # Bollinger Bands
             bb = calc_bollinger(close)
 
+            # Regime detection
+            regime, regime_weights = detect_regime(
+                adx_val, atr_pct, bb.get('bb_width_percentile'), plus_di, minus_di
+            )
+
             # 5-day change (from raw prices)
             change_5d = None
             if len(close_raw) >= 6:
@@ -244,6 +272,8 @@ def calc_technicals(batch_data, symbols, single=False):
                 # Bollinger
                 'bb_width_percentile': bb.get('bb_width_percentile'),
                 'bb_position': bb.get('bb_position'),
+                # Regime
+                'regime': regime, 'regime_weights': regime_weights,
                 # Other
                 'change_5d': change_5d,
                 # Enrichment (Phase 2)

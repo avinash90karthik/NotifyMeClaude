@@ -1,8 +1,9 @@
 # Silver Hawk Portfolio - Single Source of Truth
 
-**Letzte Aktualisierung:** 09.03.2026 14:00 (Gold LONG Re-Analyse: HALTEN 65%, DAX SHORT: HALTEN 72%)
+**Letzte Aktualisierung:** 12.03.2026 (DAX SHORT gekauft, MU LONG -24%, HIMS +2,5%)
 **Startkapital März:** ~1.788 EUR (frisches Kapital eingezahlt)
 **Ziel März:** +15% Baseline (2.056 EUR) / +30% Stretch (2.324 EUR) — v3 Strategie
+**⚡ v3 gilt ab JETZT (11.03.2026)**
 
 ---
 
@@ -10,13 +11,13 @@
 
 | Metrik | Wert |
 |--------|------|
-| **Portfolio-Wert** | **~1.468 EUR** (~504 investiert + ~964 Cash) |
-| **Investiert** | ~504 EUR (3 Positionen + NVDA Mini) |
-| **Cash frei** | **~964 EUR (66%)** |
-| **Offene Positionen** | **3** (DAX SHORT, Gold LONG, HIMS Aktie) + NVDA Mini |
-| **März P&L** | **~-320 EUR (-17,9%)** geschlossen + offene P&L |
+| **Portfolio-Wert** | **~1.411 EUR** (~550 investiert + ~861 Cash) |
+| **Investiert** | ~550 EUR (DAX SHORT ~230 + MU ~155 + HIMS ~155 + NVIDIA ~10) |
+| **Cash frei** | **~861 EUR (61%)** |
+| **Offene Positionen** | **3/3** (DAX SHORT Hedge, MU LONG, HIMS LONG) + NVIDIA Mini |
+| **März P&L** | **~-377 EUR (-21,1%)** |
 
-⚠️ **WARNUNG:** Nahe an -20% Drawdown-Regel (24h Trading-Pause)!
+🚨 **3/3 Slots belegt (v3 Hedge-Setup).** DAX SHORT = Hedge zu MU+HIMS LONGs. MU LONG -24% — Earnings 18.03 = binäres Event. HIMS +2,5% stabil.
 
 ---
 
@@ -24,10 +25,18 @@
 
 | # | Symbol | Richtung | Stück | Buy-In | Aktuell | P&L | KO | Stop/Limit | Notiz |
 |---|--------|----------|-------|--------|---------|-----|-----|------------|-------|
-| 1 | DAX SHORT Turbo KO 25.005 | SHORT | 12 Stk | ~246 EUR | ~212 EUR | ~-34 EUR (-15%) | 25.005 | **Stop 15,40€ Cert** (~DAX 23.465) | These: Industrie-Crash (-11,1% Orders). RSI 28 überverkauft → Bounce-Risiko. Verlust bei Stop: ~57€ (3,8% Portfolio) |
-| 2 | Gold LONG Turbo x14,84 | LONG | 5 Stk | 32,39€/Stk (162 EUR) | 28,16€/Stk (141 EUR) | ~-21 EUR (-13%) | 4.786 USD | **Stop 22,67€ Cert** (~Gold $5.033) | Über SMA20+50, RSI 63. Verlust bei Stop: ~49€ (3,3% Portfolio) |
-| 3 | HIMS Aktie (kein Hebel) | LONG | 7.14 | ~19,54€/Stk (140 EUR) | ~19,54€/Stk (140 EUR) | ~-11 EUR (-7,6%) | - | **Stop ~14,70€/Aktie** ($17 USD) | Squeeze-These: 44,1% Short Float + Novo Nordisk. Verlust bei Stop: ~35€ (2,4% Portfolio) |
+| ~~1~~ | ~~DAX SHORT Turbo KO 25.005~~ | ~~SHORT~~ | ~~12 Stk~~ | ~~246 EUR~~ | ~~VERKAUFT~~ | — | — | — | Stop 15,40€ ausgelöst 10.03 → siehe Geschlossene Trades |
+| ~~2a~~ | ~~Gold LONG Turbo 50% (3 Stk)~~ | ~~LONG~~ | ~~3 Stk~~ | ~~32,39€~~ | ~~38,87€~~ | **~+19€** | — | — | ✅ 50% bei +20% verkauft (v3 Regel!) → siehe Geschlossene Trades |
+| ~~2b~~ | ~~Gold LONG Runner (2 Stk)~~ | ~~LONG~~ | ~~2 Stk~~ | ~~32,39€~~ | ~~VERKAUFT~~ | **~+6€** | — | — | Runner verkauft 11.03, Position zu klein (~71€), Kapital frei für besseren Trade |
+| ~~8~~ | ~~PLTR SHORT Turbo KO ~165$~~ | ~~SHORT~~ | ~~? Stk~~ | ~~~220 EUR~~ | ~~VERKAUFT~~ | — | — | — | Geschlossen 12.03 bei Break-Even (-2€). Slot frei für MU LONG → siehe Geschlossene Trades |
+| 11 | DAX SHORT Turbo KO 25.003 | SHORT | 15 Stk | ~242 EUR (~16,13€/Stk) | ~230 EUR | ~-12 EUR (-4,9%) | 25.003 | **Stop 24.300** (mental) | v3 Hedge zu MU+HIMS LONGs. Analyse: 70% Konfidenz. Exits: Cert +20% (50%)/22.500 (30%)/22.000 (Rest). Bei Waffenstillstand SOFORT raus! Vor FOMC 17.03 sichern |
+| 10 | MU LONG Turbo KO $353.14 | LONG | 360 Stk | ~203 EUR (0,563€/Stk) | ~155 EUR | ~-48 EUR (-24%) | $353.14 | **Stop 0,27€** (= ~MU $385/SMA50) | ⚠️ -24%! Earnings 18.03 21:05 CET = binäres Event. FwdPE 8.87, HBM 2026 sold out, GM 68%. Exits: $435 (50%)/$455 (30%)/$500+ (Rest). BE-Stop VOR Earnings! |
+| ~~9~~ | ~~TSM LONG Turbo KO ~$316~~ | ~~LONG~~ | ~~? Stk~~ | ~~250 EUR~~ | ~~200 EUR~~ | — | — | — | Stop ausgelöst 12.03, -50€ (-20%) → siehe Geschlossene Trades |
+| 3 | HIMS Aktie (kein Hebel) | LONG | 7.14 | ~19,54€/Stk (140 EUR) | ~21,36€/Stk (~153 EUR) | **+13 EUR (+9,3%)** | - | **Stop $21** (~18,07€, angehoben von $17!) | Re-Analyse 12.03: HALTEN 65%. Novo-Deal = Game-Changer. 46,1% Short Float, Squeeze Score 100/100. Exits: $27 (50%)/$30 (30%)/$35+ (Rest). RSI 77 überkauft → KEIN Nachkaufen! ATR 7,5% = nur Aktie. Earnings 04.05 |
 | 4 | NVIDIA (Bruchteil) | LONG | 0.063 | ~11 EUR | ~10 EUR | ~-1 EUR | - | - | Mini-Position, irrelevant |
+| ~~5~~ | ~~ENR.DE LONG 50% (65 Stk)~~ | ~~LONG~~ | ~~65 Stk~~ | ~~1,91€~~ | ~~2,46€~~ | **~+36€** | — | — | ✅ 50% bei +29% verkauft (v3 Regel!) → siehe Geschlossene Trades |
+| ~~6~~ | ~~ENR.DE SHORT Turbo KO 160,07~~ | ~~SHORT~~ | ~~70 Stk~~ | ~~1,004€~~ | ~~~0,70€~~ | **~-21€** | — | — | Geschlossen, Geld in LONG umgeschichtet → siehe Geschlossene Trades |
+| ~~7~~ | ~~ENR.DE LONG Runner KO 133,00~~ | ~~LONG~~ | ~~65 Stk~~ | ~~1,91€~~ | ~~VERKAUFT~~ | — | — | — | Trailing Stop BE 1,91€ ausgelöst 11.03 → siehe Geschlossene Trades |
 | ~~5~~ | ~~ASTS LONG Turbo x75~~ | ~~LONG~~ | ~~? Stk~~ | ~~~164 EUR~~ | ~~VERKAUFT~~ | — | — | — | Break-Even Stop ausgelöst 09.03 → siehe Geschlossene Trades |
 | ~~6~~ | ~~AMD LONG Turbo KO 174,39~~ | ~~LONG~~ | ~~185 Stk~~ | ~~439 EUR~~ | ~~VERKAUFT~~ | — | — | — | Verkauft 06.03 Freitag Abend, -26% (~-114€) → siehe Geschlossene Trades |
 | ~~7~~ | ~~SI=F SHORT Turbo KO 97,10~~ | ~~SHORT~~ | ~~13 Stk~~ | ~~173 EUR~~ | ~~VERKAUFT~~ | — | — | — | Geschlossen 06.03, -18,5% → siehe Geschlossene Trades |
@@ -53,7 +62,15 @@
 | SI=F SHORT KO 97,10 (13 Stk) | 173,12 | 141,09 | **-32,03** | Unter 60% Gate getradet (55%)! Learning: REGEL IST REGEL |
 | AMD LONG KO 174,39 (185 Stk) | 439,45 | 304,83 (261,28+43,55) | **-134,62** | Verkauft 06.03 Fr Abend bei -30,6%. Doppelte Divergenz war da, aber AMD fiel weiter. Wochenend-Gap-Risiko zu hoch |
 | ASTS LONG Turbo x75 | ~164 | ~164 | **~0** | Break-Even Stop ausgelöst 09.03. Score 7/7 aber x75 Hebel zu riskant → BE-Stop war richtig |
-| **GESAMT** | | | **~-186** | Kern-Strategie 4x perfekt, aber SI=F Regelverstoß + AMD Timing schlecht. DAX/Gold/HIMS noch offen! |
+| DAX SHORT KO 25.005 (12 Stk) | 246 | 184,80 (15,40€×12) | **-61,20** | Stop 15,40€ ausgelöst 10.03. **EIGENMÄCHTIGER TRADE** — erster DAX SHORT war +40% Runner (perfekt!), dann OHNE neue Analyse nachgekauft aus Gier. Learning: Trade war durch, Geduld fehlte |
+| ENR.DE SHORT KO 160,07 (70 Stk) | 70,28 | ~49 | **~-21** | Geschlossen 11.03 bei ~-30%. Geld in LONG umgeschichtet. Spread war erhöht beim Kauf |
+| ENR.DE LONG 50% (65 Stk) | ~124 | ~160 (2,46€×65) | **~+36** | ✅ 50% bei +29% verkauft! Kern-Strategie v3 befolgt! Rest als Runner mit Trailing Stop BE |
+| Gold LONG 50% (3 Stk) | ~97 (32,39€×3) | ~117 (38,87€×3) | **~+19** | ✅ 50% bei +20% verkauft! v3 Regel! |
+| Gold LONG Runner (2 Stk) | ~65 (32,39€×2) | ~71 (~35,50€×2) | **~+6** | Runner verkauft 11.03 — Position zu klein (~71€), besser Capital redeployen |
+| ENR.DE LONG Runner (65 Stk) | ~124 (1,91€×65) | ~124 (1,91€×65) | **~0** | Trailing Stop BE 1,91€ ausgelöst 11.03. 50% bereits bei +29% verkauft (+36€) |
+| PLTR SHORT Turbo KO ~165$ | ~220 | ~218 | **-2** | Geschlossen 12.03 bei Break-Even. Daten-basierte Entscheidung: ADX 28,3 Uptrend, +DI 33 >> -DI 12, MACD bullish = SHORT kämpfte gegen starken Trend. Slot frei für MU LONG |
+| TSM LONG Turbo KO ~$316 | 250 | 200 | **-50** | Stop $330 ausgelöst 12.03. -20% auf Turbo. SMA50 $343 hat nicht gehalten. Markt-Schwäche + Semi-Sektor unter Druck |
+| **GESAMT** | | | **~-259** | 🚨 -21,1% Drawdown! 24h Trading-Pause. HIMS/MU offen |
 
 ---
 
@@ -93,9 +110,22 @@
 | 06.03 | WIX | WARTEN (STRONG LONG BIAS) | 58% | UNTER 60% Gate! RSI 79,7 ÜBERKAUFT nach +54% V-Recovery ($60→$93). Death Cross intakt. ABER: Fundamentals TOP — FwdPE 11,4x, FCF Yield 11% ($573M), $2B Buyback (38% Marktcap!), ChatGPT Integration, Base44 $100M ARR. Analysten STRONG BUY, Mean $131 (+41%). SI 12,7% = Squeeze. Entry-Trigger: Pullback $83-87 + RSI <60. KO $80,90, Stop $82, Exits $100/$115/$127. Klein 25% (~414€) |
 | 06.03 | GC=F | LONG (LOTTO) | 68% | 4. Gold-Analyse März! Double Bottom $5.023/5.055 hält, Bounce +1,7%. RSI 55 perfekt, Momentum dreht positiv. ATR 1,9% IDEAL für Turbos. KO $4.784 (3x ATR, unter SMA50+Puffer), Stop $4.950, Hebel ~13,6x. Lotto 10% (~157€). Exits: Cert +20% (50%)→$5.400 (30%)→$5.586+ (Rest). LEARNING: Letzter Trade -184€ wg. KO 1,38x ATR! Diesmal 3x ATR. JPM $6.300 EOY, Goldman $5.400. ⚠️ Entry MONTAG (Wochenend-Gap-Risiko) |
 | 09.03 | GC=F | LONG HALTEN (VORSICHT) | 65% | 5. Gold-Analyse März! Re-Analyse bestehende Position (x14,84, 5 Stk, -13%). Gold $5.097, ATH-Korrektur -10% ($5.586→$5.021). RSI 55 Neutral, Momentum DREHT POSITIV (Slope -1,36→+0,89). Über SMA20 ($5.089) + SMA50 ($4.854), Golden Cross. DXY 99 = 4-Jahres-Tief bullish. Iran eskaliert (US raus aus Saudi). ⚠️ STOP-PROBLEM: Stop 22,67€ (~$5.033), heutiges Tief $5.021 = FAST AUSGELÖST! Stop = 0,65x ATR = ZU ENG! → Stop auf 20€ senken (~$4.920) ODER bei Bounce >$5.150 schließen + neu kaufen mit KO $4.751. CPI 12.03 + FOMC 17-18.03 = vorher sichern! Scorecard 39:24 LONG |
+| 11.03 | ASML | WARTEN | 48% | 4. Analyse dieser Woche! UNTER 60% Gate! Scorecard 32:31 UNENTSCHIEDEN. RSI 43,8 (Reset von 82), KEINE Divergenz, MACD -22 bearisch. SMA50-Test ($1.346) = Make-or-Break. EUV-Monopol + TSMC $56B Capex vs China-Normalisierung (20% Revenue) + P/E 31,5x bei 5% Wachstum. 3/3 Slots belegt. LONG-Trigger: RSI-Divergenz ODER 3d über SMA50 ODER >$1.400. SHORT-Trigger: Break <SMA50 Closing. LONG KO $1.194, Stop $1.260, Exits $1.400/$1.475/$1.547. Earnings 15.04 |
+| 12.03 | PNG.V | WARTEN (LONG BIAS) | 52% | UNTER 60% Gate! Kraken Robotics (CAD). C$9.96 (€6.34). ATR 7.4% = NUR ohne Hebel! P/E 142x, P/S 30x, FCF -C$34M. +420% in 1J parabolisch. Bearische Divergenz an 52W-Hochs. Analysten C$7.44 (25% unter Kurs!). C$615M Covelya-Akquisition (Offering C$350M schließt 12.03). Monopol Maritime Autonomous Systems, Revenue +60%, NATO-Tailwind. Scorecard 35:30 LONG. TSX-V = auf TR wahrsch. nicht handelbar. LONG-Trigger: Pullback C$7.50-8.50 + RSI<45. Earnings 27.04 |
+| 12.03 | MU | WARTEN (STRONG LONG BIAS) | 58% | UNTER 60% Gate! $418.69 (€362). EARNINGS 18.03 IN 4 TAGEN = binäres Risiko! Forward P/E 8.87, HBM 2026 SOLD OUT, GM 68% guided, Rev +57%. RSI 50.4 perfekt neutral, V-Recovery von $358, SMA50 $383 hält. MACD bearish. KEINE Divergenz. ATR 5.0%. Wolfe $500, UBS $475, Mean $418. Scorecard 38:27 LONG klar. 3/3 Slots belegt + TSM LONG = Semi-Konzentration → max Klein 15%. POST-EARNINGS PLAN: Beat + Dip auf $380-400 = KAUFEN. KO $354, Stop $370, Exits $435/$455/$500+. |
+| 12.03 | HGRAF | KEIN TRADE (UNTRADEBAR) | 30% | HydroGraph Clean Power. $7.34 (€6.35). ATR 12.2% EXTREM = untradebar! P/S 40.700x auf $100K Revenue = absurd. RSI 77.7 überkauft + fällt (-11.3/Tag). +5.480% in 1J Penny Stock. OTC = nicht auf TR. C$30M Offering frisch. Graphen-Technologie langfristig interessant, aber Bewertung + Volatilität = für Silver Hawk System ungeeignet. Scorecard 17:36 SHORT (aber SHORT genauso untradebar). |
+| 10.03 | SI=F | LONG (TAKTISCH) | 62% | V-Recovery nach CME-Crash ($121→$68→$89). RSI 64.9 gesund (SLV-Proxy), MACD bullisch, über SMA20+SMA50. 5. Jahr Angebotsdefizit (67M oz), DXY 99 (4J-Tief), Iran Safe Haven. Scorecard 40:26 LONG klar. ⚠️ NUR LOTTO (5%, ~74€): Gold LONG offen = 34% Edelmetalle, Ann.Vol 108% EXTREM, CME Margin-Risiko ab $100+. KO $76.47 (3x ATR Rohstoff, 14.5%). Stop $80. Exits: Cert +20% (50%)/$95 (30%)/$100 (Rest). ENTRY ABWARTEN: Pullback $85-87 (SMA50). Vor FOMC 17.03 sichern! Max. Verlust 42€ (2.8%) |
+| 10.03 | PLTR | SHORT | 68% | Death Cross + SMA50-Rejection ($156.67 exakt abgeprallt!). P/E 241x = teuerste Aktie S&P500. Pentagon Maven-Krise: Anthropic/Claude verbannt, Plattform-Umbau dauert Monate, OpenAI drängt als Ersatz. Scorecard 27:42 SHORT klar. RSI 69.7 (Kollaps von 79.5, Delta -9.8/Tag!), KEINE Divergenz. MACD noch bullish (Lagging nach V-Bounce). Short Interest nur 2.4% = kein Squeeze-Risiko. KO $164.16 (2.0x ATR, über SMA200 $162.22). Stop $161. Exits: Cert +20% (50%)/$138 (30%)/$126 (Rest). Klein 15% (~223€). Time-Stop 5d. Perfekter Hedge zu 3 LONGs. ATR 4.0%, ATR(5)/ATR(14) 1.16x ✅. Earnings 04.05 (weit weg). ⚠️ Vor FOMC 17.03 sichern |
+| 10.03 | ENR.DE | LONG (WARTEN) | 62% | 7. Analyse März! V-Reversal 135,70→148,75 (+9,6%). RSI 38,9, Slope -4,49 NEGATIV, KEINE Divergenz. Fundamentals TOP: Backlog EUR 146B, FCF EUR 3,7B, EUR 2B Buyback. Stoxx50 Aufnahme 23.03 = Katalysator. JPMorgan EUR 200. ⚠️ ATR(5) 7,2% → NUR Klein/Ohne Hebel. NICHT VOR CPI 12.03 einsteigen! Entry-Signal: RSI >45 oder SMA50+Hammer. KO EUR 131 (2,5x ATR), Stop EUR 137, Exits EUR 160/170/180+. Klein 15% (~216€) |
+| 11.03 | MDB | WARTEN (LONG BIAS) | 57% | Re-Analyse (07.03: LONG 63% → WARTEN 57%). RSI 27,2 OVERSOLD + FÄLLT WEITER (-3,2/Tag)! KEINE Divergenz. ADX 62,9 EXTREM bearish. MACD -29, kein Crossover. ATR 7,0% Grenzfall (ATR(5) 5,3% = sinkt). Scorecard 34:33 UNENTSCHIEDEN. Fundamentals TOP ($2,4B Cash, FCF $475M, Atlas 30% YoY), aber Technik NICHT bereit. Entry-Trigger: Bullische RSI-Divergenz ODER MACD-Crossover ODER Close >SMA200 $307. Wenn Trigger: Lotto 10% (148€), KO $223 (2,5x ATR), Stop $248, Exits $307 (50%)/$325 (30%)/$345+ (Rest). Vor FOMC 17.03 keinen Trade. Earnings 04.06 (weit weg) |
 | 07.03 | MDB | LONG (TAKTISCH) | 63% | Post-Earnings Dip Buy! Q4 Beat (EPS $1,65 vs $1,46, Rev $695M), Crash -22% wg. FY27 Guidance ~17% Growth. RSI 28 OVERSOLD + Momentum dreht. $2,4B Cash/$62M Debt = FESTUNG. Analyst BUY $359 (+33%). Entry $258-270, Stop $245, KO $219 (2,5x ATR). Exits $307 (50%)/$325 (30%)/$340+ (Rest). Klein 25% (~394€). ⚠️ KEINE RSI-Divergenz, ATR 7,6% HOCH |
 | 07.03 | HIMS | LONG (SPEKULATIV) | 62% | 🩳 SHORT SQUEEZE SETUP! 44,1% Short Float (81M Shares!), 2,7d DTC. Novo Nordisk Partnership = Game-Changer (von Klage zu Deal). +40% Aftermarket. NUR AKTIE, KEIN TURBO (ATR 7,8%, Beta 2,6)! Entry $20-22 (Rücksetzer nach Gap-Open Mo), Stop $17, Exits $26-27 (50%)/$30-32 (30%)/$35+ (Rest). Lotto 10% (~158€). FwdPE 10,5x, Rev Growth 28%, Gross Margin 73,8%. RSI 45,7 (Recovery von 4,5!), Bullische Divergenz. Earnings 04.05 |
 | 06.03 | QBTS | WARTEN (LONG BIAS) | 55% | UNTER 60% Gate! ATR 7,0% EXTREM, Vol 102%, Beta 1,66 — für Turbos UNTRADEBAR. P/S 292x bei nur $24,6M Rev (FY25 +179%). Q4 Rev Miss -26% ($2,75M vs $3,72M). ABER: BULLISCHE DIVERGENZ ($17,46→$17,26/RSI 39→50). Bookings-Explosion: $30M allein Jan 2026! $884M Cash, $43M Debt = 15J Runway. Analyst STRONG BUY, Mean $38 (+96%). Scorecard 30:31 UNENTSCHIEDEN. NUR Lotto 10% OHNE Hebel. Entry-Trigger: SMA200 Reclaim $22,46+RSI>55 ODER Double Bottom $17 bestätigt. Earnings 07.05 |
+| 11.03 | AXON | SHORT | 64% | Momentum-Breakdown nach V-Recovery $396→$588. RSI-Kollaps 83→69 (-8,2/Tag!). Death Cross aktiv (SMA50 $537 unter SMA200 $665). P/E 358x ABSURD, Operating Margin -3,1%. Scorecard 26:38 SHORT klar. ATR 5,3%, ATR(5)/ATR(14) 0,88x ✅. Korrelation mit PLTR SHORT 0,58 = MITTEL → NUR Lotto 10% (148€)! KO $600,15 (2,5x ATR, 13,2%). Stop $590. Exits: $495 (50%)/$470 (30%)/$440 (Rest). CPI heute + FOMC 17.03 = vor FOMC sichern! Earnings 06.05. Short Interest nur 3,7% = kein Squeeze-Risiko. Entry bei Bounce auf SMA50 $537 oder sofort |
+| 11.03 | TSM | LONG (TAKTISCH) | 63% | Re-Analyse (05.03: WARTEN 55% → LONG 63%). SMA50 $343 hält als Support, Hammer 09.03 bei 19,2M Vol. RSI 42,3, Slope +0,47 positiv, KEINE Divergenz. Revenue Jan-Feb +30% YoY (AI-Supercycle). Goldman Conviction Buy NT$2.330. FwdPE 19,3x, Gross Margin 59,9%. MACD bearisch (-4,74), ADX 18,6 (RANGING). Scorecard 37:29 LONG klar. ATR 3,1% IDEAL für Turbos, ATR(5)/ATR(14) 1,14x ✅. KO $316 (Chart-basiert, unter S2 $319). Stop $330. Klein 15% (~222€). Exits: $375 (50%)/$390 (30%)/$410+ (Rest). Ex-Div 17.03 ($0,76). ⚠️ Vor FOMC 17-18.03 min. 50% sichern! Earnings 16.04 (weit weg). Max. Verlust ~43€ (2,9%). Alternativ WARTEN auf bullische Divergenz → dann Standard 35% |
+| 11.03 | PLTR | SHORT HALTEN (Re-Analyse) | 66% | 2. PLTR-Analyse März (10.03: SHORT 68% → HALTEN 66%). SHORT-These INTAKT: **DREIFACHE SMA50-Rejection** (06/09/10.03) = stärkstes bearisches Chartsignal! Death Cross weitet sich: Gap -$0.43→-$7.44 in 2 Wochen. RSI 70.2 ÜBERKAUFT in Death-Cross = historisch Verkaufssignal. Maven-Krise ungelöst: Hegseth fordert sofortige Anthropic-Trennung, Anthropic verklagt Pentagon (Richterin MI 12.03). P/E 242x teuerste S&P500-Aktie. Scorecard 29:42 SHORT klar. MACD bullish (Crossover +3.12) = einziges Bull-Signal, aber Lagging. Short Interest 2.4% = kein Squeeze-Risiko. Turbo ~-13% (~-29€), Basiswert nahe Entry $152.41. Stop $159 (angepasst von $161). Exits: $145 (50%)/$138 (30%)/$126 (Rest). Time-Stop: 15.03 Check, 17.03 halbieren. ⚠️ MI 12.03 Anthropic-Richterin: wenn gewinnt → SOFORT schließen! Vor FOMC 17-18.03 min. 50% sichern. KO ~$165 (8.3% Abstand, 2.1x ATR) ✅ |
+| 12.03 | HIMS | LONG HALTEN (Re-Analyse) | 65% | 2. HIMS-Analyse März! V-Recovery nach Novo-Deal ($14→$25, +77%). RSI 77 ÜBERKAUFT + dreht runter (-4,2/Tag), Slope-Einbruch +11,85→+1,36. KEINE Divergenz. ADX 60,9 STARKER Trend. MACD Bullish Crossover. 46,1% Short Float, Squeeze Score 100/100. Novo Deal: Ozempic+Wegovy auf Plattform, Klage vom Tisch. Scorecard 40:27 LONG klar. ATR 7,5% = NUR Aktie! Stop von $17 auf $21 anheben (Gap-Fill). Exits: $27 (50%)/$30 (30%)/$35+ (Rest). Time-Stop 5d unter $24 → halbieren. Earnings 04.05 weit weg. Max. Verlust ~22€ (1,6%). KEIN Nachkaufen bei RSI 77! |
+| 12.03 | ^GDAXI | SHORT (HEDGE) | 70% | 4. DAX-Analyse März! DAX 23.539, -7,7% vom ATH. RSI 29,9 OVERSOLD + FÄLLT WEITER (-4,2/Tag), KEINE Divergenz = Wasserfall intakt. MACD -332, -DI 42,7 >> +DI 15,5, DX 46,8 STARK. ATR 2,0% IDEAL für Turbos. Scorecard 22:44 SHORT klar. KO 25.004 (über SMA50 + 1% Puffer, 6,2%). Stop 24.300 (mental). Iran-Krieg = Haupttreiber. v3 HEDGE zu MU LONG + HIMS LONG. Lotto 10% (~141€). Exits: Cert +20% (50%)/22.500 (30%)/22.000 (Rest). TAKTIK: ECB-Bounce morgen 13.03 auf 24.000 abwarten = idealer Entry. Time-Stop 5d. Vor FOMC 17.03 sichern. Bei Waffenstillstand SOFORT raus! |
 
 ---
 
@@ -104,7 +134,10 @@
 | Datum | Event | Relevanz | Aktion |
 |-------|-------|----------|--------|
 | LAUFEND | US-Iran Krieg | SEHR HOCH | Risk-Off, Safe Haven dominiert |
+| 11.03 | CPI Februar (2,4% YoY, +0,3% MoM) | Hoch | Leicht über Fed-Ziel, Energie +0,6% |
 | 10.03 | APLD Earnings | Hoch | Beobachten |
+| **19.03** | **ECB Zinsentscheidung (Polymarket: 99% HOLD bei 2,65%)** | **HOCH** | **Kein Bounce durch Zinssenkung erwartet! DAX SHORT intakt** |
+| **18.03** | **MU Earnings (nach Börsenschluss 21:05 CET)** | **SEHR HOCH** | **BE-Stop VOR Earnings! 55min Window bis TR-Schluss 22:00** |
 | 17-18.03 | FOMC Meeting | Hoch | Fed erwartet HOLD, aber Inflation durch Öl? |
 | 15.04 | ASML Earnings | Mittel | Weit weg |
 | 16.04 | TSM Earnings | Mittel | Weit weg |
@@ -114,6 +147,8 @@
 | 04.05 | HIMS Earnings Q1 2026 | Mittel | EPS $0,13 erwartet, Rev $616M |
 | 07.05 | QBTS Earnings Q1 | Mittel | Weit weg, EPS -$0,08 erwartet |
 | 11.05 | ASTS Earnings Q1 | Mittel | Weit weg, EPS -$0,17 erwartet |
+| 06.05 | AXON Earnings Q1 | Mittel | EPS $1,60 erwartet, Rev $779M. Vor Earnings min. 50% sichern! |
+| 04.06 | MDB Earnings Q1 FY27 | Mittel | Weit weg, EPS $1,18 erwartet, Rev $664M |
 | 12.05 | ENR.DE Earnings Q2 | Mittel | Weit weg |
 
 ---
@@ -142,6 +177,8 @@
 - **MAX 3 Positionen EINHALTEN!** — 5 Positionen = 0 Cash = 0 Kontrolle. Februar-Fehler wiederholt
 - **Break-Even Stop bei Gewinnern = RICHTIG** — ASTS +8% → BE-Stop ausgelöst bei 0%. Besser 0 als Minus
 - **Nahe -20% Drawdown = ALARMZONE** — Bei -17,9% im März. Nächster Fehler triggert 24h Pause
+- **GIER NACH ABGESCHLOSSENEM TRADE** — DAX SHORT war +40% Runner (perfekt!). Dann nachgekauft weil "da geht noch mehr". -61€ Verlust. Wenn ein Trade durch ist, ist er DURCH. Geduld auf neues Setup warten!
+- **US-Aktien Turbos IMMER erst nach US-Open (15:30 CET) kaufen!** — Vor 15:30 basiert der Turbo-Preis auf Market-Maker-Pricing mit dünner Liquidität, nicht auf echter Preisfindung. MU bei Max gekauft weil vor US-Open eingestiegen → sofort -20%
 
 ---
 
