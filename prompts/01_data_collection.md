@@ -750,6 +750,128 @@ Wenn ein relevantes Makro-Event ansteht (FOMC, ECB, CPI, etc.), pruefe die Markt
 
 ---
 
+## 1.10b PRE-OPEN PATTERN CHECK (PFLICHT!)
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  PRE-OPEN PATTERNS — Backtested Pattern-Matching              ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Nutze preopen_check.py fuer stochastische Muster:            ║
+║  → Gap Fill Rate (wie oft wird der Opening-Gap geschlossen?)  ║
+║  → Pattern Hit Rates (LONG/SHORT basierend auf Score+Regime)  ║
+║  → Trap-Erkennung (Score hoch, aber Hit Rate niedrig)         ║
+║                                                               ║
+║  WICHTIG: Ergebnis beeinflusst Entry-Timing!                  ║
+║  → Gap Fill >80%: NACH US-Open kaufen (Gap wird gefuellt)     ║
+║  → Pattern Hit >60%: Richtungs-Bestaetigung                   ║
+║  → Pattern Hit <50%: WARNUNG — historisch schlecht!            ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Schritt 1: Pattern-DB pruefen — Symbol in DB?**
+```bash
+python3 -c "import json; d=json.load(open('memory/preopen_patterns.json')); print('Symbols:', d.get('symbols',[])); print('IN DB' if '{{SYMBOL}}' in d.get('symbols',[]) else 'NICHT IN DB — backtest noetig!')"
+```
+
+**Wenn {{SYMBOL}} NICHT in DB → erst backtesten!**
+```bash
+python3 preopen_backtest.py --symbols {{SYMBOL}}
+```
+> WICHTIG: Danach Pattern-DB mit ALLEN Symbolen neu bauen (Hintergrund):
+> `python3 preopen_backtest.py --symbols AAPL ARM NVDA GOOGL QBTS IREN APLD ASML VST CEG MU {{SYMBOL}}`
+
+**Schritt 2: Pre-Open Check mit symbol-spezifischen Patterns:**
+```bash
+python3 preopen_check.py {{SYMBOL}}
+```
+
+**Schritt 3: ENTRY-TIMING ANALYSE (PFLICHT!)**
+
+Fuehre diese Analyse aus um den optimalen Entry-Zeitpunkt zu bestimmen:
+
+```python
+import yfinance as yf
+import pandas as pd
+import numpy as np
+
+daily = yf.download("{{SYMBOL}}", period='2y', progress=False)
+hourly = yf.download("{{SYMBOL}}", period='730d', interval='1h', progress=False)
+if daily.columns.nlevels > 1:
+    daily.columns = daily.columns.get_level_values(0)
+if hourly.columns.nlevels > 1:
+    hourly.columns = hourly.columns.get_level_values(0)
+
+results = []
+for i in range(1, len(daily)):
+    prev_close = float(daily.iloc[i-1]['Close'])
+    day_open = float(daily.iloc[i]['Open'])
+    day_close = float(daily.iloc[i]['Close'])
+    gap_pct = (day_open - prev_close) / prev_close * 100
+    day_hourly = hourly[hourly.index.date == daily.index[i].date()]
+    fh_low = float(day_hourly.iloc[0]['Low']) if len(day_hourly) >= 1 else None
+    results.append({'gap_pct': gap_pct,
+        'pre_to_close': (day_close-prev_close)/prev_close*100,
+        'open_to_close': (day_close-day_open)/day_open*100,
+        'fh_to_close': (day_close-fh_low)/fh_low*100 if fh_low else None})
+
+df = pd.DataFrame(results)
+for label, subset in [('Alle Tage', df), ('Gap-Up >1%', df[df['gap_pct']>1]), ('Gap-Up >3%', df[df['gap_pct']>3])]:
+    n = len(subset)
+    if n == 0: continue
+    fh = subset['fh_to_close'].dropna()
+    print(f'{label} (n={n}):')
+    print(f'  Pre-Market:     {subset["pre_to_close"].mean():+.2f}% | Positiv: {(subset["pre_to_close"]>0).mean()*100:.0f}%')
+    print(f'  Bei Open:       {subset["open_to_close"].mean():+.2f}% | Positiv: {(subset["open_to_close"]>0).mean()*100:.0f}%')
+    print(f'  First-Hour Dip: {fh.mean():+.2f}% | Positiv: {(fh>0).mean()*100:.0f}%')
+```
+
+**Dokumentiere das Ergebnis:**
+
+| Datenpunkt | Wert |
+|------------|------|
+| LONG Score | XX/100 |
+| SHORT Score | XX/100 |
+| Pattern LONG Hit | XX% |
+| Pattern SHORT Hit | XX% |
+| Gap Fill Rate | XX% |
+| BB Squeeze | Ja (X%) / Nein |
+| Verdict | LONG / SHORT / WAIT / KEIN TRADE |
+| **Bester Entry** | **PRE-MARKET / FIRST-HOUR DIP / BEI OPEN** |
+| Pre-Market Win% | XX% |
+| Open Win% | XX% |
+| First-Hour Dip Win% | XX% |
+
+**Entry-Timing Empfehlung (datenbasiert!):**
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  ENTRY-TIMING — NICHT raten, DATEN entscheiden!              ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Pre-Market Win% > Open Win%:                                ║
+║  → VOR US-Open kaufen (Momentum-Stock!)                      ║
+║  → Aber: LIMIT-Order wegen Market-Maker-Spread!              ║
+║                                                               ║
+║  First-Hour Dip Win% > Pre-Market Win%:                      ║
+║  → NACH US-Open warten auf Dip in erster Stunde             ║
+║  → Entry ~16:00-16:30 CET                                    ║
+║                                                               ║
+║  Open Win% ist FAST IMMER am schlechtesten!                  ║
+║  → NIEMALS exakt bei Open kaufen (Market-Maker-Spread!)     ║
+║                                                               ║
+║  AKTUELLES GAP:                                              ║
+║  Gap heute: +X.X% → Vergleiche mit historischem Gap-Bucket   ║
+║  → Nutze das passende Bucket (>1% / >3%) fuer die Empfehlung║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+> Entry-Timing wird in Schritt 3 (Judge) und Schritt 4 (Trading Card) uebernommen!
+
+---
+
 ## 1.11 EVENT-KALENDER
 
 **Kommende Events die {{SYMBOL}} bewegen koennten:**
@@ -781,6 +903,10 @@ Wenn ein relevantes Makro-Event ansteht (FOMC, ECB, CPI, etc.), pruefe die Markt
 - ✅ **Regime-Erkennung durchgefuehrt (TRENDING/RANGE/CHOPPY/TRANSITIONAL)**
 - ✅ **Intraday-Kontext fuer Aktien ausgefuehrt (PFLICHT!)**
 - ✅ **Market-Maker-Pricing Check: Handelszeiten geprueft, Spread-Warnung bei geschlossenem Markt**
+- ✅ **Pre-Open Pattern Check: preopen_check.py ausgefuehrt, Gap Fill + Hit Rates dokumentiert**
+- ✅ **Symbol in Pattern-DB? Wenn nicht → preopen_backtest.py --symbols {{SYMBOL}} ausfuehren!**
+- ✅ **Entry-Timing Analyse: Pre-Market vs Open vs First-Hour Dip verglichen (PFLICHT!)**
+- ✅ **Entry-Empfehlung: PRE-MARKET / FIRST-HOUR DIP / BEI OPEN mit Win% dokumentiert**
 
 ---
 
@@ -807,7 +933,19 @@ Generiere am Ende von Schritt 1 diesen strukturierten Output:
   "adx": 0.0,
   "earnings_date": null,
   "support_levels": [0.00, 0.00, 0.00],
-  "resistance_levels": [0.00, 0.00, 0.00]
+  "resistance_levels": [0.00, 0.00, 0.00],
+  "preopen_verdict": "LONG|SHORT|WAIT|KEIN TRADE",
+  "preopen_gap_fill_pct": 0,
+  "preopen_long_hit_pct": 0,
+  "preopen_short_hit_pct": 0,
+  "entry_timing": {
+    "best_entry": "PRE_MARKET|FIRST_HOUR_DIP|AT_OPEN",
+    "pre_market_win_pct": 0,
+    "at_open_win_pct": 0,
+    "first_hour_dip_win_pct": 0,
+    "current_gap_pct": 0.0,
+    "gap_bucket": "none|gt1|gt3"
+  }
 }
 ```
 

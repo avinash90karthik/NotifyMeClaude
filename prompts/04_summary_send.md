@@ -49,6 +49,14 @@ Referenziere die JSON-Blöcke aus Schritt 1, 2 und 3 fuer strukturierte Datenpun
 ║  Time-Stop: X Tage ohne Bewegung → halbieren        ║
 ║                                                      ║
 ╠══════════════════════════════════════════════════════╣
+║  ENTRY-TIMING (datenbasiert!)                        ║
+╠══════════════════════════════════════════════════════╣
+║  Bester Entry: [PRE-MARKET/FIRST-HOUR DIP/BEI OPEN] ║
+║  Pre-Market Win:    XX% | First-Hour: XX% | Open: XX%║
+║  Aktuelles Gap:     +X.X%                            ║
+║  → [Konkrete Empfehlung mit Uhrzeit]                ║
+║                                                      ║
+╠══════════════════════════════════════════════════════╣
 ║  SUPPORT              │  RESISTANCE                  ║
 ╠══════════════════════════════════════════════════════╣
 ║  S1: $XX.XX           │  R1: $XX.XX                  ║
