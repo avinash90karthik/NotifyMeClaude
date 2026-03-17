@@ -7,10 +7,10 @@ AI-powered trading analysis and price alerts via Telegram. Built with Claude Cod
 - **Multi-Agent Analysis:** 4-step pipeline (data collection, bull/bear debate, judge verdict, trading card) for any stock or commodity
 - **LONG & SHORT Signals:** Scorecard-based evaluation ensures SHORT trades are treated equally
 - **3-Step KO Calculation:** ATR-based + chart-support combined, asset-class adjusted (Large Cap 2x, Mid/Small 2.5x, Commodities 3x)
-- **Risk Management:** 15% max per trade, 50% max simultaneous risk, 60% max sector concentration
+- **Risk Management:** 10% max per trade, 40% max simultaneous risk, 60% max sector concentration
 - **Portfolio Tracking:** `memory/portfolio.md` as single source of truth — updated after every analysis and trade
 - **Correlation Check:** Reads open positions from `memory/portfolio.md` before every new trade
-- **Time-Stops:** Auto-halve after 5 days sideways, close after 8 days, secure 50% before earnings
+- **Time-Stops:** Halve after 3 days without +5%, close after 5 days sideways, secure 50% before earnings
 - **Price Alerts:** Telegram notifications on big moves, level crossings, and flash spikes
 - **Portfolio Health Check:** 3x daily RSI alerts for all open positions and watchlist
 
@@ -53,8 +53,10 @@ You (Claude Code)
 └── python3 admin_stocks.py add TSLA ...   → Manage watchlist
 
 GitHub Actions (automatic)
-├── tracker.yml (every 10 min)            → Price alerts → Telegram
-└── portfolio_check.yml (3x daily)        → RSI alerts for positions + watchlist
+├── watchlist_check.yml (2x daily)        → Top LONG/SHORT from watchlist → Telegram
+├── morning_screener.yml (08:00 CET)      → LONG/SHORT scoring, top picks → Telegram
+├── portfolio_check.yml (3x daily)        → RSI alerts for positions + watchlist
+└── reddit_gems.yml (07:00 CET)           → Reddit trending stocks → Telegram
 
 Local State
 └── memory/portfolio.md                   → Open positions, stops, P&L, analysis log
@@ -77,10 +79,11 @@ Local State
 
 | Script | Purpose |
 |--------|---------|
-| `tracker_check.py` | Personal price alert config — customize SYMBOLS, ALERT_RULES, TRADING_ZONES |
-| `tracker_check_template.py` | Template for new users to copy and customize |
-| `portfolio_check.py` | RSI alerts for positions + watchlist (3x daily via GitHub Actions) |
 | `morning_screener.py` | Pre-market LONG/SHORT screener, scores 500+ stocks |
+| `watchlist_check.py` | 2x daily scan of personal watchlist with v4 scoring |
+| `portfolio_check.py` | RSI alerts for positions + watchlist (3x daily via GitHub Actions) |
+| `preopen_check.py` | Pre-open verdict: buy NOW or WAIT? Pattern-based |
+| `reddit_gems.py` | Daily Reddit trending stocks via ApeWisdom API |
 | `send_telegram.py` | Send messages and photos to your Telegram bot |
 | `browse_stocks.py` | View watchlist with prices, RSI, ratings |
 | `admin_stocks.py` | Add/remove stocks, seed watchlist |
@@ -103,9 +106,11 @@ CHART_OUTPUT_DIR=...      # Optional: path to chart output directory
 
 | Workflow | Schedule | Purpose |
 |----------|----------|---------|
-| `tracker.yml` | Every 10 min (market hours) | Price alerts via Telegram |
-| `portfolio_check.yml` | 3x daily (08:00, 15:00, 21:00 CET) | RSI alerts, stop/KO proximity |
+| `watchlist_check.yml` | 07:30 + 21:15 CET (weekdays) | Top 5 LONG/SHORT from personal watchlist |
 | `morning_screener.yml` | 08:00 CET (weekdays) | LONG/SHORT scoring, top picks |
+| `portfolio_check.yml` | 3x daily (08:00, 15:00, 21:00 CET) | RSI alerts, stop/KO proximity |
+| `reddit_gems.yml` | 07:00 CET (weekdays) | Reddit trending stocks via ApeWisdom |
+| `reflect.yml` | Friday 20:00 CET | Weekly trade statistics and patterns |
 
 Secrets needed: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 

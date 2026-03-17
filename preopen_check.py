@@ -21,6 +21,9 @@ PATTERNS_FILE = os.path.join(SCRIPT_DIR, 'memory', 'preopen_patterns.json')
 ET = ZoneInfo('America/New_York')
 
 
+ENTRY_TIMING_CACHE = os.path.join(SCRIPT_DIR, 'memory', 'entry_timing_cache.json')
+
+
 def load_patterns():
     """Load pattern DB."""
     if not os.path.exists(PATTERNS_FILE):
@@ -29,10 +32,156 @@ def load_patterns():
         return json.load(f)
 
 
-def check_symbol(sym, patterns_db):
+def analyze_entry_timing(sym, force=False):
+    """Analyze optimal entry timing (Pre-Market vs Open vs First-Hour Dip).
+
+    Downloads 2y daily + hourly data, computes win% per gap bucket.
+    Results are cached in memory/entry_timing_cache.json and invalidated
+    when preopen_patterns.json is newer than the cache entry.
+
+    Returns dict with best_entry and per-bucket statistics, or None on error.
+    """
+    import yfinance as yf
+    import numpy as np
+
+    # Check cache (invalidate when patterns file is newer)
+    if not force and os.path.exists(ENTRY_TIMING_CACHE):
+        try:
+            with open(ENTRY_TIMING_CACHE) as f:
+                cache = json.load(f)
+            cached = cache.get(sym)
+            if cached:
+                cache_ts = cached.get('timestamp', 0)
+                patterns_ts = os.path.getmtime(PATTERNS_FILE) if os.path.exists(PATTERNS_FILE) else 0
+                if cache_ts > patterns_ts:
+                    print(f'  Entry-Timing {sym}: cache hit')
+                    return cached['data']
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    print(f'  Entry-Timing {sym}: computing...')
+
+    try:
+        daily = yf.download(sym, period='2y', progress=False)
+        if daily is None or daily.empty or len(daily) < 60:
+            return None
+        if daily.columns.nlevels > 1:
+            daily.columns = daily.columns.get_level_values(0)
+
+        hourly = yf.download(sym, period='730d', interval='1h', progress=False)
+        if hourly is not None and not hourly.empty:
+            if hourly.columns.nlevels > 1:
+                hourly.columns = hourly.columns.get_level_values(0)
+            # Timezone fix: convert to ET for market-hours filtering
+            if hourly.index.tz is not None:
+                hourly.index = hourly.index.tz_convert(ET)
+            else:
+                hourly.index = hourly.index.tz_localize('UTC').tz_convert(ET)
+        else:
+            hourly = None
+    except Exception as e:
+        print(f'  Entry-Timing {sym}: download error: {e}')
+        return None
+
+    results = []
+    for i in range(1, len(daily)):
+        prev_close = float(daily.iloc[i - 1]['Close'])
+        day_open = float(daily.iloc[i]['Open'])
+        day_close = float(daily.iloc[i]['Close'])
+        if prev_close == 0:
+            continue
+        gap_pct = (day_open - prev_close) / prev_close * 100
+
+        fh_low = None
+        if hourly is not None:
+            trade_date = daily.index[i]
+            if hasattr(trade_date, 'date'):
+                trade_date = trade_date.date()
+            # Filter market hours only: 09:30-10:30 ET for first-hour low
+            day_hourly = hourly[hourly.index.date == trade_date]
+            fh = day_hourly.between_time('09:30', '10:30')
+            if len(fh) > 0:
+                fh_low = float(fh['Low'].min())
+
+        results.append({
+            'gap_pct': gap_pct,
+            'pre_to_close': (day_close - prev_close) / prev_close * 100,
+            'open_to_close': (day_close - day_open) / day_open * 100 if day_open != 0 else 0,
+            'fh_to_close': (day_close - fh_low) / fh_low * 100 if fh_low and fh_low != 0 else None,
+        })
+
+    if not results:
+        return None
+
+    # Build buckets: all days, gap-up >1%, gap-up >3%, gap-down <-1%
+    import pandas as pd
+    df = pd.DataFrame(results)
+
+    buckets = {}
+    for label, subset in [
+        ('all', df),
+        ('gap_up_1pct', df[df['gap_pct'] > 1]),
+        ('gap_up_3pct', df[df['gap_pct'] > 3]),
+        ('gap_down_1pct', df[df['gap_pct'] < -1]),
+    ]:
+        n = len(subset)
+        if n < 5:
+            continue
+        fh = subset['fh_to_close'].dropna()
+        buckets[label] = {
+            'n': n,
+            'pre_market_mean': round(float(subset['pre_to_close'].mean()), 2),
+            'pre_market_win_pct': round(float((subset['pre_to_close'] > 0).mean() * 100), 0),
+            'at_open_mean': round(float(subset['open_to_close'].mean()), 2),
+            'at_open_win_pct': round(float((subset['open_to_close'] > 0).mean() * 100), 0),
+            'first_hour_dip_mean': round(float(fh.mean()), 2) if len(fh) > 0 else None,
+            'first_hour_dip_win_pct': round(float((fh > 0).mean() * 100), 0) if len(fh) > 0 else None,
+        }
+
+    if not buckets:
+        return None
+
+    # Determine best entry from 'all' bucket
+    all_b = buckets.get('all', {})
+    pre_win = all_b.get('pre_market_win_pct', 0)
+    open_win = all_b.get('at_open_win_pct', 0)
+    fh_win = all_b.get('first_hour_dip_win_pct', 0) or 0
+
+    if fh_win > pre_win and fh_win > open_win:
+        best_entry = 'FIRST_HOUR_DIP'
+    elif pre_win > open_win:
+        best_entry = 'PRE_MARKET'
+    else:
+        best_entry = 'AT_OPEN'
+
+    result = {
+        'best_entry': best_entry,
+        'buckets': buckets,
+    }
+
+    # Save to cache
+    try:
+        cache = {}
+        if os.path.exists(ENTRY_TIMING_CACHE):
+            with open(ENTRY_TIMING_CACHE) as f:
+                cache = json.load(f)
+        cache[sym] = {
+            'timestamp': datetime.now(timezone.utc).timestamp(),
+            'data': result,
+        }
+        with open(ENTRY_TIMING_CACHE, 'w') as f:
+            json.dump(cache, f, indent=2)
+    except (OSError, json.JSONDecodeError):
+        pass
+
+    return result
+
+
+def check_symbol(sym, patterns_db, entry_timing=False, force_timing=False):
     """Run pre-open check for a single symbol.
 
     Returns dict with verdict, scores, pattern info, and reasoning.
+    If entry_timing=True, also runs analyze_entry_timing().
     """
     import yfinance as yf
     from indicators import calc_technicals
@@ -107,6 +256,13 @@ def check_symbol(sym, patterns_db):
     avg_long_hit = round(sum(p['hit'] for p in long_hit_rates) / len(long_hit_rates), 1) if long_hit_rates else None
     avg_short_hit = round(sum(p['hit'] for p in short_hit_rates) / len(short_hit_rates), 1) if short_hit_rates else None
 
+    # Entry timing analysis
+    entry_timing_data = None
+    if entry_timing:
+        entry_timing_data = analyze_entry_timing(sym, force=force_timing)
+        if entry_timing_data:
+            d['_entry_timing'] = entry_timing_data
+
     # Build verdict
     reasons = []
     verdict = 'WAIT'
@@ -139,9 +295,22 @@ def check_symbol(sym, patterns_db):
             verdict = direction
             reasons.append(f'Score {best_score} ({direction})')
 
-    # Gap fill warning
+    # Gap fill warning (from pattern DB)
     if avg_gap_fill is not None and avg_gap_fill >= 80:
-        reasons.append(f'Gap Fill {avg_gap_fill:.0f}% — nach US-Open kaufen!')
+        reasons.append(f'Gap Fill {avg_gap_fill:.0f}%')
+
+    # Entry-timing override (from analyze_entry_timing if available)
+    entry_timing = d.get('_entry_timing')
+    if entry_timing:
+        best = entry_timing.get('best_entry', '')
+        all_b = entry_timing.get('buckets', {}).get('all', {})
+        if best == 'FIRST_HOUR_DIP' and all_b.get('first_hour_dip_win_pct'):
+            reasons.append(f'Entry: First-Hour Dip ({all_b["first_hour_dip_win_pct"]:.0f}% Win)')
+            if verdict in ('LONG', 'SHORT'):
+                verdict = f'{verdict} (NACH OPEN)'
+        elif best == 'PRE_MARKET' and all_b.get('pre_market_win_pct'):
+            reasons.append(f'Entry: Pre-Market ({all_b["pre_market_win_pct"]:.0f}% Win)')
+    elif avg_gap_fill is not None and avg_gap_fill >= 80:
         if verdict in ('LONG', 'SHORT'):
             verdict = f'{verdict} (NACH OPEN)'
 
@@ -180,6 +349,7 @@ def check_symbol(sym, patterns_db):
         'pattern_short': best_short_pat,
         'pattern_long_hit': avg_long_hit,
         'pattern_short_hit': avg_short_hit,
+        'entry_timing': entry_timing,
     }
 
 
@@ -230,6 +400,21 @@ def format_verdict(r):
     if r.get('bb_pctl') is not None and r['bb_pctl'] < 10:
         lines.append(f'   BB Squeeze: {r["bb_pctl"]:.1f}%')
 
+    # Entry timing
+    et = r.get('entry_timing')
+    if et:
+        all_b = et.get('buckets', {}).get('all', {})
+        best = et.get('best_entry', '?')
+        parts = []
+        if all_b.get('pre_market_win_pct') is not None:
+            parts.append(f'Pre {all_b["pre_market_win_pct"]:.0f}%')
+        if all_b.get('at_open_win_pct') is not None:
+            parts.append(f'Open {all_b["at_open_win_pct"]:.0f}%')
+        if all_b.get('first_hour_dip_win_pct') is not None:
+            parts.append(f'FH-Dip {all_b["first_hour_dip_win_pct"]:.0f}%')
+        if parts:
+            lines.append(f'   Entry: {best} ({" | ".join(parts)})')
+
     # Reasons
     for reason in r.get('reasons', []):
         lines.append(f'   \u2192 {reason}')
@@ -241,6 +426,8 @@ def main():
     parser = argparse.ArgumentParser(description='Silver Hawk Pre-Open Verdict')
     parser.add_argument('symbols', nargs='+', help='Symbols to check')
     parser.add_argument('--telegram', action='store_true', help='Send via Telegram')
+    parser.add_argument('--entry-timing', action='store_true', help='Run entry-timing analysis')
+    parser.add_argument('--force-timing', action='store_true', help='Bypass entry-timing cache')
     args = parser.parse_args()
 
     now_et = datetime.now(ET)
@@ -257,7 +444,9 @@ def main():
     results = []
     for sym in args.symbols:
         print(f'  Checking {sym}...')
-        r = check_symbol(sym, patterns_db)
+        r = check_symbol(sym, patterns_db,
+                         entry_timing=args.entry_timing,
+                         force_timing=args.force_timing)
         results.append(r)
 
     print(f'\n{"=" * 50}')

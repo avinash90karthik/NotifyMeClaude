@@ -112,7 +112,7 @@ Bewerte jeden Ticker für Turbo-Trading (0-10):
 | **GESAMT (gewichtet)** | 100% | **X.X** | **X.X** | |
 
 **Sektor-Check gegen Portfolio:**
-- Lies offene Positionen aus Supabase `portfolio` Tabelle
+- Lies offene Positionen aus `memory/portfolio.md`
 - Welcher Ticker diversifiziert am besten?
 - ⚠️ Wenn alle Ticker im selben Sektor wie bestehende Positionen → WARNUNG
 

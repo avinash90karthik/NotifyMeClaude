@@ -124,25 +124,6 @@ Schreibe eine vollstaendige Analyse mit folgender Struktur:
 
 ---
 
-## CHART HOCHLADEN (PFLICHT!)
-
-**Lies SUPABASE_URL und SUPABASE_ANON_KEY aus der `.env` Datei!**
-
-**1. Chart zu Supabase Storage hochladen:**
-```bash
-source .env
-curl -X POST "${SUPABASE_URL}/storage/v1/object/charts/{{SYMBOL}}_chart.png" \
-  -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
-  -H "Content-Type: image/png" \
-  -H "x-upsert: true" \
-  --data-binary @${CHART_OUTPUT_DIR}/{{SYMBOL}}_chart.png
-```
-
-**2. Chart-URL:**
-```
-${SUPABASE_URL}/storage/v1/object/public/charts/{{SYMBOL}}_chart.png
-```
-
 ---
 
 ---
@@ -153,7 +134,7 @@ Pruefe JEDEN Punkt bevor du sendest. Bei einem ❌ → STOPP und korrigieren!
 
 | # | Check | Kriterium |
 |---|-------|-----------|
-| 1 | Portfolio gelesen? | portfolio.md gelesen (Supabase als Fallback) |
+| 1 | Portfolio gelesen? | portfolio.md gelesen |
 | 2 | yfinance-Daten? | Preis, ATR, RSI aus yfinance (nicht Web-Suche) |
 | 3 | RSI-Divergenz geprueft? | Delta, Slope und Divergenz-Check ausgefuehrt |
 | 4 | Stop-Loss vorhanden? | Jeder Trade hat einen Stop (mental oder TR) |
@@ -192,12 +173,18 @@ EOF
 )"
 ```
 
-**Wenn Chart vorhanden, auch als Foto senden:**
+**Chart als Foto senden (wenn vorhanden):**
 ```bash
-python -c "
+source .env 2>/dev/null
+CHART_FILE="${CHART_OUTPUT_DIR:-charts}/{{SYMBOL}}_chart.png"
+if [ -f "$CHART_FILE" ]; then
+  python -c "
 from send_telegram import send_photo
-send_photo('${CHART_OUTPUT_DIR}/{{SYMBOL}}_chart.png', '📊 {{SYMBOL}} Chart')
+send_photo('$CHART_FILE', '📊 {{SYMBOL}} Chart')
 "
+else
+  echo "Kein Chart vorhanden — uebersprungen"
+fi
 ```
 
 ---
@@ -221,9 +208,9 @@ Das ist die Single Source of Truth fuer den Portfolio-Stand.
 - ✅ Positions-Empfehlung in % vom Portfolio (nicht feste EUR-Betraege)
 - ✅ Minimum 500 Woerter in der Analyse
 - ✅ **RSI-Divergenz in Analyse und Telegram erwaehnt**
-- ✅ Chart zu Supabase Storage hochladen
+- ✅ Chart via Telegram senden (wenn vorhanden)
 - ✅ Telegram-Nachricht mit Trading Card senden (PFLICHT!)
-- ✅ Chart als Telegram-Foto senden
+- ✅ Chart als Telegram-Foto senden (wenn vorhanden)
 - ✅ portfolio.md aktualisieren (PFLICHT!)
 
 ```

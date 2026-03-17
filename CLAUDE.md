@@ -169,7 +169,7 @@ Analysen werden per Telegram gesendet. Kein Datenbankzugriff nötig.
 
 **`tracker_check.py`** - Personal price alert config, runs via GitHub Actions.
 - Contains SYMBOLS, ALERT_RULES, and TRADING_ZONES
-- State (prev_prices, alerted_levels) persisted in Supabase `tracker_state` table
+- State (prev_prices, alerted_levels) persisted in `memory/tracker_state.json`
 
 **`tracker_check_template.py`** - Template for new users to copy and customize.
 
@@ -279,7 +279,7 @@ Curated watchlist managed via `admin_stocks.py`, updated automatically via GitHu
 - `python admin_stocks.py remove NVDA` - Deactivate (soft delete)
 - `python admin_stocks.py seed` - Seed initial watchlist
 
-**`update_stocks.py`** - Fetches yfinance data and updates Supabase.
+**`update_stocks.py`** - Fetches yfinance data and updates watchlist.
 - Updates: price, change_pct, RSI, SMA50, SMA200, market_cap, volume, analyst_rating
 - Workflow: `.github/workflows/update_stocks.yml` (every 30 min during market hours)
 
@@ -297,7 +297,7 @@ Curated watchlist managed via `admin_stocks.py`, updated automatically via GitHu
 | Morning Screener | `morning_screener.yml` | 08:00 CET (weekdays) | LONG/SHORT scoring, top picks |
 | Reddit Gems | `reddit_gems.yml` | 07:00 CET (weekdays) | Reddit trending stocks via ApeWisdom |
 | Weekly Reflection | `reflect.yml` | Freitag 20:00 CET | Trade-Statistiken, Duration, Patterns |
-| ~~Price Tracker~~ | `tracker.yml` | ~~Every 10 min~~ DEPRECATED | Replaced by Watchlist Check |
+| ~~Price Tracker~~ | ~~`tracker.yml`~~ | ~~Every 10 min~~ DELETED | Replaced by Watchlist Check |
 
 Secrets needed: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 

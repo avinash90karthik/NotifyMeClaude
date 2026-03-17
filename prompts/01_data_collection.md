@@ -286,9 +286,9 @@ except:
 ```bash
 source .env 2>/dev/null
 VENV="${YFINANCE_VENV:-python3}"
-SCRIPT="${CHART_SCRIPT:-scripts/generate_chart.py}"
+SCRIPT="${CHART_SCRIPT:-}"
 OUTPUT="${CHART_OUTPUT_DIR:-charts}"
-$VENV $SCRIPT {{SYMBOL}}
+if [ -z "$SCRIPT" ]; then echo "Chart uebersprungen (CHART_SCRIPT nicht gesetzt)"; else $VENV $SCRIPT {{SYMBOL}}; fi
 ```
 
 **Dann lies den Chart:**
@@ -723,18 +723,18 @@ Wenn ein relevantes Makro-Event ansteht (FOMC, ECB, CPI, etc.), pruefe die Markt
 ║  BEVOR ein neuer Trade eroeffnet wird:                       ║
 ║  Pruefe Korrelation zu bestehenden Positionen!               ║
 ║                                                               ║
-║  → Lies offene Positionen aus Supabase `portfolio` Tabelle   ║
+║  → Lies offene Positionen aus memory/portfolio.md            ║
 ║  → Bestimme Sektor-Konzentration                             ║
 ║  → Wenn >60% in einem Sektor: WARNUNG ausgeben!              ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
-**Bestehende offene Positionen (aus Supabase):**
+**Bestehende offene Positionen (aus memory/portfolio.md):**
 
 | Symbol | Sektor | Richtung | Groesse (EUR) |
 |--------|--------|----------|---------------|
-| [aus DB] | [Sektor] | LONG/SHORT | XXX EUR |
-| [aus DB] | [Sektor] | LONG/SHORT | XXX EUR |
+| [aus portfolio.md] | [Sektor] | LONG/SHORT | XXX EUR |
+| [aus portfolio.md] | [Sektor] | LONG/SHORT | XXX EUR |
 
 **Korrelations-Bewertung:**
 
@@ -789,43 +789,15 @@ python3 preopen_check.py {{SYMBOL}}
 
 **Schritt 3: ENTRY-TIMING ANALYSE (PFLICHT!)**
 
-Fuehre diese Analyse aus um den optimalen Entry-Zeitpunkt zu bestimmen:
+Fuehre die Entry-Timing Analyse via CLI aus:
 
-```python
-import yfinance as yf
-import pandas as pd
-import numpy as np
-
-daily = yf.download("{{SYMBOL}}", period='2y', progress=False)
-hourly = yf.download("{{SYMBOL}}", period='730d', interval='1h', progress=False)
-if daily.columns.nlevels > 1:
-    daily.columns = daily.columns.get_level_values(0)
-if hourly.columns.nlevels > 1:
-    hourly.columns = hourly.columns.get_level_values(0)
-
-results = []
-for i in range(1, len(daily)):
-    prev_close = float(daily.iloc[i-1]['Close'])
-    day_open = float(daily.iloc[i]['Open'])
-    day_close = float(daily.iloc[i]['Close'])
-    gap_pct = (day_open - prev_close) / prev_close * 100
-    day_hourly = hourly[hourly.index.date == daily.index[i].date()]
-    fh_low = float(day_hourly.iloc[0]['Low']) if len(day_hourly) >= 1 else None
-    results.append({'gap_pct': gap_pct,
-        'pre_to_close': (day_close-prev_close)/prev_close*100,
-        'open_to_close': (day_close-day_open)/day_open*100,
-        'fh_to_close': (day_close-fh_low)/fh_low*100 if fh_low else None})
-
-df = pd.DataFrame(results)
-for label, subset in [('Alle Tage', df), ('Gap-Up >1%', df[df['gap_pct']>1]), ('Gap-Up >3%', df[df['gap_pct']>3])]:
-    n = len(subset)
-    if n == 0: continue
-    fh = subset['fh_to_close'].dropna()
-    print(f'{label} (n={n}):')
-    print(f'  Pre-Market:     {subset["pre_to_close"].mean():+.2f}% | Positiv: {(subset["pre_to_close"]>0).mean()*100:.0f}%')
-    print(f'  Bei Open:       {subset["open_to_close"].mean():+.2f}% | Positiv: {(subset["open_to_close"]>0).mean()*100:.0f}%')
-    print(f'  First-Hour Dip: {fh.mean():+.2f}% | Positiv: {(fh>0).mean()*100:.0f}%')
+```bash
+python3 preopen_check.py {{SYMBOL}} --entry-timing
 ```
+
+> **Hinweis:** Ergebnisse werden in `memory/entry_timing_cache.json` gecacht.
+> Cache wird automatisch invalidiert wenn `preopen_patterns.json` neuer ist.
+> Fuer Cache-Bypass: `python3 preopen_check.py {{SYMBOL}} --entry-timing --force-timing`
 
 **Dokumentiere das Ergebnis:**
 
@@ -851,8 +823,8 @@ for label, subset in [('Alle Tage', df), ('Gap-Up >1%', df[df['gap_pct']>1]), ('
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
 ║  Pre-Market Win% > Open Win%:                                ║
-║  → VOR US-Open kaufen (Momentum-Stock!)                      ║
-║  → Aber: LIMIT-Order wegen Market-Maker-Spread!              ║
+║  → LIMIT-Order auf Turbo bei Market-Open setzen              ║
+║  → Pre-Market Win% = Richtungs-Signal, nicht Entry-Preis!    ║
 ║                                                               ║
 ║  First-Hour Dip Win% > Pre-Market Win%:                      ║
 ║  → NACH US-Open warten auf Dip in erster Stunde             ║

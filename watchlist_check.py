@@ -160,33 +160,15 @@ def enrich_candidates(symbols, data):
 
 
 # ---------------------------------------------------------------------------
-# Scoring (copied from morning_screener.py — v4, self-contained)
+# Scoring (shared with morning_screener.py)
 # ---------------------------------------------------------------------------
 
+from morning_screener import passes_hard_gates as _ms_hard_gates
+from morning_screener import score_long, score_short
+
+
 def passes_hard_gates(sym, d):
-    if not d or not d.get('price') or d.get('rsi') is None:
-        return False
-    if sym in FUTURES:
-        return True
-    if (d.get('volume') or 0) < MIN_VOLUME:
-        return False
-    rsi_range = d.get('rsi_range')
-    rsi_had_extreme = d.get('rsi_had_extreme', False)
-    if rsi_range is not None and (rsi_range < 15 or not rsi_had_extreme):
-        return False
-    return True
-
-
-def score_long(d, regime=None):
-    """Identical scoring to morning_screener.py with regime support."""
-    from morning_screener import score_long as _score_long
-    return _score_long(d, regime=regime)
-
-
-def score_short(d, regime=None):
-    """Identical scoring to morning_screener.py with regime support."""
-    from morning_screener import score_short as _score_short
-    return _score_short(d, regime=regime)
+    return _ms_hard_gates(sym, d, min_volume=MIN_VOLUME)
 
 
 # ---------------------------------------------------------------------------

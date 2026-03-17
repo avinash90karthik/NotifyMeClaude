@@ -2,7 +2,7 @@
 
 You need: a Mac/PC, 30 minutes, and a Claude Pro subscription ($20/month).
 
-Everything is completely private - your own bot, your own database, your own alerts.
+Everything is completely private - your own bot, your own alerts.
 
 ---
 
@@ -33,27 +33,7 @@ Find your Chat ID:
 
 ---
 
-## Step 3: Create a Supabase Project (free)
-
-1. Go to https://supabase.com and create an account
-2. Click **New Project**
-3. Name: e.g. "Trading Bot" | Password: something secure | Region: EU West
-4. Wait for the project to be created (~1 minute)
-
-Copy your credentials:
-1. Go to **Project Settings > API**
-2. Copy the **Project URL** (e.g. `https://xxxxx.supabase.co`)
-3. Copy the **anon public** key
-
-Set up the database:
-1. Go to **SQL Editor** (left sidebar)
-2. Open the file `supabase/schema.sql` from the repo
-3. Copy the entire content and run it in the SQL Editor
-4. Green checkmark = done!
-
----
-
-## Step 4: Fork the Repo and Configure
+## Step 3: Fork the Repo and Configure
 
 1. Go to the GitHub repo (link from admin)
 2. Click **Fork** (top right)
@@ -72,13 +52,11 @@ Now edit `.env` and fill in ALL fields:
 TELEGRAM_BOT_TOKEN=your_bot_token
 TELEGRAM_CHAT_ID=your_chat_id
 TELEGRAM_BOT_USERNAME=your_bot_username
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your_anon_key
 ```
 
 ---
 
-## Step 5: Install Python Dependencies + Seed Watchlist
+## Step 4: Install Python Dependencies + Seed Watchlist
 
 ```bash
 # Install dependencies
@@ -90,7 +68,7 @@ python3 admin_stocks.py seed
 
 ---
 
-## Step 6: Test Everything
+## Step 5: Test Everything
 
 ```bash
 # Test 1: Telegram Bot
@@ -112,20 +90,18 @@ python3 browse_stocks.py
 
 ---
 
-## Step 7: Set Up GitHub Actions (recommended!)
+## Step 6: Set Up GitHub Actions (recommended!)
 
 This runs price updates automatically - even when your computer is off.
 
 1. Go to your fork on GitHub
 2. **Settings > Secrets and variables > Actions**
-3. Add these 4 secrets:
+3. Add these 2 secrets:
 
 | Secret | Value |
 |--------|-------|
 | `TELEGRAM_BOT_TOKEN` | Your Bot Token from Step 2 |
 | `TELEGRAM_CHAT_ID` | Your Chat ID from Step 2 |
-| `SUPABASE_URL` | Your Supabase URL from Step 3 |
-| `SUPABASE_ANON_KEY` | Your Anon Key from Step 3 |
 
 4. Go to the **Actions** tab
 5. Click **"I understand my workflows, go ahead and enable them"**
@@ -196,10 +172,10 @@ python3 admin_stocks.py list
 ## FAQ
 
 **Does this cost anything?**
-Claude Pro: $20/month. Telegram, Supabase (free tier), GitHub Actions: all free.
+Claude Pro: $20/month. Telegram and GitHub Actions: free.
 
 **Can anyone see my data?**
-No. You have your own database, your own bot, and your own alerts. Everything is completely private.
+No. You have your own bot and your own alerts. Everything is completely private.
 
 **Do I need to know how to code?**
 No! You just need to open Terminal and run the commands above.

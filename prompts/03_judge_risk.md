@@ -55,11 +55,41 @@ Analysiere die Bull vs Bear Argumente aus Schritt 2:
 | 📰 News Sentiment (NSI) | [X.XX] | [Stark bullisch / Leicht bullisch / Neutral / Bearisch] |
 | 🔄 Regime | [TRENDING/RANGE/CHOPPY/TRANSITIONAL] | [Signal aligned mit Regime?] |
 | 🩳 Short Interest | X% Float / X Tage | [Squeeze-Potential oder bearishes Signal?] |
+| 🎯 Pre-Open Pattern | [Verdict + Hit%] | [Bestaetigt/widerspricht Signal? Gap Fill Timing?] |
 
 **Entscheidende Faktoren:**
 1. [Wichtigster Faktor]
 2. [Zweitwichtigster Faktor]
 3. [Drittwichtigster Faktor]
+
+### PRE-OPEN PATTERN ADJUSTMENT
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  PRE-OPEN PATTERN → ENTRY-TIMING & KONFIDENZ                 ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Pattern Hit Rate ≥60% UND gleiche Richtung wie Signal:       ║
+║  → Konfidenz +3% (Pattern bestaetigt Signal)                 ║
+║                                                               ║
+║  Pattern Hit Rate <50% ABER Signal sagt LONG/SHORT:           ║
+║  → Konfidenz -5% (Pattern warnt: historisch schlecht!)        ║
+║                                                               ║
+║  Gap Fill Rate ≥80%:                                          ║
+║  → Entry-Empfehlung: NACH US-Open (Gap wird gefuellt)        ║
+║  → In Trading Card Entry-Timing dokumentieren!                ║
+║                                                               ║
+║  BB Squeeze <10%:                                             ║
+║  → Ausbruch steht bevor, Richtung unsicher                   ║
+║  → Position eine Stufe kleiner ODER Trigger abwarten          ║
+║                                                               ║
+║  Pre-Open Verdict: [LONG/SHORT/WAIT/KEIN TRADE]              ║
+║  Pattern Hit Rate: XX% [Richtung]                             ║
+║  Gap Fill: XX%                                                ║
+║  → Adjustment: [+X% / -X% / 0%]                              ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
 
 ### REGIME-ADJUSTMENT
 
@@ -208,7 +238,7 @@ Identifiziere die relevanten Chart-Levels aus Schritt 1:
 ║  PORTFOLIO-SCHUTZ                                            ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  Portfolio-Wert (aus Supabase):     XXX EUR                  ║
+║  Portfolio-Wert (aus portfolio.md): XXX EUR                  ║
 ║  Max. Verlust pro Trade (10%):      XXX EUR                  ║
 ║  Max. gleichzeitig riskiert (40%):  XXX EUR                  ║
 ║  Aktuell riskiert (offene Pos.):    XXX EUR                  ║
@@ -342,6 +372,7 @@ Identifiziere die relevanten Chart-Levels aus Schritt 1:
 - ✅ Stop-Levels basierend auf Support-Zonen
 - ✅ **Risk Audit: Alle 5 VETO-Regeln + 4 WARNUNGs explizit geprueft (PFLICHT!)**
 - ✅ **Regime-Adjustment angewandt (Konfidenz vor/nach dokumentiert)**
+- ✅ **Pre-Open Pattern Adjustment angewandt (Hit Rate + Gap Fill + BB Squeeze)**
 - ✅ **Reflection-Based Adjustment geprueft**
 
 ---

@@ -16,8 +16,11 @@ from datetime import datetime, timezone
 from indicators import calc_technicals
 from risk_audit import risk_audit, parse_portfolio_summary
 
-WATCHLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'watchlist.json')
-PORTFOLIO_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'portfolio.md')
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+WATCHLIST_FILE = os.path.join(SCRIPT_DIR, 'memory', 'watchlist.json')
+PORTFOLIO_FILE = os.path.join(SCRIPT_DIR, 'memory', 'portfolio.md')
+PATTERNS_FILE = os.path.join(SCRIPT_DIR, 'memory', 'preopen_patterns.json')
+SNAPSHOTS_FILE = os.path.join(SCRIPT_DIR, 'memory', 'preopen_snapshots.json')
 
 FUTURES = {'SI=F', 'GC=F'}
 MIN_VOLUME = 100_000
@@ -156,12 +159,14 @@ def enrich_candidates(symbols, data):
             print(f'  Enrich {sym}: {e}')
 
 
-def passes_hard_gates(sym, d):
+def passes_hard_gates(sym, d, min_volume=None):
+    if min_volume is None:
+        min_volume = MIN_VOLUME
     if not d or not d.get('price') or d.get('rsi') is None:
         return False
     if sym in FUTURES:
         return True
-    if (d.get('volume') or 0) < MIN_VOLUME:
+    if (d.get('volume') or 0) < min_volume:
         return False
     # RSI Range Quality: must oscillate (range >= 15) AND hit an extreme in 20 days
     rsi_range = d.get('rsi_range')
@@ -548,7 +553,130 @@ def parse_backtest_health(path):
         return None
 
 
-def fmt_candidate(i, score, sym, sector, d, signals, direction, pos_dirs, name=''):
+def load_patterns():
+    """Load pre-open pattern database if available."""
+    if not os.path.exists(PATTERNS_FILE):
+        return None
+    try:
+        with open(PATTERNS_FILE) as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def find_best_pattern(d, direction, patterns_db):
+    """Find the best matching pattern for a candidate from the pattern DB.
+
+    Returns (pattern_label, hit_rate, n) or None.
+    """
+    if not patterns_db:
+        return None
+
+    from preopen_backtest import tag_patterns
+    tags = tag_patterns(d, gap_pct=0)  # gap unknown pre-open
+
+    pats = patterns_db.get('primary_patterns', {}).get(direction, {})
+    best = None
+    best_n = 0
+
+    for key, stats in pats.items():
+        combo_dims = stats['combo'].split('+')
+        pat_vals = stats['values'].split('|')
+        if len(combo_dims) != len(pat_vals):
+            continue
+        # Check if all dimensions match
+        match = all(tags.get(dim) == val for dim, val in zip(combo_dims, pat_vals))
+        if match:
+            hr = stats.get('hit_4h') or stats.get('hit_close') or 0
+            n = stats.get('n', 0)
+            if n > best_n or (n == best_n and hr > (best[1] if best else 0)):
+                best = (stats['values'].replace('|', '+'), hr, n)
+                best_n = n
+
+    return best
+
+
+def find_trap_match(d, direction, patterns_db):
+    """Check if candidate matches a known trap pattern (Score>=60, hit<50%)."""
+    if not patterns_db:
+        return None
+    traps = patterns_db.get('traps', [])
+    if not traps:
+        return None
+
+    from preopen_backtest import tag_patterns
+    tags = tag_patterns(d, gap_pct=0)
+
+    for trap in traps:
+        if trap['direction'] != direction:
+            continue
+        # Parse pattern key to check match
+        pat_key = trap.get('pattern', '')
+        if ':' not in pat_key:
+            continue
+        combo_part, vals_part = pat_key.split(':', 1)
+        combo_dims = combo_part.split('+')
+        pat_vals = vals_part.split('|')
+        if len(combo_dims) != len(pat_vals):
+            continue
+        match = all(tags.get(dim) == val for dim, val in zip(combo_dims, pat_vals))
+        if match:
+            return trap
+    return None
+
+
+def save_preopen_snapshot(data, top_long, top_short, patterns_db):
+    """Save pre-open snapshot for post-open accuracy tracking.
+
+    Writes to memory/preopen_snapshots.json (rolling 30 days).
+    """
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    candidates = []
+
+    for direction, top_list in [('LONG', top_long), ('SHORT', top_short)]:
+        for score, sym, sector, d, signals in top_list:
+            if score < MIN_SCORE:
+                continue
+            entry = {
+                'symbol': sym,
+                'direction': direction,
+                'score': score,
+                'pre_open_price': d.get('price'),
+                'regime': d.get('regime', '?'),
+                'rsi': d.get('rsi'),
+            }
+            # Pattern match
+            pat = find_best_pattern(d, direction, patterns_db)
+            if pat:
+                entry['pattern_match'] = pat[0]
+                entry['pattern_hit_rate'] = pat[1]
+                entry['pattern_n'] = pat[2]
+            candidates.append(entry)
+
+    snapshot = {'date': today, 'candidates': candidates}
+
+    # Load existing, append, keep 30 days
+    if os.path.exists(SNAPSHOTS_FILE):
+        try:
+            with open(SNAPSHOTS_FILE) as f:
+                existing = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            existing = {'snapshots': []}
+    else:
+        existing = {'snapshots': []}
+
+    # Remove existing snapshot for today (overwrite)
+    existing['snapshots'] = [s for s in existing['snapshots'] if s.get('date') != today]
+    existing['snapshots'].append(snapshot)
+    # Keep last 30
+    existing['snapshots'] = existing['snapshots'][-30:]
+
+    with open(SNAPSHOTS_FILE, 'w') as f:
+        json.dump(existing, f, indent=2, default=str)
+    print(f'  Snapshot saved: {len(candidates)} candidates')
+
+
+def fmt_candidate(i, score, sym, sector, d, signals, direction, pos_dirs, name='', patterns_db=None):
     """Format a single candidate line for Telegram."""
     emoji = '🟢' if direction == 'LONG' else '🔴'
     name_str = f' {name}' if name else ''
@@ -599,10 +727,19 @@ def fmt_candidate(i, score, sym, sector, d, signals, direction, pos_dirs, name='
     if d.get('earnings_date'):
         line += f'   Earnings: {d["earnings_date"]}\n'
 
+    # Pattern match from pre-open backtest
+    if patterns_db:
+        pat = find_best_pattern(d, direction, patterns_db)
+        if pat:
+            line += f'   Pattern: {pat[1]:.0f}% Treffer (n={pat[2]}, {pat[0]})\n'
+        trap = find_trap_match(d, direction, patterns_db)
+        if trap:
+            line += f'   FALLE: {trap["hit_rate"]:.0f}% (n={trap["n"]}) — Vorsicht!\n'
+
     return line
 
 
-def build_message(all_data, positions, sector_map, scan_time, total_scanned, pos_dirs, name_map=None):
+def build_message(all_data, positions, sector_map, scan_time, total_scanned, pos_dirs, name_map=None, patterns_db=None):
     """Build the Telegram screener message."""
     name_map = name_map or {}
     passed = {sym: d for sym, d in all_data.items() if passes_hard_gates(sym, d)}
@@ -664,7 +801,7 @@ def build_message(all_data, positions, sector_map, scan_time, total_scanned, pos
                 sig.insert(0, f'VETO: {vetoes[0].split(":")[0]}')
             for w in warns:
                 sig.append(f'⚠️{w.split(":")[0]}')
-            msg += fmt_candidate(i, sc, sym, sec, d, sig, 'LONG', pos_dirs, name_map.get(sym, ''))
+            msg += fmt_candidate(i, sc, sym, sec, d, sig, 'LONG', pos_dirs, name_map.get(sym, ''), patterns_db)
     else:
         msg += '  Keine starken Setups\n'
 
@@ -680,7 +817,7 @@ def build_message(all_data, positions, sector_map, scan_time, total_scanned, pos
                 sig.insert(0, f'VETO: {vetoes[0].split(":")[0]}')
             for w in warns:
                 sig.append(f'⚠️{w.split(":")[0]}')
-            msg += fmt_candidate(i, sc, sym, sec, d, sig, 'SHORT', pos_dirs, name_map.get(sym, ''))
+            msg += fmt_candidate(i, sc, sym, sec, d, sig, 'SHORT', pos_dirs, name_map.get(sym, ''), patterns_db)
     else:
         msg += '  Keine starken Setups\n'
 
@@ -800,11 +937,37 @@ def main():
         if sym in data and data[sym].get('sector'):
             sector_map.setdefault(sym, data[sym]['sector'])
 
-    msg = build_message(data, positions, sector_map, scan_time, total_scanned, pos_dirs, name_map)
+    # Load pattern DB for pattern matching
+    patterns_db = load_patterns()
+    if patterns_db:
+        print(f'  Pattern DB loaded: {patterns_db.get("total_records", 0)} records')
+
+    msg = build_message(data, positions, sector_map, scan_time, total_scanned, pos_dirs, name_map, patterns_db)
     print(f'\n{msg}\n')
 
     result = send_telegram(msg)
     print(f'  Telegram sent: {result.get("ok", False)}')
+
+    # Save pre-open snapshot for post-open accuracy tracking
+    try:
+        # Recompute top lists for snapshot (same logic as build_message)
+        passed_snap = {sym: d for sym, d in data.items() if passes_hard_gates(sym, d)}
+        long_snap = []
+        short_snap = []
+        for sym, d in passed_snap.items():
+            rw = d.get('regime_weights')
+            ls, lsig = score_long(d, regime=rw)
+            ss, ssig = score_short(d, regime=rw)
+            sector = sector_map.get(sym, d.get('sector') or '?')
+            d['_score_long'] = ls
+            d['_score_short'] = ss
+            long_snap.append((ls, sym, sector, d, lsig))
+            short_snap.append((ss, sym, sector, d, ssig))
+        long_snap.sort(key=lambda x: x[0], reverse=True)
+        short_snap.sort(key=lambda x: x[0], reverse=True)
+        save_preopen_snapshot(data, long_snap[:TOP_N], short_snap[:TOP_N], patterns_db)
+    except Exception as e:
+        print(f'  Snapshot save failed: {e}')
 
 
 if __name__ == '__main__':

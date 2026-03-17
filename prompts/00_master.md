@@ -43,8 +43,8 @@ Lies: prompts/04_summary_send.md
 ```
 - **Input:** ALLE Outputs der vorherigen Schritte
 - Trading Card, ausführliche Analyse, JSON Output
-- Chart hochladen + Supabase INSERT
-- **Output:** NotifyMe-App-Eintrag mit vollständiger Analyse
+- Chart + Analyse via Telegram senden
+- **Output:** Telegram-Nachricht mit vollständiger Analyse
 
 ---
 
