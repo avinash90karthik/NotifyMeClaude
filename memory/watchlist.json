@@ -10,7 +10,7 @@
     "sma200": 246.7,
     "market_cap": 3696381394944,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-23T21:12:19.495282+00:00"
+    "last_updated": "2026-03-23T21:45:08.154820+00:00"
   },
   {
     "symbol": "ARM",
@@ -23,7 +23,7 @@
     "sma200": 138.16,
     "market_cap": 145376985088,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-23T21:12:19.495282+00:00"
+    "last_updated": "2026-03-23T21:45:08.154820+00:00"
   },
   {
     "symbol": "NVDA",
@@ -36,7 +36,7 @@
     "sma200": 178.59,
     "market_cap": 4268930367488,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-23T21:12:19.495282+00:00"
+    "last_updated": "2026-03-23T21:45:08.154820+00:00"
   },
   {
     "symbol": "GOOGL",
@@ -49,7 +49,7 @@
     "sma200": 260.22,
     "market_cap": 3654019973120,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-23T21:12:19.495282+00:00"
+    "last_updated": "2026-03-23T21:45:08.154820+00:00"
   },
   {
     "symbol": "QBTS",
@@ -62,7 +62,7 @@
     "sma200": 22.5,
     "market_cap": 6033292288,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-23T21:12:19.495282+00:00"
+    "last_updated": "2026-03-23T21:45:08.154820+00:00"
   },
   {
     "symbol": "IREN",
@@ -75,7 +75,7 @@
     "sma200": 37.87,
     "market_cap": 13986966528,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-23T21:12:19.495282+00:00"
+    "last_updated": "2026-03-23T21:45:08.154820+00:00"
   },
   {
     "symbol": "APLD",
@@ -88,7 +88,7 @@
     "sma200": 23.72,
     "market_cap": 7621509632,
     "analyst_rating": "None",
-    "last_updated": "2026-03-23T21:12:19.495282+00:00"
+    "last_updated": "2026-03-23T21:45:08.154820+00:00"
   },
   {
     "symbol": "SAP.DE",
@@ -101,7 +101,7 @@
     "sma200": 217.75,
     "market_cap": 179640631296,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-23T21:12:19.495282+00:00"
+    "last_updated": "2026-03-23T21:45:08.154820+00:00"
   },
   {
     "symbol": "ASML",
@@ -114,7 +114,7 @@
     "sma200": 1027.35,
     "market_cap": 537793200128,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-23T21:12:19.495282+00:00"
+    "last_updated": "2026-03-23T21:45:08.154820+00:00"
   },
   {
     "symbol": "VST",
@@ -127,7 +127,7 @@
     "sma200": 181.26,
     "market_cap": 51260907520,
     "analyst_rating": "Strong Buy",
-    "last_updated": "2026-03-23T21:12:19.495282+00:00"
+    "last_updated": "2026-03-23T21:45:08.154820+00:00"
   },
   {
     "symbol": "CEG",
@@ -140,7 +140,7 @@
     "sma200": 328.72,
     "market_cap": 104890327040,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-23T21:12:19.495282+00:00"
+    "last_updated": "2026-03-23T21:45:08.154820+00:00"
   },
   {
     "symbol": "ENR.DE",
@@ -153,7 +153,7 @@
     "sma200": 113.56,
     "market_cap": 126248804352,
     "analyst_rating": "Buy",
-    "last_updated": "2026-03-23T21:12:19.495282+00:00"
+    "last_updated": "2026-03-23T21:45:08.154820+00:00"
   },
   {
     "symbol": "SI=F",
@@ -166,7 +166,7 @@
     "sma200": 56.45,
     "market_cap": null,
     "analyst_rating": null,
-    "last_updated": "2026-03-23T21:12:19.495282+00:00"
+    "last_updated": "2026-03-23T21:45:08.154820+00:00"
   },
   {
     "symbol": "GC=F",
@@ -179,6 +179,6 @@
     "sma200": 4068.49,
     "market_cap": null,
     "analyst_rating": null,
-    "last_updated": "2026-03-23T21:12:19.495282+00:00"
+    "last_updated": "2026-03-23T21:45:08.154820+00:00"
   }
 ]
