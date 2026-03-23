@@ -1,4 +1,4 @@
-# SCHRITT 1: DATENSAMMLUNG
+# STEP 1: DATA COLLECTION
 
 **Asset:** {{SYMBOL}}
 
@@ -8,41 +8,41 @@
 
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║  BEVOR DU ANFAENGST:                                         ║
+║  BEFORE YOU START:                                            ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  ✅ YFINANCE ZUERST: Python-Script fuer Live-Daten (PFLICHT!)║
-║  ✅ CHART GENERIEREN: Visuell den Chart analysieren!         ║
-║  ✅ ECHTE News: Mit Datum, Quelle und Link                   ║
-║  ✅ Web-Suche: NUR fuer News und aktuelle Events             ║
-║  ✅ KORRELATION: Bestehende Positionen pruefen!              ║
+║  ✅ YFINANCE FIRST: Python script for live data (MANDATORY!) ║
+║  ✅ GENERATE CHART: Visually analyze the chart!              ║
+║  ✅ REAL News: With date, source, and link                    ║
+║  ✅ Web search: ONLY for news and current events              ║
+║  ✅ CORRELATION: Check existing positions!                    ║
 ║                                                               ║
-║  ❌ NICHT Web-Suche fuer Preisdaten nutzen (veraltet!)       ║
-║  ❌ KEINE erfundenen Daten oder Schaetzungen ohne Quelle     ║
+║  ❌ Do NOT use web search for price data (outdated!)          ║
+║  ❌ NO fabricated data or estimates without source            ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
 ---
 
-## 0.0 PORTFOLIO.MD AKTUALISIEREN (VOR ANALYSE-START!)
+## 0.0 UPDATE PORTFOLIO.MD (BEFORE STARTING ANALYSIS!)
 
-**Lese `memory/portfolio.md` und pruefe ob es aktuell ist.**
+**Read `memory/portfolio.md` and check if it is up to date.**
 
-Falls der User seit der letzten Aktualisierung einen Trade gemacht hat (neue Position, Teilverkauf, Stop ausgeloest), trage ihn JETZT ein BEVOR die Analyse beginnt.
+If the user has made a trade since the last update (new position, partial sale, stop triggered), enter it NOW BEFORE the analysis begins.
 
-- Neue Position? → In "Offene Positionen" eintragen (Symbol, Sektor, Wert, Buy-In, KO, Stop)
-- Position geschlossen? → In "Geschlossene Trades" verschieben + P&L
-- Stop ausgeloest? → Als geschlossen markieren + Verlust eintragen
-- Datum der "Letzte Aktualisierung" setzen
+- New position? → Add to "Open Positions" (Symbol, Sector, Value, Buy-In, KO, Stop)
+- Position closed? → Move to "Closed Trades" + P&L
+- Stop triggered? → Mark as closed + enter loss
+- Set "Last Updated" date
 
-**Nach jedem Trade wird portfolio.md auch in Schritt 4 nochmals geprueft.**
+**After every trade, portfolio.md is also checked again in Step 4.**
 
 ---
 
-## 1.0 LIVE-DATEN VIA YFINANCE (PFLICHT!)
+## 1.0 LIVE DATA VIA YFINANCE (MANDATORY!)
 
-**Fuehre IMMER zuerst dieses Python-Script aus:**
+**ALWAYS execute this Python script first:**
 
 ```python
 import yfinance as yf
@@ -72,54 +72,54 @@ except ImportError:
 
 from datetime import datetime
 
-# Futures-Proxy-Map: Fuer RSI/MACD ETF statt Futures nutzen (kein Rollover-Problem)
+# Futures proxy map: Use ETF instead of futures for RSI/MACD (no rollover issue)
 FUTURES_ETF_PROXY = {
-    'SI=F': 'SLV',   # Silber → iShares Silver ETF
+    'SI=F': 'SLV',   # Silver → iShares Silver ETF
     'GC=F': 'GLD',   # Gold → SPDR Gold ETF
-    'CL=F': 'USO',   # Oel → United States Oil ETF
+    'CL=F': 'USO',   # Oil → United States Oil ETF
     'NG=F': 'UNG',   # Natural Gas → United States Natural Gas ETF
 }
 
-# Hole Preisdaten fuer {{SYMBOL}}
+# Fetch price data for {{SYMBOL}}
 ticker = yf.Ticker("{{SYMBOL}}")
 hist = ticker.history(period='3mo')
 info = ticker.info
 
-# Fuer Technicals: ETF-Proxy wenn Futures, sonst direkt
+# For technicals: ETF proxy if futures, otherwise direct
 proxy_symbol = FUTURES_ETF_PROXY.get("{{SYMBOL}}")
 if proxy_symbol:
     proxy_hist = yf.Ticker(proxy_symbol).history(period='3mo')
     close_for_ta = wavelet_denoise(proxy_hist['Close']) if HAS_WAVELET else proxy_hist['Close']
     rsi = calculate_rsi(close_for_ta)
     macd, signal, histogram = calculate_macd(close_for_ta)
-    technicals_source = f'{proxy_symbol} (ETF-Proxy, rollover-frei, wavelet-denoised)'
+    technicals_source = f'{proxy_symbol} (ETF proxy, rollover-free, wavelet-denoised)'
 else:
     close_for_ta = wavelet_denoise(hist['Close']) if HAS_WAVELET else hist['Close']
     rsi = calculate_rsi(close_for_ta)
     macd, signal, histogram = calculate_macd(close_for_ta)
     technicals_source = '{{SYMBOL}} (wavelet-denoised)' if HAS_WAVELET else '{{SYMBOL}}'
 
-# EXAKTER TIMESTAMP
+# EXACT TIMESTAMP
 now = datetime.utcnow()
 last_trade = datetime.fromtimestamp(info.get('regularMarketTime', 0))
 market_state = info.get('marketState', 'UNKNOWN')
 
 print('=' * 60)
-print('{{SYMBOL}} - LIVE DATEN')
+print('{{SYMBOL}} - LIVE DATA')
 print('=' * 60)
-print(f'Analyse-Zeit:      {now.strftime("%Y-%m-%d %H:%M:%S")} UTC')
-print(f'Letzter Trade:     {last_trade.strftime("%Y-%m-%d %H:%M:%S")}')
+print(f'Analysis Time:     {now.strftime("%Y-%m-%d %H:%M:%S")} UTC')
+print(f'Last Trade:        {last_trade.strftime("%Y-%m-%d %H:%M:%S")}')
 print(f'Market State:      {market_state}')
-print(f'Technicals-Quelle: {technicals_source}')
+print(f'Technicals Source: {technicals_source}')
 print('=' * 60)
 print()
-print('PREIS & PERFORMANCE')
-print(f'  Aktueller Preis:    ${info.get("currentPrice", 0):.2f}')
-print(f'  Tages-Hoch:         ${info.get("dayHigh", 0):.2f}')
-print(f'  Tages-Tief:         ${info.get("dayLow", 0):.2f}')
+print('PRICE & PERFORMANCE')
+print(f'  Current Price:      ${info.get("currentPrice", 0):.2f}')
+print(f'  Day High:           ${info.get("dayHigh", 0):.2f}')
+print(f'  Day Low:            ${info.get("dayLow", 0):.2f}')
 print(f'  Previous Close:     ${info.get("previousClose", 0):.2f}')
-print(f'  52W Hoch:           ${info.get("fiftyTwoWeekHigh", 0):.2f}')
-print(f'  52W Tief:           ${info.get("fiftyTwoWeekLow", 0):.2f}')
+print(f'  52W High:           ${info.get("fiftyTwoWeekHigh", 0):.2f}')
+print(f'  52W Low:            ${info.get("fiftyTwoWeekLow", 0):.2f}')
 print()
 print('MOVING AVERAGES')
 print(f'  50-Day SMA:         ${info.get("fiftyDayAverage", 0):.2f}')
@@ -127,16 +127,16 @@ print(f'  200-Day SMA:        ${info.get("twoHundredDayAverage", 0):.2f}')
 price = info.get('currentPrice', 0)
 sma50 = info.get('fiftyDayAverage', 1)
 sma200 = info.get('twoHundredDayAverage', 1)
-print(f'  Preis vs 50 SMA:    {((price/sma50)-1)*100:.1f}%')
-print(f'  Preis vs 200 SMA:   {((price/sma200)-1)*100:.1f}%')
-print(f'  Golden Cross:       {"JA" if sma50 > sma200 else "NEIN"}')
+print(f'  Price vs 50 SMA:    {((price/sma50)-1)*100:.1f}%')
+print(f'  Price vs 200 SMA:   {((price/sma200)-1)*100:.1f}%')
+print(f'  Golden Cross:       {"YES" if sma50 > sma200 else "NO"}')
 print()
-print('TECHNISCHE INDIKATOREN')
+print('TECHNICAL INDICATORS')
 current_rsi = rsi.iloc[-1]
 current_macd = macd.iloc[-1]
 current_signal = signal.iloc[-1]
 current_hist = histogram.iloc[-1]
-rsi_status = "UEBERKAUFT" if current_rsi > 70 else "UEBERVERKAUFT" if current_rsi < 30 else "Neutral"
+rsi_status = "OVERBOUGHT" if current_rsi > 70 else "OVERSOLD" if current_rsi < 30 else "Neutral"
 print(f'  RSI (14):           {current_rsi:.1f} ({rsi_status})')
 print(f'  MACD:               {current_macd:.2f}')
 print(f'  MACD Signal:        {current_signal:.2f}')
@@ -144,46 +144,46 @@ print(f'  MACD Histogram:     {current_hist:.2f} ({"BULLISH" if current_hist > 0
 print()
 
 # =============================================
-# RSI-DELTA, DIVERGENZ & MOMENTUM (NEU!)
+# RSI DELTA, DIVERGENCE & MOMENTUM (NEW!)
 # =============================================
-print('RSI-MOMENTUM & DIVERGENZ')
+print('RSI MOMENTUM & DIVERGENCE')
 prev_rsi = rsi.iloc[-2]
 rsi_delta_1d = current_rsi - prev_rsi
 rsi_delta_3d = current_rsi - rsi.iloc[-4] if len(rsi) > 4 else 0
 rsi_delta_5d = current_rsi - rsi.iloc[-6] if len(rsi) > 6 else 0
-print(f'  RSI aktuell:        {current_rsi:.1f}')
-print(f'  RSI gestern:        {prev_rsi:.1f}')
-print(f'  RSI-Delta (1d):     {rsi_delta_1d:+.1f}')
-print(f'  RSI-Delta (3d):     {rsi_delta_3d:+.1f}')
-print(f'  RSI-Delta (5d):     {rsi_delta_5d:+.1f}')
+print(f'  RSI current:        {current_rsi:.1f}')
+print(f'  RSI yesterday:      {prev_rsi:.1f}')
+print(f'  RSI Delta (1d):     {rsi_delta_1d:+.1f}')
+print(f'  RSI Delta (3d):     {rsi_delta_3d:+.1f}')
+print(f'  RSI Delta (5d):     {rsi_delta_5d:+.1f}')
 
 # RSI Slope (3-day moving average of RSI delta)
 rsi_slope = rsi.diff().rolling(3).mean()
-print(f'  RSI-Slope (3d avg): {rsi_slope.iloc[-1]:+.2f}')
+print(f'  RSI Slope (3d avg): {rsi_slope.iloc[-1]:+.2f}')
 prev_slope = rsi_slope.iloc[-2]
-print(f'  RSI-Slope vorher:   {prev_slope:+.2f}')
+print(f'  RSI Slope prev:     {prev_slope:+.2f}')
 if rsi_slope.iloc[-1] > 0 and prev_slope < 0:
-    print('  -> RSI-MOMENTUM DREHT POSITIV!')
+    print('  -> RSI MOMENTUM TURNING POSITIVE!')
 elif rsi_slope.iloc[-1] > prev_slope:
-    print('  -> RSI-Momentum VERBESSERT sich')
+    print('  -> RSI momentum IMPROVING')
 elif rsi_slope.iloc[-1] < 0:
-    print('  -> RSI-Momentum NEGATIV')
+    print('  -> RSI momentum NEGATIVE')
 
-# RSI Status bei Extremen
+# RSI status at extremes
 if current_rsi < 30:
     if rsi_delta_1d > 0:
-        print(f'  SIGNAL: RSI OVERSOLD + DREHT HOCH ({rsi_delta_1d:+.1f}/Tag)')
+        print(f'  SIGNAL: RSI OVERSOLD + TURNING UP ({rsi_delta_1d:+.1f}/day)')
     else:
-        print(f'  SIGNAL: RSI OVERSOLD + FAELLT WEITER ({rsi_delta_1d:+.1f}/Tag)')
+        print(f'  SIGNAL: RSI OVERSOLD + FALLING FURTHER ({rsi_delta_1d:+.1f}/day)')
 elif current_rsi > 70:
     if rsi_delta_1d < 0:
-        print(f'  SIGNAL: RSI OVERBOUGHT + DREHT RUNTER ({rsi_delta_1d:+.1f}/Tag)')
+        print(f'  SIGNAL: RSI OVERBOUGHT + TURNING DOWN ({rsi_delta_1d:+.1f}/day)')
     else:
-        print(f'  SIGNAL: RSI OVERBOUGHT + STEIGT WEITER ({rsi_delta_1d:+.1f}/Tag)')
+        print(f'  SIGNAL: RSI OVERBOUGHT + STILL RISING ({rsi_delta_1d:+.1f}/day)')
 
-# Divergenz-Check: Vergleiche letzte 2 Preis-Tiefs mit RSI-Tiefs
+# Divergence check: Compare last 2 price lows with RSI lows
 print()
-print('  DIVERGENZ-CHECK (letzte 30 Tage):')
+print('  DIVERGENCE CHECK (last 30 days):')
 recent = hist.tail(30)
 rsi_recent = rsi.tail(30)
 lows = []
@@ -200,29 +200,29 @@ if len(lows) >= 2:
     last_two = lows[-2:]
     price_lower = last_two[1][1] < last_two[0][1]
     rsi_higher = last_two[1][2] > last_two[0][2]
-    print(f'  Tief 1: {last_two[0][0]} Preis=${last_two[0][1]:.2f} RSI={last_two[0][2]:.1f}')
-    print(f'  Tief 2: {last_two[1][0]} Preis=${last_two[1][1]:.2f} RSI={last_two[1][2]:.1f}')
+    print(f'  Low 1: {last_two[0][0]} Price=${last_two[0][1]:.2f} RSI={last_two[0][2]:.1f}')
+    print(f'  Low 2: {last_two[1][0]} Price=${last_two[1][1]:.2f} RSI={last_two[1][2]:.1f}')
     if price_lower and rsi_higher:
-        print('  -> BULLISCHE DIVERGENZ (Preis Lower Low, RSI Higher Low)')
+        print('  -> BULLISH DIVERGENCE (Price Lower Low, RSI Higher Low)')
     elif not price_lower and not rsi_higher:
-        print('  -> BEARISCHE DIVERGENZ (Preis Higher Low, RSI Lower Low)')
+        print('  -> BEARISH DIVERGENCE (Price Higher Low, RSI Lower Low)')
     else:
-        print('  -> Keine Divergenz bei Tiefs')
+        print('  -> No divergence at lows')
 else:
-    print('  Nicht genug Tiefs fuer Divergenz-Check')
+    print('  Not enough lows for divergence check')
 
 if len(highs) >= 2:
     last_two_h = highs[-2:]
     price_higher = last_two_h[1][1] > last_two_h[0][1]
     rsi_lower = last_two_h[1][2] < last_two_h[0][2]
-    print(f'  Hoch 1: {last_two_h[0][0]} Preis=${last_two_h[0][1]:.2f} RSI={last_two_h[0][2]:.1f}')
-    print(f'  Hoch 2: {last_two_h[1][0]} Preis=${last_two_h[1][1]:.2f} RSI={last_two_h[1][2]:.1f}')
+    print(f'  High 1: {last_two_h[0][0]} Price=${last_two_h[0][1]:.2f} RSI={last_two_h[0][2]:.1f}')
+    print(f'  High 2: {last_two_h[1][0]} Price=${last_two_h[1][1]:.2f} RSI={last_two_h[1][2]:.1f}')
     if price_higher and rsi_lower:
-        print('  -> BEARISCHE DIVERGENZ (Preis Higher High, RSI Lower High)')
+        print('  -> BEARISH DIVERGENCE (Price Higher High, RSI Lower High)')
     elif not price_higher and not rsi_lower:
-        print('  -> BULLISCHE DIVERGENZ (Preis Lower High, RSI Higher High)')
+        print('  -> BULLISH DIVERGENCE (Price Lower High, RSI Higher High)')
     else:
-        print('  -> Keine Divergenz bei Hochs')
+        print('  -> No divergence at highs')
 
 print()
 print('SHORT INTEREST')
@@ -230,12 +230,12 @@ print(f'  Shares Short:       {info.get("sharesShort", 0):,}')
 print(f'  Short % of Float:   {info.get("shortPercentOfFloat", 0)*100:.1f}%')
 print(f'  Short Ratio (Days): {info.get("shortRatio", 0):.1f}')
 print()
-print('BEWERTUNG')
+print('VALUATION')
 print(f'  Market Cap:         ${info.get("marketCap", 0)/1e9:.1f}B')
 print(f'  P/S Ratio:          {info.get("priceToSalesTrailing12Months", 0):.0f}x')
 print(f'  P/B Ratio:          {info.get("priceToBook", 0):.1f}x')
 print()
-print('CASH & SCHULDEN')
+print('CASH & DEBT')
 print(f'  Total Cash:         ${info.get("totalCash", 0)/1e6:.0f}M')
 print(f'  Total Debt:         ${info.get("totalDebt", 0)/1e6:.0f}M')
 print(f'  Free Cash Flow:     ${info.get("freeCashflow", 0)/1e6:.0f}M')
@@ -246,89 +246,89 @@ print(f'  Target Mean:        ${info.get("targetMeanPrice", 0):.0f}')
 print(f'  Target Low:         ${info.get("targetLowPrice", 0):.0f}')
 print(f'  Recommendation:     {info.get("recommendationKey", "N/A").upper()}')
 print()
-print('VOLATILITAET')
+print('VOLATILITY')
 atr_data = hist['High'] - hist['Low']
 atr14 = atr_data.rolling(14).mean().iloc[-1]
 atr_pct = (atr14 / price) * 100
 ann_vol = hist['Close'].pct_change().std() * (252**0.5) * 100
 beta = info.get('beta', 'N/A')
 print(f'  ATR (14):           ${atr14:.2f} ({atr_pct:.1f}%)')
-print(f'  Ann. Volatilitaet:  {ann_vol:.0f}%')
+print(f'  Ann. Volatility:    {ann_vol:.0f}%')
 print(f'  Beta:               {beta}')
 print()
 print('RISK SCORES')
 print(f'  Overall Risk:       {info.get("overallRisk", "N/A")}/10')
 print()
 
-# EARNINGS-KALENDER
+# EARNINGS CALENDAR
 print('EARNINGS & EVENTS')
 try:
     cal = ticker.calendar
     if cal is not None and len(cal) > 0:
-        print(f'  Naechste Earnings:  {cal}')
+        print(f'  Next Earnings:      {cal}')
     else:
-        print('  Naechste Earnings:  Keine Daten verfuegbar')
+        print('  Next Earnings:      No data available')
 except:
-    print('  Naechste Earnings:  Keine Daten verfuegbar')
+    print('  Next Earnings:      No data available')
 ```
 
-**WICHTIG:**
-- ❌ NIEMALS Web-Suche fuer Preisdaten nutzen - immer yfinance!
-- ✅ Web-Suche NUR fuer News und aktuelle Events
-- ✅ Die yfinance-Daten sind die WAHRHEIT - nutze sie!
+**IMPORTANT:**
+- ❌ NEVER use web search for price data - always yfinance!
+- ✅ Web search ONLY for news and current events
+- ✅ The yfinance data is the TRUTH - use it!
 
 ---
 
-## 1.1 CHART GENERIEREN & ANALYSIEREN (PFLICHT!)
+## 1.1 GENERATE & ANALYZE CHART (MANDATORY!)
 
-**Fuehre diesen Befehl aus (nutze Pfade aus `.env`):**
+**Execute this command (use paths from `.env`):**
 
 ```bash
 source .env 2>/dev/null
 VENV="${YFINANCE_VENV:-python3}"
 SCRIPT="${CHART_SCRIPT:-}"
 OUTPUT="${CHART_OUTPUT_DIR:-charts}"
-if [ -z "$SCRIPT" ]; then echo "Chart uebersprungen (CHART_SCRIPT nicht gesetzt)"; else $VENV $SCRIPT {{SYMBOL}}; fi
+if [ -z "$SCRIPT" ]; then echo "Chart skipped (CHART_SCRIPT not set)"; else $VENV $SCRIPT {{SYMBOL}}; fi
 ```
 
-**Dann lies den Chart:**
+**Then read the chart:**
 
 ```
-Lies die Datei: ${CHART_OUTPUT_DIR}/{{SYMBOL}}_chart.png
+Read the file: ${CHART_OUTPUT_DIR}/{{SYMBOL}}_chart.png
 ```
 
-### CHART-INHALTE (4 Panels)
+### CHART CONTENTS (4 Panels)
 
-| Panel | Inhalt | Farben |
-|-------|--------|--------|
+| Panel | Content | Colors |
+|-------|---------|--------|
 | 1 | Candlesticks + Moving Averages | SMA 50 = Orange, SMA 200 = Purple |
-| 2 | RSI (14) | Gelb, Overbought 70 = Rot, Oversold 30 = Gruen |
-| 3 | Volume | Gruen = Bullish, Rot = Bearish |
+| 2 | RSI (14) | Yellow, Overbought 70 = Red, Oversold 30 = Green |
+| 3 | Volume | Green = Bullish, Red = Bearish |
 | 4 | Money Flow | CMF = Cyan, OBV = Magenta |
 
-### INITIALE CHART-ANALYSE (PFLICHT-TABELLE)
+### INITIAL CHART ANALYSIS (MANDATORY TABLE)
 
-Dokumentiere was du im Chart siehst:
+Document what you see in the chart:
 
-| Aspekt | Beobachtung |
+| Aspect | Observation |
 |--------|-------------|
-| **Trend** | Aufwaerts/Abwaerts/Seitwaerts |
+| **Trend** | Uptrend/Downtrend/Sideways |
 | **SMA 50/200** | Golden Cross / Death Cross / Neutral |
-| **RSI** | Ueberkauft (>70) / Ueberverkauft (<30) / Neutral |
-| **Volume** | Steigend/Fallend bei Preisbewegung |
-| **CMF** | Positiv (Akkumulation) / Negativ (Distribution) |
+| **RSI** | Overbought (>70) / Oversold (<30) / Neutral |
+| **Volume** | Rising/Falling with price movement |
+| **CMF** | Positive (Accumulation) / Negative (Distribution) |
 | **Pattern** | Double Top/Bottom, H&S, Triangle, etc. |
-| **Support** | Sichtbare Support-Levels im Chart |
-| **Resistance** | Sichtbare Resistance-Levels im Chart |
+| **Support** | Visible support levels in the chart |
+| **Resistance** | Visible resistance levels in the chart |
 
 ---
 
-## 1.1b INTRADAY-KONTEXT (PFLICHT fuer Aktien)
+## 1.1b INTRADAY CONTEXT (MANDATORY for stocks)
 
-**NUR als Kontext, NICHT fuer Indikator-Berechnung!**
+**ONLY as context, NOT for indicator calculation!**
 
 ```python
-# Intraday-Daten (1h, letzte 5 Tage)
+# Intraday data (1h, last 5 days)
 try:
     intraday = yf.download("{{SYMBOL}}", period='5d', interval='1h', progress=False)
     if intraday is not None and len(intraday) > 0:
@@ -336,58 +336,58 @@ try:
         if intraday.columns.nlevels > 1:
             intraday.columns = intraday.columns.get_level_values(0)
 
-        # Volume-Profil: Top 3 Preis-Zonen nach Volumen
+        # Volume profile: Top 3 price zones by volume
         price_bins = pd.cut(intraday['Close'], bins=20)
         vol_profile = intraday.groupby(price_bins, observed=True)['Volume'].sum().sort_values(ascending=False)
-        print('INTRADAY-KONTEXT (5d, 1h)')
-        print('  Volume-Profil (Top 3 Zonen):')
+        print('INTRADAY CONTEXT (5d, 1h)')
+        print('  Volume Profile (Top 3 Zones):')
         for i, (zone, vol) in enumerate(vol_profile.head(3).items()):
             print(f'    {i+1}. ${zone.left:.2f}-${zone.right:.2f}: {vol:,.0f}')
 
         # VWAP Approximation (5d)
         vwap = (intraday['Close'] * intraday['Volume']).sum() / intraday['Volume'].sum()
         print(f'  VWAP (5d):          ${vwap:.2f}')
-        print(f'  Preis vs VWAP:      {((price/vwap)-1)*100:+.1f}%')
+        print(f'  Price vs VWAP:      {((price/vwap)-1)*100:+.1f}%')
 
         # Intraday Range (5d)
         intra_high = float(intraday['High'].max())
         intra_low = float(intraday['Low'].min())
-        print(f'  5d Intraday-Range:  ${intra_low:.2f} - ${intra_high:.2f}')
+        print(f'  5d Intraday Range:  ${intra_low:.2f} - ${intra_high:.2f}')
 
-        # Momentum: letzte 6h vs vorherige 6h
+        # Momentum: last 6h vs previous 6h
         if len(intraday) >= 12:
             recent_6h = intraday['Close'].iloc[-6:]
             prior_6h = intraday['Close'].iloc[-12:-6]
             recent_chg = (float(recent_6h.iloc[-1]) - float(recent_6h.iloc[0])) / float(recent_6h.iloc[0]) * 100
             prior_chg = (float(prior_6h.iloc[-1]) - float(prior_6h.iloc[0])) / float(prior_6h.iloc[0]) * 100
-            momentum = 'BESCHLEUNIGEND' if abs(recent_chg) > abs(prior_chg) and recent_chg * prior_chg > 0 else 'VERLANGSAMEND' if abs(recent_chg) < abs(prior_chg) else 'WECHSELND'
-            print(f'  Momentum (6h):      {momentum} (letzte {recent_chg:+.2f}% vs vorher {prior_chg:+.2f}%)')
+            momentum = 'ACCELERATING' if abs(recent_chg) > abs(prior_chg) and recent_chg * prior_chg > 0 else 'DECELERATING' if abs(recent_chg) < abs(prior_chg) else 'REVERSING'
+            print(f'  Momentum (6h):      {momentum} (last {recent_chg:+.2f}% vs prior {prior_chg:+.2f}%)')
     else:
-        print('INTRADAY-KONTEXT: Keine Daten verfuegbar (Futures/Wochenende)')
+        print('INTRADAY CONTEXT: No data available (Futures/Weekend)')
 except Exception as e:
-    print(f'INTRADAY-KONTEXT: Nicht verfuegbar ({e})')
+    print(f'INTRADAY CONTEXT: Not available ({e})')
 ```
 
-> **Hinweis:** Intraday-Daten dienen NUR als zusaetzlicher Kontext fuer Entry-Timing. Alle technischen Indikatoren (RSI, MACD, ATR etc.) werden ausschliesslich auf Daily-Basis berechnet. Wenn Intraday-Daten nicht verfuegbar (manche Futures/Rohstoffe, Wochenende) → ueberspringen.
+> **Note:** Intraday data serves ONLY as additional context for entry timing. All technical indicators (RSI, MACD, ATR etc.) are calculated exclusively on a daily basis. If intraday data is not available (some futures/commodities, weekends) → skip.
 
-### MARKET-MAKER-PRICING CHECK (automatisch!)
+### MARKET-MAKER PRICING CHECK (automatic!)
 
 ```python
-# Market-Status-Check: Automatische Warnung bei geschlossenem Markt
+# Market status check: Automatic warning when market is closed
 from datetime import datetime, timezone
 
 _now_utc = datetime.now(timezone.utc)
 _hour = _now_utc.hour + _now_utc.minute / 60
 _weekday = _now_utc.weekday()  # 0=Mon, 6=Sun
 
-# Handelszeiten (UTC)
+# Trading hours (UTC)
 _market_hours = {
     'US': (14.5, 21.0),   # NYSE/NASDAQ 14:30-21:00 UTC
     'EU': (7.0, 15.5),    # XETRA 07:00-15:30 UTC
-    'FUT': (23.0, 22.0),  # Futures ~23:00-22:00 UTC (fast 24h)
+    'FUT': (23.0, 22.0),  # Futures ~23:00-22:00 UTC (nearly 24h)
 }
 
-# Bestimme Boerse nach Symbol
+# Determine exchange by symbol
 _sym = "{{SYMBOL}}"
 if _sym.endswith('.DE') or _sym.endswith('.PA') or _sym.endswith('.AS'):
     _exchange = 'EU'
@@ -402,122 +402,122 @@ if _exchange == 'FUT':
 else:
     _is_open = _weekday < 5 and _open_h <= _hour < _close_h
 
-print(f'\nMARKET-STATUS ({_exchange})')
-print(f'  Zeit:     {_now_utc.strftime("%H:%M UTC")} ({["Mo","Di","Mi","Do","Fr","Sa","So"][_weekday]})')
+print(f'\nMARKET STATUS ({_exchange})')
+print(f'  Time:     {_now_utc.strftime("%H:%M UTC")} ({["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][_weekday]})')
 if _is_open:
-    print(f'  Status:   ✅ MARKT OFFEN — normale Spreads')
+    print(f'  Status:   ✅ MARKET OPEN — normal spreads')
 else:
-    print(f'  Status:   ⚠️ MARKT GESCHLOSSEN')
-    print(f'  → Turbo-Spread beim Market Maker 2-5x hoeher!')
-    print(f'  → LIMIT-ORDER statt Market-Order nutzen!')
-    print(f'  → Preise koennen vom Fair Value abweichen')
+    print(f'  Status:   ⚠️ MARKET CLOSED')
+    print(f'  → Turbo spread at market maker 2-5x higher!')
+    print(f'  → Use LIMIT ORDER instead of market order!')
+    print(f'  → Prices may deviate from fair value')
 ```
 
 ---
 
-## 1.2 Preis & Markt
+## 1.2 Price & Market
 
-| Datenpunkt | Wert | Quelle |
-|------------|------|--------|
-| Aktueller Preis (USD) | $XX.XX | yfinance |
-| EUR/USD Kurs | X.XXXX | [Quelle] |
-| Preis in EUR | €XX.XX | Berechnet |
-| Tagesveraenderung | +/-X.XX% | yfinance |
-| 52-Wochen Hoch | $XX.XX | yfinance |
-| 52-Wochen Tief | $XX.XX | yfinance |
-| Volumen | XXM | yfinance |
+| Data Point | Value | Source |
+|------------|-------|--------|
+| Current Price (USD) | $XX.XX | yfinance |
+| EUR/USD Rate | X.XXXX | [Source] |
+| Price in EUR | €XX.XX | Calculated |
+| Daily Change | +/-X.XX% | yfinance |
+| 52-Week High | $XX.XX | yfinance |
+| 52-Week Low | $XX.XX | yfinance |
+| Volume | XXM | yfinance |
 
-## 1.3 Technische Indikatoren
+## 1.3 Technical Indicators
 
-| Indikator | Wert | Signal | Quelle |
-|-----------|------|--------|--------|
-| RSI (14) | XX.X | Ueberkauft/Neutral/Ueberverkauft | yfinance |
-| **RSI-Delta (1d)** | +/-X.X | Dreht hoch/runter/stagniert | yfinance |
-| **RSI-Divergenz** | Bullisch/Bearisch/Keine | Preis-Tiefs vs RSI-Tiefs | yfinance |
+| Indicator | Value | Signal | Source |
+|-----------|-------|--------|--------|
+| RSI (14) | XX.X | Overbought/Neutral/Oversold | yfinance |
+| **RSI Delta (1d)** | +/-X.X | Turning up/down/stagnating | yfinance |
+| **RSI Divergence** | Bullish/Bearish/None | Price lows vs RSI lows | yfinance |
 | MACD | X.XX | Bullish/Bearish Crossover | yfinance |
-| SMA 50 | $XX.XX | Preis darueber/darunter | yfinance |
-| SMA 200 | $XX.XX | Preis darueber/darunter | yfinance |
-| Golden/Death Cross | Ja/Nein | Datum des letzten | yfinance |
+| SMA 50 | $XX.XX | Price above/below | yfinance |
+| SMA 200 | $XX.XX | Price above/below | yfinance |
+| Golden/Death Cross | Yes/No | Date of last occurrence | yfinance |
 
-### RSI-MOMENTUM & DIVERGENZ (PFLICHT!)
+### RSI MOMENTUM & DIVERGENCE (MANDATORY!)
 
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║  RSI allein reicht NICHT! Immer auch pruefen:                ║
+║  RSI alone is NOT enough! Always also check:                  ║
 ║                                                               ║
-║  1. RSI-DELTA: Dreht der RSI? (+/- pro Tag)                 ║
-║  2. RSI-DIVERGENZ: Preis Lower Low + RSI Higher Low?         ║
-║  3. RSI-SLOPE: Beschleunigt/verlangsamt sich die Bewegung?  ║
+║  1. RSI DELTA: Is RSI turning? (+/- per day)                 ║
+║  2. RSI DIVERGENCE: Price Lower Low + RSI Higher Low?         ║
+║  3. RSI SLOPE: Is the movement accelerating/decelerating?    ║
 ║                                                               ║
-║  RSI 27 + STEIGEND = potentieller Bounce                    ║
-║  RSI 27 + FALLEND  = Wasserfall, kein Kaufsignal!           ║
+║  RSI 27 + RISING = potential bounce                          ║
+║  RSI 27 + FALLING = waterfall, NOT a buy signal!             ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
-| RSI-Datenpunkt | Wert | Interpretation |
-|----------------|------|----------------|
-| RSI aktuell | XX.X | Ueberkauft/Neutral/Ueberverkauft |
-| RSI gestern | XX.X | Vergleichswert |
-| RSI-Delta (1d) | +/-X.X | Positiv = dreht hoch, Negativ = faellt weiter |
-| RSI-Delta (3d) | +/-X.X | Kurzfristiger Trend |
-| RSI-Delta (5d) | +/-X.X | Mittelfristiger Trend |
-| RSI-Slope (3d avg) | +/-X.XX | Momentum der RSI-Bewegung |
-| **Divergenz** | Bullisch/Bearisch/Keine | **Wichtigstes Signal!** |
+| RSI Data Point | Value | Interpretation |
+|----------------|-------|----------------|
+| RSI current | XX.X | Overbought/Neutral/Oversold |
+| RSI yesterday | XX.X | Comparison value |
+| RSI Delta (1d) | +/-X.X | Positive = turning up, Negative = falling further |
+| RSI Delta (3d) | +/-X.X | Short-term trend |
+| RSI Delta (5d) | +/-X.X | Medium-term trend |
+| RSI Slope (3d avg) | +/-X.XX | Momentum of RSI movement |
+| **Divergence** | Bullish/Bearish/None | **Most important signal!** |
 
-**RSI-Divergenz-Einordnung:**
+**RSI Divergence Classification:**
 
-| Typ | Bedeutung | Staerke |
-|-----|-----------|---------|
-| **Bullische Divergenz** | Preis macht Lower Low, RSI macht Higher Low → Verkaufsdruck laesst nach | Stark bullisch wenn RSI <35 |
-| **Bearische Divergenz** | Preis macht Higher High, RSI macht Lower High → Kaufdruck laesst nach | Stark bearisch wenn RSI >65 |
-| Keine Divergenz | Preis und RSI bewegen sich synchron | Trend intakt |
+| Type | Meaning | Strength |
+|------|---------|----------|
+| **Bullish Divergence** | Price makes Lower Low, RSI makes Higher Low → selling pressure easing | Strongly bullish when RSI <35 |
+| **Bearish Divergence** | Price makes Higher High, RSI makes Lower High → buying pressure easing | Strongly bearish when RSI >65 |
+| No Divergence | Price and RSI move in sync | Trend intact |
 
-> **DIVERGENZ ist oft das FRUEHESTE Umkehrsignal!** Wenn eine bullische Divergenz bei RSI <30 erkannt wird, ist das ein starkes Argument fuer einen bevorstehenden Bounce - auch wenn der Trend noch abwaerts zeigt.
+> **DIVERGENCE is often the EARLIEST reversal signal!** If a bullish divergence is detected at RSI <30, it is a strong argument for an upcoming bounce - even if the trend still points downward.
 
 ## 1.4 Support & Resistance
 
-| Level | Preis | Typ | Begruendung |
-|-------|-------|-----|-------------|
-| R3 | $XX.XX | Resistance | [Warum dieses Level?] |
-| R2 | $XX.XX | Resistance | [Warum?] |
-| R1 | $XX.XX | Resistance | [Warum?] |
-| **Aktuell** | **$XX.XX** | — | — |
-| S1 | $XX.XX | Support | [Warum?] |
-| S2 | $XX.XX | Support | [Warum?] |
-| S3 | $XX.XX | Support | [Warum?] |
+| Level | Price | Type | Reasoning |
+|-------|-------|------|-----------|
+| R3 | $XX.XX | Resistance | [Why this level?] |
+| R2 | $XX.XX | Resistance | [Why?] |
+| R1 | $XX.XX | Resistance | [Why?] |
+| **Current** | **$XX.XX** | — | — |
+| S1 | $XX.XX | Support | [Why?] |
+| S2 | $XX.XX | Support | [Why?] |
+| S3 | $XX.XX | Support | [Why?] |
 
 ## 1.5 Short Interest
 
-| Datenpunkt | Wert | Bedeutung |
-|------------|------|-----------|
-| Short % of Float | XX.X% | Anteil der geshorteten Aktien |
-| Short Ratio (Days to Cover) | X.X | Tage um alle Shorts zu covern |
+| Data Point | Value | Meaning |
+|------------|-------|---------|
+| Short % of Float | XX.X% | Percentage of shorted shares |
+| Short Ratio (Days to Cover) | X.X | Days to cover all shorts |
 
-**Short-Interest-Einordnung:**
-- < 5%: Normal, kein besonderes Signal
-- 5-10%: Erhoehte Skepsis, beobachten
-- 10-20%: Hohes Short Interest, Short-Squeeze-Potential bei positiven Katalysatoren
-- \> 20%: Extrem hoch, starkes Squeeze-Potential ABER auch starke bearishe Ueberzeugung
-- Short Ratio > 5 Tage: Shorts koennen nicht schnell covern -> Squeeze-Risiko steigt
+**Short Interest Classification:**
+- < 5%: Normal, no special signal
+- 5-10%: Elevated skepticism, monitor
+- 10-20%: High short interest, short squeeze potential with positive catalysts
+- \> 20%: Extremely high, strong squeeze potential BUT also strong bearish conviction
+- Short Ratio > 5 days: Shorts cannot cover quickly -> squeeze risk increases
 
-> **Hoher Short Interest ist KEIN automatisches Kaufsignal!** Er zeigt Skepsis, kann aber bei Katalysatoren (Earnings Beat, News) explosive Moves ausloesen.
+> **High short interest is NOT an automatic buy signal!** It shows skepticism, but can trigger explosive moves with catalysts (earnings beat, news).
 
 ---
 
-## 1.6 Volatilitaet & Risiko-Profil
+## 1.6 Volatility & Risk Profile
 
-| Datenpunkt | Wert | Bedeutung |
-|------------|------|-----------|
-| ATR (14) | $XX.XX (X.X%) | Durchschnittliche Tagesschwankung |
-| Ann. Volatilitaet | XX% | Jahres-Volatilitaet |
-| Beta | X.XX | Markt-Sensitivitaet |
+| Data Point | Value | Meaning |
+|------------|-------|---------|
+| ATR (14) | $XX.XX (X.X%) | Average daily range |
+| Ann. Volatility | XX% | Annualized volatility |
+| Beta | X.XX | Market sensitivity |
 
-ATR wird in Schritt 3 fuer die KO-Berechnung genutzt. Hier nur den Wert dokumentieren.
+ATR is used in Step 3 for KO calculation. Here only document the value.
 
-**ATR Event-Check (v3 PFLICHT!):**
+**ATR Event Check (v3 MANDATORY!):**
 
 ```python
-# ATR Event-Check: ATR(5) vs ATR(14)
+# ATR Event Check: ATR(5) vs ATR(14)
 atr5_data = (hist['High'] - hist['Low']).rolling(5).mean().iloc[-1]
 atr14_data = (hist['High'] - hist['Low']).rolling(14).mean().iloc[-1]
 atr5_pct = (atr5_data / price) * 100
@@ -528,25 +528,25 @@ print(f'  ATR (5):            ${atr5_data:.2f} ({atr5_pct:.1f}%)')
 print(f'  ATR (14):           ${atr14_data:.2f} ({atr14_pct:.1f}%)')
 print(f'  ATR(5)/ATR(14):     {atr_ratio:.2f}x')
 if atr_ratio > 1.5:
-    print('  ⚠️ VOLATILITAET ERHOEHT! Position eine Stufe kleiner!')
+    print('  ⚠️ VOLATILITY ELEVATED! Reduce position by one size level!')
 ```
 
-**Volatilitaets-Einordnung:**
+**Volatility Classification:**
 
-| ATR % | Einordnung | Bedeutung fuer Turbos |
-|-------|------------|----------------------|
-| < 2% | Niedrig | Enger KO moeglich, aber wenig Bewegung |
-| 2-4% | Mittel | Standard-Turbos gut geeignet |
-| 4-7% | Hoch | Weiter KO noetig, hoeheres Risiko |
-| > 7% | Sehr hoch | Nur mit kleiner Position, weiter KO PFLICHT |
+| ATR % | Classification | Meaning for Turbos |
+|-------|----------------|-------------------|
+| < 2% | Low | Tight KO possible, but little movement |
+| 2-4% | Medium | Standard turbos well suited |
+| 4-7% | High | Wider KO needed, higher risk |
+| > 7% | Very high | Only with small position, wide KO MANDATORY |
 
 ---
 
-## 1.6b REGIME-ERKENNUNG (PFLICHT!)
+## 1.6b REGIME DETECTION (MANDATORY!)
 
 ```python
-# Regime-Erkennung: ADX, BB-Width-Percentile, DI-Spread
-# (ADX, +DI, -DI bereits in 1.0 berechnet)
+# Regime detection: ADX, BB Width Percentile, DI Spread
+# (ADX, +DI, -DI already calculated in 1.0)
 import pandas as pd
 
 # Bollinger Band Width Percentile
@@ -559,7 +559,7 @@ bb_width_clean = bb_width.dropna()
 current_bb_width = float(bb_width.iloc[-1])
 bb_pctl = round(float((bb_width_clean.tail(120) < current_bb_width).sum() / min(len(bb_width_clean), 120) * 100), 1)
 
-# ADX + DI (aus yfinance-Daten)
+# ADX + DI (from yfinance data)
 def calc_adx_manual(high, low, close, period=14):
     plus_dm = high.diff().copy()
     minus_dm = (-low.diff()).copy()
@@ -586,7 +586,7 @@ import numpy as np
 adx_val, plus_di, minus_di = calc_adx_manual(hist['High'], hist['Low'], hist['Close'])
 di_spread = abs(plus_di - minus_di)
 
-# Regime bestimmen
+# Determine regime
 if adx_val >= 25 and di_spread > 10:
     regime = 'TRENDING'
 elif adx_val < 20 and bb_pctl < 30:
@@ -596,297 +596,297 @@ elif adx_val < 20 and bb_pctl > 60:
 else:
     regime = 'TRANSITIONAL'
 
-print(f'\nREGIME-ERKENNUNG')
+print(f'\nREGIME DETECTION')
 print(f'  ADX:                {adx_val:.1f}')
 print(f'  +DI:                {plus_di:.1f}')
 print(f'  -DI:                {minus_di:.1f}')
-print(f'  DI-Spread:          {di_spread:.1f}')
-print(f'  BB-Width-Pctl:      {bb_pctl:.0f}%')
+print(f'  DI Spread:          {di_spread:.1f}')
+print(f'  BB Width Pctl:      {bb_pctl:.0f}%')
 print(f'  → REGIME:           {regime}')
 ```
 
-**Regime-Tabelle:**
+**Regime Table:**
 
-| Regime | Bedingung | Bedeutung | Gewichtung |
-|--------|-----------|-----------|------------|
-| **TRENDING** | ADX ≥ 25 + DI-Spread > 10 | Klarer Trend, Trend-Indikatoren (SMA, MACD) dominieren | Trend ×1.3, Oszillatoren ×0.7 |
-| **RANGE** | ADX < 20 + BB-Pctl < 30 | Seitwaerts, Oszillatoren (RSI, BB) dominieren | Trend ×0.7, Oszillatoren ×1.3 |
-| **CHOPPY** | ADX < 20 + BB-Pctl > 60 | Unruhig ohne Richtung, ALLE Signale schwaecher | Gesamt ×0.7 |
-| **TRANSITIONAL** | Alles andere | Uebergang, Standardgewichtung | Alles ×1.0 |
+| Regime | Condition | Meaning | Weighting |
+|--------|-----------|---------|-----------|
+| **TRENDING** | ADX ≥ 25 + DI Spread > 10 | Clear trend, trend indicators (SMA, MACD) dominate | Trend ×1.3, Oscillators ×0.7 |
+| **RANGE** | ADX < 20 + BB Pctl < 30 | Sideways, oscillators (RSI, BB) dominate | Trend ×0.7, Oscillators ×1.3 |
+| **CHOPPY** | ADX < 20 + BB Pctl > 60 | Choppy without direction, ALL signals weaker | Overall ×0.7 |
+| **TRANSITIONAL** | Everything else | Transitioning, standard weighting | All ×1.0 |
 
-> **Regime fließt in Schritt 2 (Debate Gewichtung) und Schritt 3 (Konfidenz-Adjustment) ein!**
+> **Regime feeds into Step 2 (Debate weighting) and Step 3 (Confidence adjustment)!**
 
 ---
 
-## 1.7 News & Katalysatoren
+## 1.7 News & Catalysts
 
-**Suche ECHTE NEWS! Nutze Web-Suche fuer aktuelle Headlines!**
+**Search for REAL NEWS! Use web search for current headlines!**
 
-Suchquellen:
+Search sources:
 - **Google News** - `{{SYMBOL}} news today`
 - **Reuters** - `site:reuters.com {{SYMBOL}}`
 - **Bloomberg** - `site:bloomberg.com {{SYMBOL}}`
 - **Seeking Alpha** - `site:seekingalpha.com {{SYMBOL}}`
 - **Kitco** (Commodities) - `site:kitco.com`
-- **Oil Price** (Oel) - `site:oilprice.com`
+- **Oil Price** (Oil) - `site:oilprice.com`
 
-**Mindestens 5 News-Items mit EXAKTEM TIMESTAMP:**
+**At least 5 news items with EXACT TIMESTAMP:**
 
-| # | Datum & Uhrzeit (UTC) | Headline | Impact | Quelle | Link |
-|---|----------------------|----------|--------|--------|------|
-| 1 | DD.MM HH:MM | [Vollstaendige Headline] | 🟢 Bullish / 🔴 Bearish / 🟡 Neutral | [Quelle] | [URL] |
-| 2 | DD.MM HH:MM | [Vollstaendige Headline] | 🟢/🔴/🟡 | [Quelle] | [URL] |
-| 3 | DD.MM HH:MM | [Vollstaendige Headline] | 🟢/🔴/🟡 | [Quelle] | [URL] |
-| 4 | DD.MM HH:MM | [Vollstaendige Headline] | 🟢/🔴/🟡 | [Quelle] | [URL] |
-| 5 | DD.MM HH:MM | [Vollstaendige Headline] | 🟢/🔴/🟡 | [Quelle] | [URL] |
+| # | Date & Time (UTC) | Headline | Impact | Source | Link |
+|---|-------------------|----------|--------|--------|------|
+| 1 | DD.MM HH:MM | [Full headline] | 🟢 Bullish / 🔴 Bearish / 🟡 Neutral | [Source] | [URL] |
+| 2 | DD.MM HH:MM | [Full headline] | 🟢/🔴/🟡 | [Source] | [URL] |
+| 3 | DD.MM HH:MM | [Full headline] | 🟢/🔴/🟡 | [Source] | [URL] |
+| 4 | DD.MM HH:MM | [Full headline] | 🟢/🔴/🟡 | [Source] | [URL] |
+| 5 | DD.MM HH:MM | [Full headline] | 🟢/🔴/🟡 | [Source] | [URL] |
 
-**Fuer jede News: 1-2 Saetze Erklaerung warum Bullish/Bearish:**
-- News 1: [Erklaerung]
-- News 2: [Erklaerung]
-- News 3: [Erklaerung]
-- News 4: [Erklaerung]
-- News 5: [Erklaerung]
+**For each news item: 1-2 sentences explaining why Bullish/Bearish:**
+- News 1: [Explanation]
+- News 2: [Explanation]
+- News 3: [Explanation]
+- News 4: [Explanation]
+- News 5: [Explanation]
 
-## 1.7b NEWS INTELLIGENCE SCORING (PFLICHT!)
+## 1.7b NEWS INTELLIGENCE SCORING (MANDATORY!)
 
-Bewerte JEDE der 5+ gesammelten News auf diesen 7 Achsen (-2 bis +2):
+Rate EACH of the 5+ collected news items on these 7 axes (-2 to +2):
 
-| # | Headline (kurz) | Relevanz | Sentiment | Preis-Impact | Trend | Earnings | Investoren-Vertrauen | Risiko-Profil | SCORE |
-|---|-----------------|----------|-----------|--------------|-------|----------|---------------------|---------------|-------|
+| # | Headline (short) | Relevance | Sentiment | Price Impact | Trend | Earnings | Investor Confidence | Risk Profile | SCORE |
+|---|------------------|-----------|-----------|--------------|-------|----------|---------------------|--------------|-------|
 | 1 | [Headline] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | Σ/7 |
 | 2 | [Headline] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | Σ/7 |
 | 3 | [Headline] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | Σ/7 |
 | 4 | [Headline] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | Σ/7 |
 | 5 | [Headline] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | [-2..+2] | Σ/7 |
 
-**Achsen-Definitionen:**
-- `Relevanz`: Wie relevant ist die News fuer {{SYMBOL}}? (-2 = irrelevant, +2 = direkt)
-- `Sentiment`: Grundstimmung der Nachricht (-2 = sehr negativ, +2 = sehr positiv)
-- `Preis-Impact`: Wird die News den Preis bewegen? (-2 = starker Druck runter, +2 = starker Druck hoch)
-- `Trend`: Unterstuetzt die News den aktuellen Trend? (-2 = stark dagegen, +2 = stark dafuer)
-- `Earnings`: Wirkt sich auf Earnings/Umsatz aus? (-2 = stark negativ, +2 = stark positiv)
-- `Investoren-Vertrauen`: Effekt auf Investoren-Vertrauen? (-2 = Panik, +2 = Euphorie)
-- `Risiko-Profil`: Aendert sich das Risiko-Profil? (-2 = viel riskanter, +2 = sicherer)
+**Axis Definitions:**
+- `Relevance`: How relevant is the news for {{SYMBOL}}? (-2 = irrelevant, +2 = directly relevant)
+- `Sentiment`: Overall tone of the news (-2 = very negative, +2 = very positive)
+- `Price Impact`: Will the news move the price? (-2 = strong downward pressure, +2 = strong upward pressure)
+- `Trend`: Does the news support the current trend? (-2 = strongly against, +2 = strongly in favor)
+- `Earnings`: Does it affect earnings/revenue? (-2 = strongly negative, +2 = strongly positive)
+- `Investor Confidence`: Effect on investor confidence? (-2 = panic, +2 = euphoria)
+- `Risk Profile`: Does the risk profile change? (-2 = much riskier, +2 = safer)
 
-**News Sentiment Index (NSI) = Durchschnitt aller SCORE-Werte:**
+**News Sentiment Index (NSI) = Average of all SCORE values:**
 
 ```
-NSI > +1.0:         Stark bullisch
-NSI +0.3 bis +1.0:  Leicht bullisch
-NSI -0.3 bis +0.3:  Neutral
-NSI -1.0 bis -0.3:  Leicht bearisch
-NSI < -1.0:         Stark bearisch
+NSI > +1.0:         Strongly bullish
+NSI +0.3 to +1.0:   Slightly bullish
+NSI -0.3 to +0.3:   Neutral
+NSI -1.0 to -0.3:   Slightly bearish
+NSI < -1.0:         Strongly bearish
 ```
 
-**NSI = X.XX → [Einordnung]**
+**NSI = X.XX → [Classification]**
 
-→ NSI wird in Schritt 2 (Debate) und Schritt 3 (Judge) referenziert!
+→ NSI is referenced in Step 2 (Debate) and Step 3 (Judge)!
 
 ---
 
-## 1.8 Makro-Faktoren
+## 1.8 Macro Factors
 
-**Aktuelle Werte via Web-Suche:**
-- Fed/Zinsen: [Aktueller Stand + naechstes Meeting Datum]
-- USD (DXY): [Aktueller Wert] + [Trend: steigend/fallend]
-- Inflation: [Letzter CPI Wert + Datum]
-- Treasury 10Y: [Aktueller Yield]
-- Geopolitik: [Aktuelle Konflikte/Events die relevant sind]
+**Current values via web search:**
+- Fed/Rates: [Current status + next meeting date]
+- USD (DXY): [Current value] + [Trend: rising/falling]
+- Inflation: [Last CPI value + date]
+- Treasury 10Y: [Current yield]
+- Geopolitics: [Current conflicts/events that are relevant]
 
-**Polymarket-Check (PFLICHT bei Makro-Events!):**
-Wenn ein relevantes Makro-Event ansteht (FOMC, ECB, CPI, etc.), pruefe die Markt-Erwartungen auf Polymarket:
-- Suche: `https://polymarket.com/search?query=[EVENT]`
-- Dokumentiere die Odds (z.B. "ECB Hold: 99%, Cut: <1%")
-- NICHT raten was passiert — Polymarket zeigt was der Markt ERWARTET
-- Wenn Markt-Erwartung ≠ deine Annahme → Annahme korrigieren!
+**Polymarket Check (MANDATORY for macro events!):**
+When a relevant macro event is upcoming (FOMC, ECB, CPI, etc.), check market expectations on Polymarket:
+- Search: `https://polymarket.com/search?query=[EVENT]`
+- Document the odds (e.g. "ECB Hold: 99%, Cut: <1%")
+- Do NOT guess what will happen — Polymarket shows what the market EXPECTS
+- If market expectation ≠ your assumption → correct your assumption!
 
-| Event | Polymarket Odds | Bedeutung fuer Trade |
-|-------|-----------------|----------------------|
-| [Event 1] | [XX% Szenario A / XX% Szenario B] | [Impact auf These] |
-| [Event 2] | [XX% Szenario A / XX% Szenario B] | [Impact auf These] |
+| Event | Polymarket Odds | Meaning for Trade |
+|-------|-----------------|-------------------|
+| [Event 1] | [XX% Scenario A / XX% Scenario B] | [Impact on thesis] |
+| [Event 2] | [XX% Scenario A / XX% Scenario B] | [Impact on thesis] |
 
-## 1.9 Fundamentaldaten
+## 1.9 Fundamental Data
 
-| Faktor | Status | Details |
+| Factor | Status | Details |
 |--------|--------|---------|
-| Angebot/Nachfrage | [Defizit/Ueberschuss] | [Details] |
-| ETF Flows | [Inflow/Outflow] | [Zahlen wenn verfuegbar] |
-| COT Daten | [Commercials Long/Short] | [Quelle] |
-| Saisonalitaet | [Bullish/Bearish Monat?] | [Historisch] |
+| Supply/Demand | [Deficit/Surplus] | [Details] |
+| ETF Flows | [Inflow/Outflow] | [Numbers if available] |
+| COT Data | [Commercials Long/Short] | [Source] |
+| Seasonality | [Bullish/Bearish month?] | [Historical] |
 
 ---
 
-## 1.10 KORRELATIONS-CHECK (PFLICHT!)
+## 1.10 CORRELATION CHECK (MANDATORY!)
 
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║  BEVOR ein neuer Trade eroeffnet wird:                       ║
-║  Pruefe Korrelation zu bestehenden Positionen!               ║
+║  BEFORE opening a new trade:                                  ║
+║  Check correlation with existing positions!                   ║
 ║                                                               ║
-║  → Lies offene Positionen aus memory/portfolio.md            ║
-║  → Bestimme Sektor-Konzentration                             ║
-║  → Wenn >60% in einem Sektor: WARNUNG ausgeben!              ║
+║  → Read open positions from memory/portfolio.md              ║
+║  → Determine sector concentration                             ║
+║  → If >60% in one sector: issue WARNING!                      ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
-**Bestehende offene Positionen (aus memory/portfolio.md):**
+**Existing open positions (from memory/portfolio.md):**
 
-| Symbol | Sektor | Richtung | Groesse (EUR) |
-|--------|--------|----------|---------------|
-| [aus portfolio.md] | [Sektor] | LONG/SHORT | XXX EUR |
-| [aus portfolio.md] | [Sektor] | LONG/SHORT | XXX EUR |
+| Symbol | Sector | Direction | Size (EUR) |
+|--------|--------|-----------|------------|
+| [from portfolio.md] | [Sector] | LONG/SHORT | XXX EUR |
+| [from portfolio.md] | [Sector] | LONG/SHORT | XXX EUR |
 
-**Korrelations-Bewertung:**
+**Correlation Assessment:**
 
-| Pruefung | Ergebnis | Status |
-|----------|----------|--------|
-| Gleicher Sektor wie {{SYMBOL}}? | [Ja/Nein - welche?] | ✅/⚠️ |
-| Gleiche Richtung (alle LONG)? | [Ja/Nein] | ✅/⚠️ |
-| Sektor-Konzentration | XX% in [Sektor] | ✅ <60% / ⚠️ >60% |
-| Korreliert mit Nasdaq/S&P? | [Hoch/Mittel/Niedrig] | ✅/⚠️ |
+| Check | Result | Status |
+|-------|--------|--------|
+| Same sector as {{SYMBOL}}? | [Yes/No - which ones?] | ✅/⚠️ |
+| Same direction (all LONG)? | [Yes/No] | ✅/⚠️ |
+| Sector concentration | XX% in [Sector] | ✅ <60% / ⚠️ >60% |
+| Correlated with Nasdaq/S&P? | [High/Medium/Low] | ✅/⚠️ |
 
-**Wenn ⚠️ WARNUNG:**
-> Hohe Korrelation erkannt! Bei einem Nasdaq-Einbruch von 3% wuerden ALLE Positionen gleichzeitig bluten. Erwaege: kleinere Positionsgroesse, SHORT-Hedge, oder unkorrelierten Trade (Gold, Short-Turbo auf Index).
+**If ⚠️ WARNING:**
+> High correlation detected! In a 3% Nasdaq crash, ALL positions would bleed simultaneously. Consider: smaller position size, SHORT hedge, or uncorrelated trade (Gold, short turbo on index).
 
 ---
 
-## 1.10b PRE-OPEN PATTERN CHECK (PFLICHT!)
+## 1.10b PRE-OPEN PATTERN CHECK (MANDATORY!)
 
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║  PRE-OPEN PATTERNS — Backtested Pattern-Matching              ║
+║  PRE-OPEN PATTERNS — Backtested Pattern Matching              ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  Nutze preopen_check.py fuer stochastische Muster:            ║
-║  → Gap Fill Rate (wie oft wird der Opening-Gap geschlossen?)  ║
-║  → Pattern Hit Rates (LONG/SHORT basierend auf Score+Regime)  ║
-║  → Trap-Erkennung (Score hoch, aber Hit Rate niedrig)         ║
+║  Use preopen_check.py for stochastic patterns:                ║
+║  → Gap Fill Rate (how often is the opening gap closed?)       ║
+║  → Pattern Hit Rates (LONG/SHORT based on score+regime)       ║
+║  → Trap Detection (score high, but hit rate low)              ║
 ║                                                               ║
-║  WICHTIG: Ergebnis beeinflusst Entry-Timing!                  ║
-║  → Gap Fill >80%: NACH US-Open kaufen (Gap wird gefuellt)     ║
-║  → Pattern Hit >60%: Richtungs-Bestaetigung                   ║
-║  → Pattern Hit <50%: WARNUNG — historisch schlecht!            ║
+║  IMPORTANT: Result influences entry timing!                   ║
+║  → Gap Fill >80%: BUY AFTER US Open (gap will be filled)     ║
+║  → Pattern Hit >60%: Directional confirmation                 ║
+║  → Pattern Hit <50%: WARNING — historically poor!             ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
-**Schritt 1: Pattern-DB pruefen — Symbol in DB?**
+**Step 1: Check Pattern DB — Symbol in DB?**
 ```bash
-python3 -c "import json; d=json.load(open('memory/preopen_patterns.json')); print('Symbols:', d.get('symbols',[])); print('IN DB' if '{{SYMBOL}}' in d.get('symbols',[]) else 'NICHT IN DB — backtest noetig!')"
+python3 -c "import json; d=json.load(open('memory/preopen_patterns.json')); print('Symbols:', d.get('symbols',[])); print('IN DB' if '{{SYMBOL}}' in d.get('symbols',[]) else 'NOT IN DB — backtest needed!')"
 ```
 
-**Wenn {{SYMBOL}} NICHT in DB → erst backtesten!**
+**If {{SYMBOL}} NOT in DB → backtest first!**
 ```bash
 python3 preopen_backtest.py --symbols {{SYMBOL}}
 ```
-> WICHTIG: Danach Pattern-DB mit ALLEN Symbolen neu bauen (Hintergrund):
+> IMPORTANT: Then rebuild pattern DB with ALL symbols (background):
 > `python3 preopen_backtest.py --symbols AAPL ARM NVDA GOOGL QBTS IREN APLD ASML VST CEG MU {{SYMBOL}}`
 
-**Schritt 2: Pre-Open Check mit symbol-spezifischen Patterns:**
+**Step 2: Pre-Open Check with symbol-specific patterns:**
 ```bash
 python3 preopen_check.py {{SYMBOL}}
 ```
 
-**Schritt 3: ENTRY-TIMING ANALYSE (PFLICHT!)**
+**Step 3: ENTRY TIMING ANALYSIS (MANDATORY!)**
 
-Fuehre die Entry-Timing Analyse via CLI aus:
+Run the entry timing analysis via CLI:
 
 ```bash
 python3 preopen_check.py {{SYMBOL}} --entry-timing
 ```
 
-> **Hinweis:** Ergebnisse werden in `memory/entry_timing_cache.json` gecacht.
-> Cache wird automatisch invalidiert wenn `preopen_patterns.json` neuer ist.
-> Fuer Cache-Bypass: `python3 preopen_check.py {{SYMBOL}} --entry-timing --force-timing`
+> **Note:** Results are cached in `memory/entry_timing_cache.json`.
+> Cache is automatically invalidated when `preopen_patterns.json` is newer.
+> For cache bypass: `python3 preopen_check.py {{SYMBOL}} --entry-timing --force-timing`
 
-**Dokumentiere das Ergebnis:**
+**Document the result:**
 
-| Datenpunkt | Wert |
-|------------|------|
+| Data Point | Value |
+|------------|-------|
 | LONG Score | XX/100 |
 | SHORT Score | XX/100 |
 | Pattern LONG Hit | XX% |
 | Pattern SHORT Hit | XX% |
 | Gap Fill Rate | XX% |
-| BB Squeeze | Ja (X%) / Nein |
-| Verdict | LONG / SHORT / WAIT / KEIN TRADE |
-| **Bester Entry** | **PRE-MARKET / FIRST-HOUR DIP / BEI OPEN** |
+| BB Squeeze | Yes (X%) / No |
+| Verdict | LONG / SHORT / WAIT / NO TRADE |
+| **Best Entry** | **PRE-MARKET / FIRST-HOUR DIP / AT OPEN** |
 | Pre-Market Win% | XX% |
 | Open Win% | XX% |
 | First-Hour Dip Win% | XX% |
 
-**Entry-Timing Empfehlung (datenbasiert!):**
+**Entry Timing Recommendation (data-driven!):**
 
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║  ENTRY-TIMING — NICHT raten, DATEN entscheiden!              ║
+║  ENTRY TIMING — Do NOT guess, let DATA decide!               ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
 ║  Pre-Market Win% > Open Win%:                                ║
-║  → LIMIT-Order auf Turbo bei Market-Open setzen              ║
-║  → Pre-Market Win% = Richtungs-Signal, nicht Entry-Preis!    ║
+║  → Set LIMIT order on turbo at market open                   ║
+║  → Pre-Market Win% = directional signal, NOT entry price!    ║
 ║                                                               ║
 ║  First-Hour Dip Win% > Pre-Market Win%:                      ║
-║  → NACH US-Open warten auf Dip in erster Stunde             ║
+║  → WAIT after US Open for dip in first hour                  ║
 ║  → Entry ~16:00-16:30 CET                                    ║
 ║                                                               ║
-║  Open Win% ist FAST IMMER am schlechtesten!                  ║
-║  → NIEMALS exakt bei Open kaufen (Market-Maker-Spread!)     ║
+║  Open Win% is ALMOST ALWAYS the worst!                       ║
+║  → NEVER buy exactly at open (market maker spread!)          ║
 ║                                                               ║
-║  AKTUELLES GAP:                                              ║
-║  Gap heute: +X.X% → Vergleiche mit historischem Gap-Bucket   ║
-║  → Nutze das passende Bucket (>1% / >3%) fuer die Empfehlung║
+║  CURRENT GAP:                                                ║
+║  Gap today: +X.X% → Compare with historical gap bucket       ║
+║  → Use the matching bucket (>1% / >3%) for recommendation    ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
-> Entry-Timing wird in Schritt 3 (Judge) und Schritt 4 (Trading Card) uebernommen!
+> Entry timing is carried over to Step 3 (Judge) and Step 4 (Trading Card)!
 
 ---
 
-## 1.11 EVENT-KALENDER
+## 1.11 EVENT CALENDAR
 
-**Kommende Events die {{SYMBOL}} bewegen koennten:**
+**Upcoming events that could move {{SYMBOL}}:**
 
-| Datum | Event | Erwarteter Impact | Relevanz |
-|-------|-------|-------------------|----------|
-| [Datum] | Earnings {{SYMBOL}} | 🔴🔴🔴 Hoch | Direkt |
-| [Datum] | Fed Meeting / FOMC | 🔴🔴 Mittel-Hoch | Makro |
-| [Datum] | CPI-Daten | 🔴 Mittel | Makro |
-| [Datum] | Earnings [Peer] | 🟡 Niedrig-Mittel | Sektor |
-| [Datum] | [Anderes Event] | [Impact] | [Relevanz] |
+| Date | Event | Expected Impact | Relevance |
+|------|-------|-----------------|-----------|
+| [Date] | Earnings {{SYMBOL}} | 🔴🔴🔴 High | Direct |
+| [Date] | Fed Meeting / FOMC | 🔴🔴 Medium-High | Macro |
+| [Date] | CPI Data | 🔴 Medium | Macro |
+| [Date] | Earnings [Peer] | 🟡 Low-Medium | Sector |
+| [Date] | [Other event] | [Impact] | [Relevance] |
 
-**⚠️ EARNINGS-WARNUNG:** Wenn {{SYMBOL}} Earnings < 5 Handelstage entfernt sind, wird dies in Schritt 3 bei der KO-Berechnung beruecksichtigt (erhoehter ATR-Multiplikator).
+**⚠️ EARNINGS WARNING:** If {{SYMBOL}} has earnings < 5 trading days away, this will be factored into Step 3 in the KO calculation (increased ATR multiplier).
 
 ---
 
 ## ENFORCEMENT
 
-- ✅ yfinance IMMER zuerst ausfuehren
-- ✅ Chart generieren und visuell analysieren
-- ✅ Chart-Analyse-Tabelle ist PFLICHT
-- ✅ Keine Web-Suche fuer Preisdaten
-- ✅ Jeder Datenpunkt mit Quelle
-- ✅ Mindestens 5 News-Headlines mit Datum
-- ✅ **RSI-Delta, Divergenz und Momentum berechnet (PFLICHT!)**
-- ✅ **News Intelligence Scoring: Alle News auf 7 Achsen bewertet, NSI berechnet (PFLICHT!)**
-- ✅ Korrelations-Check gegen bestehende Positionen (PFLICHT!)
-- ✅ Event-Kalender mit Earnings und Makro-Terminen
-- ✅ **Regime-Erkennung durchgefuehrt (TRENDING/RANGE/CHOPPY/TRANSITIONAL)**
-- ✅ **Intraday-Kontext fuer Aktien ausgefuehrt (PFLICHT!)**
-- ✅ **Market-Maker-Pricing Check: Handelszeiten geprueft, Spread-Warnung bei geschlossenem Markt**
-- ✅ **Pre-Open Pattern Check: preopen_check.py ausgefuehrt, Gap Fill + Hit Rates dokumentiert**
-- ✅ **Symbol in Pattern-DB? Wenn nicht → preopen_backtest.py --symbols {{SYMBOL}} ausfuehren!**
-- ✅ **Entry-Timing Analyse: Pre-Market vs Open vs First-Hour Dip verglichen (PFLICHT!)**
-- ✅ **Entry-Empfehlung: PRE-MARKET / FIRST-HOUR DIP / BEI OPEN mit Win% dokumentiert**
+- ✅ yfinance ALWAYS execute first
+- ✅ Generate chart and visually analyze
+- ✅ Chart analysis table is MANDATORY
+- ✅ No web search for price data
+- ✅ Every data point with source
+- ✅ At least 5 news headlines with date
+- ✅ **RSI delta, divergence, and momentum calculated (MANDATORY!)**
+- ✅ **News Intelligence Scoring: All news rated on 7 axes, NSI calculated (MANDATORY!)**
+- ✅ Correlation check against existing positions (MANDATORY!)
+- ✅ Event calendar with earnings and macro dates
+- ✅ **Regime detection completed (TRENDING/RANGE/CHOPPY/TRANSITIONAL)**
+- ✅ **Intraday context for stocks executed (MANDATORY!)**
+- ✅ **Market-Maker Pricing Check: Trading hours verified, spread warning when market closed**
+- ✅ **Pre-Open Pattern Check: preopen_check.py executed, Gap Fill + Hit Rates documented**
+- ✅ **Symbol in Pattern DB? If not → run preopen_backtest.py --symbols {{SYMBOL}}!**
+- ✅ **Entry Timing Analysis: Pre-Market vs Open vs First-Hour Dip compared (MANDATORY!)**
+- ✅ **Entry Recommendation: PRE-MARKET / FIRST-HOUR DIP / AT OPEN with Win% documented**
 
 ---
 
 ## OUTPUT JSON
 
-**WICHTIG: Der JSON-Block ist ZUSAETZLICH zur Prosa. Er ersetzt NICHTS.**
+**IMPORTANT: The JSON block is IN ADDITION to the prose. It replaces NOTHING.**
 
-Generiere am Ende von Schritt 1 diesen strukturierten Output:
+Generate this structured output at the end of Step 1:
 
 ```json
 {
@@ -906,7 +906,7 @@ Generiere am Ende von Schritt 1 diesen strukturierten Output:
   "earnings_date": null,
   "support_levels": [0.00, 0.00, 0.00],
   "resistance_levels": [0.00, 0.00, 0.00],
-  "preopen_verdict": "LONG|SHORT|WAIT|KEIN TRADE",
+  "preopen_verdict": "LONG|SHORT|WAIT|NO TRADE",
   "preopen_gap_fill_pct": 0,
   "preopen_long_hit_pct": 0,
   "preopen_short_hit_pct": 0,
@@ -921,8 +921,8 @@ Generiere am Ende von Schritt 1 diesen strukturierten Output:
 }
 ```
 
-Fuelle ALLE Felder mit den tatsaechlichen Werten aus der Analyse!
+Fill ALL fields with the actual values from the analysis!
 
 ```
-✅ [SCHRITT 1: DATENSAMMLUNG ABGESCHLOSSEN]
+✅ [STEP 1: DATA COLLECTION COMPLETE]
 ```

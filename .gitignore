@@ -21,3 +21,9 @@ telegram_config.json
 
 # Personal local-only tracker (infinite loop version)
 price_tracker.py
+
+# Runtime state files (auto-generated, user-specific)
+memory/tracker_state.json
+memory/entry_timing_cache.json
+memory/preopen_patterns.json
+memory/watchlist.json

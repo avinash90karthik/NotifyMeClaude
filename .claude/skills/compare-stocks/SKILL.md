@@ -4,20 +4,20 @@ description: "Quick comparison of 2-4 stock tickers. Use when the user says 'Ver
 argument-hint: "<SYMBOL1> <SYMBOL2> [SYMBOL3] [SYMBOL4]"
 ---
 
-# Schnell-Vergleich: $ARGUMENTS
+# Quick Comparison: $ARGUMENTS
 
-## ZWECK
+## PURPOSE
 
-Schnelles Screening von 2-4 Tickern ohne volle 4-Schritt-Analyse.
-Ergebnis: Ranking + Empfehlung welchen Ticker man voll analysieren sollte.
+Quick screening of 2-4 tickers without a full 4-step analysis.
+Result: Ranking + recommendation which ticker to fully analyze.
 
-**Kein Chart, keine Debate, kein Judge** - reines Daten-Screening.
+**No chart, no debate, no judge** — pure data screening.
 
 ---
 
-## SCHRITT 1: Daten parallel holen
+## STEP 1: Fetch data in parallel
 
-Führe dieses yfinance-Script für ALLE Ticker aus:
+Run this yfinance script for ALL tickers:
 
 ```python
 import yfinance as yf
@@ -25,7 +25,7 @@ import yfinance as yf
 symbols = "$ARGUMENTS".split()
 results = []
 
-# EUR/USD live holen
+# Fetch EUR/USD live
 eurusd = yf.Ticker("EURUSD=X").info.get("regularMarketPrice", 1.05)
 
 for sym in symbols:
@@ -38,7 +38,7 @@ for sym in symbols:
         atr14 = (hist['High'] - hist['Low']).rolling(14).mean().iloc[-1]
         atr_pct = (atr14 / price * 100) if price > 0 else 0
 
-        # RSI berechnen (Wilder's smoothing)
+        # Calculate RSI (Wilder's smoothing)
         delta = hist['Close'].diff()
         gain = delta.where(delta > 0, 0).ewm(alpha=1/14, min_periods=14).mean()
         loss = (-delta.where(delta < 0, 0)).ewm(alpha=1/14, min_periods=14).mean()
@@ -62,13 +62,13 @@ for sym in symbols:
             'target_mean': info.get('targetMeanPrice', 0),
             'recommendation': info.get('recommendationKey', 'N/A'),
         })
-        print(f"✅ {sym} geladen")
+        print(f"✅ {sym} loaded")
     except Exception as e:
-        print(f"❌ {sym} Fehler: {e}")
+        print(f"❌ {sym} error: {e}")
 
 print(f"\n💱 EUR/USD: {eurusd:.4f}")
 print(f"\n{'='*80}")
-print(f"{'Symbol':<8} {'Preis $':>10} {'ATR%':>7} {'RSI':>6} {'Beta':>6} {'Sektor':<15} {'Short%':>7}")
+print(f"{'Symbol':<8} {'Price $':>10} {'ATR%':>7} {'RSI':>6} {'Beta':>6} {'Sector':<15} {'Short%':>7}")
 print(f"{'='*80}")
 for r in results:
     beta_str = f"{r['beta']:.2f}" if isinstance(r['beta'], (int, float)) else r['beta']
@@ -77,74 +77,74 @@ for r in results:
 
 ---
 
-## SCHRITT 2: Vergleichstabelle erstellen
+## STEP 2: Create comparison table
 
-Erstelle diese Tabelle mit den yfinance-Daten:
+Build this table with the yfinance data:
 
-| Kriterium | SYMBOL1 | SYMBOL2 | SYMBOL3 | SYMBOL4 |
+| Criterion | SYMBOL1 | SYMBOL2 | SYMBOL3 | SYMBOL4 |
 |-----------|---------|---------|---------|---------|
-| **Preis (USD)** | $XX.XX | $XX.XX | | |
-| **Preis (EUR)** | €XX.XX | €XX.XX | | |
+| **Price (USD)** | $XX.XX | $XX.XX | | |
+| **Price (EUR)** | €XX.XX | €XX.XX | | |
 | **ATR% (14)** | X.X% | X.X% | | |
 | **RSI (14)** | XX.X | XX.X | | |
 | **Beta** | X.XX | X.XX | | |
-| **Sektor** | Tech | Energy | | |
+| **Sector** | Tech | Energy | | |
 | **Market Cap** | $XXB | $XXB | | |
 | **Short %** | X.X% | X.X% | | |
-| **SMA 50** | über/unter | über/unter | | |
-| **SMA 200** | über/unter | über/unter | | |
+| **SMA 50** | above/below | above/below | | |
+| **SMA 200** | above/below | above/below | | |
 | **Analyst Target** | $XXX | $XXX | | |
-| **Empfehlung** | BUY/HOLD | BUY/HOLD | | |
+| **Recommendation** | BUY/HOLD | BUY/HOLD | | |
 
 ---
 
-## SCHRITT 3: Turbo-Eignung bewerten
+## STEP 3: Evaluate turbo suitability
 
-Bewerte jeden Ticker für Turbo-Trading (0-10):
+Rate each ticker for turbo trading (0-10):
 
-| Kriterium | Gewicht | SYMBOL1 | SYMBOL2 | ... |
-|-----------|---------|---------|---------|-----|
-| **ATR%** (höher = mehr Bewegung) | 25% | X/10 | X/10 | |
-| **Liquidität** (Volume + MarketCap) | 20% | X/10 | X/10 | |
-| **KO-Sicherheit** (Beta, Gaps) | 20% | X/10 | X/10 | |
-| **Sektor-Diversifikation** (vs. Portfolio) | 20% | X/10 | X/10 | |
-| **Technisches Setup** (RSI, SMA-Trend) | 15% | X/10 | X/10 | |
-| **GESAMT (gewichtet)** | 100% | **X.X** | **X.X** | |
+| Criterion | Weight | SYMBOL1 | SYMBOL2 | ... |
+|-----------|--------|---------|---------|-----|
+| **ATR%** (higher = more movement) | 25% | X/10 | X/10 | |
+| **Liquidity** (volume + market cap) | 20% | X/10 | X/10 | |
+| **KO safety** (beta, gaps) | 20% | X/10 | X/10 | |
+| **Sector diversification** (vs portfolio) | 20% | X/10 | X/10 | |
+| **Technical setup** (RSI, SMA trend) | 15% | X/10 | X/10 | |
+| **TOTAL (weighted)** | 100% | **X.X** | **X.X** | |
 
-**Sektor-Check gegen Portfolio:**
-- Lies offene Positionen aus `memory/portfolio.md`
-- Welcher Ticker diversifiziert am besten?
-- ⚠️ Wenn alle Ticker im selben Sektor wie bestehende Positionen → WARNUNG
+**Sector check against portfolio:**
+- Read open positions from `memory/portfolio.md`
+- Which ticker diversifies best?
+- ⚠️ If all tickers in same sector as existing positions → WARNING
 
 ---
 
-## SCHRITT 4: Ranking & Empfehlung
+## STEP 4: Ranking & recommendation
 
 ```
 ╔══════════════════════════════════════════════════════╗
 ║  RANKING                                             ║
 ╠══════════════════════════════════════════════════════╣
-║  🥇 #1: SYMBOL (Score X.X) - [1 Satz warum]        ║
-║  🥈 #2: SYMBOL (Score X.X) - [1 Satz warum]        ║
-║  🥉 #3: SYMBOL (Score X.X) - [1 Satz warum]        ║
+║  🥇 #1: SYMBOL (Score X.X) - [1 sentence why]       ║
+║  🥈 #2: SYMBOL (Score X.X) - [1 sentence why]       ║
+║  🥉 #3: SYMBOL (Score X.X) - [1 sentence why]       ║
 ║                                                      ║
-║  → Empfehlung: SYMBOL voll analysieren               ║
+║  → Recommendation: fully analyze SYMBOL              ║
 ║    (/analyse-stock SYMBOL)                           ║
 ╚══════════════════════════════════════════════════════╝
 ```
 
 ---
 
-## SCHRITT 5: Telegram senden
+## STEP 5: Send via Telegram
 
 ```bash
 source .env
 python send_telegram.py "$(cat <<'EOF'
-📊 TICKER-VERGLEICH
+📊 TICKER COMPARISON
 
-[Ranking-Tabelle]
+[Ranking table]
 
-→ Empfehlung: SYMBOL voll analysieren
+→ Recommendation: fully analyze SYMBOL
 EOF
 )"
 ```
@@ -153,8 +153,8 @@ EOF
 
 ## ENFORCEMENT
 
-- ✅ Alle Daten aus yfinance (keine Schätzungen)
-- ✅ EUR/USD live geholt
-- ✅ Sektor-Check gegen bestehendes Portfolio
-- ✅ Klares Ranking mit Begründung
-- ✅ Telegram-Versand
+- ✅ All data from yfinance (no estimates)
+- ✅ EUR/USD fetched live
+- ✅ Sector check against existing portfolio
+- ✅ Clear ranking with reasoning
+- ✅ Telegram delivery

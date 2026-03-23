@@ -33,7 +33,7 @@ claude
 > /analyse-stock AAPL
 ```
 
-Full setup guide: **[ONBOARDING.md](ONBOARDING.md)** (DE) | **[ONBOARDING_EN.md](ONBOARDING_EN.md)** (EN)
+Full setup guide: **[ONBOARDING.md](ONBOARDING.md)** (EN) | **[ONBOARDING_DE.md](ONBOARDING_DE.md)** (DE)
 
 ## Requirements
 

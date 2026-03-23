@@ -1,171 +1,169 @@
 # Silver Hawk Trading - Onboarding Guide
 
-Du brauchst: einen Mac/PC, 30 Minuten, und eine Claude Pro Subscription ($20/Monat).
+You need: a Mac/PC, 30 minutes, and a Claude Pro subscription ($20/month).
 
-Alles ist komplett privat - dein eigener Bot, deine eigenen Alerts.
+Everything is completely private - your own bot, your own alerts.
 
 ---
 
-## Schritt 1: Claude Code installieren
+## Step 1: Install Claude Code
 
 ```bash
-# Terminal oeffnen und ausfuehren:
+# Open Terminal and run:
 npm install -g @anthropic-ai/claude-code
 ```
 
-Falls npm nicht installiert ist: https://nodejs.org herunterladen und installieren.
+If npm is not installed: download and install from https://nodejs.org
 
 ---
 
-## Schritt 2: Telegram Bot erstellen
+## Step 2: Create a Telegram Bot
 
-1. Telegram oeffnen
-2. Nach **@BotFather** suchen und oeffnen
-3. `/newbot` eingeben
-4. Namen vergeben (z.B. "Mein Trading Bot")
-5. Username vergeben (muss auf `_bot` enden, z.B. `mein_trading_bot`)
-6. **Bot Token kopieren** - das brauchst du gleich!
+1. Open Telegram
+2. Search for **@BotFather** and open it
+3. Type `/newbot`
+4. Choose a name (e.g. "My Trading Bot")
+5. Choose a username (must end with `_bot`, e.g. `my_trading_bot`)
+6. **Copy the Bot Token** - you'll need it shortly!
 
-Deine Chat-ID herausfinden:
-1. Schicke deinem neuen Bot eine Nachricht (irgendwas)
-2. Oeffne im Browser: `https://api.telegram.org/bot<DEIN_TOKEN>/getUpdates`
-3. Suche nach `"chat":{"id":` - die Zahl dahinter ist deine **Chat ID**
+Find your Chat ID:
+1. Send your new bot a message (anything)
+2. Open in browser: `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates`
+3. Look for `"chat":{"id":` - the number after that is your **Chat ID**
 
 ---
 
-## Schritt 3: Repo forken und einrichten
+## Step 3: Fork the Repo and Configure
 
-1. Gehe zum GitHub Repo (Link vom Admin)
-2. Klicke **Fork** (oben rechts)
-3. Dann im Terminal:
+1. Go to the GitHub repo (link from admin)
+2. Click **Fork** (top right)
+3. Then in Terminal:
 
 ```bash
-git clone https://github.com/DEIN_USERNAME/NotifyMeClaude.git
+git clone https://github.com/YOUR_USERNAME/NotifyMeClaude.git
 cd NotifyMeClaude
 
-# .env aus Template erstellen
+# Create .env from template
 cp .env.template .env
 ```
 
-Jetzt `.env` bearbeiten und ALLE Felder ausfuellen:
+Now edit `.env` and fill in ALL fields:
 ```
-TELEGRAM_BOT_TOKEN=dein_bot_token
-TELEGRAM_CHAT_ID=deine_chat_id
-TELEGRAM_BOT_USERNAME=dein_bot_username
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_CHAT_ID=your_chat_id
+TELEGRAM_BOT_USERNAME=your_bot_username
 ```
 
 ---
 
-## Schritt 4: Python einrichten + Watchlist befuellen
+## Step 4: Install Python Dependencies + Seed Watchlist
 
 ```bash
-# Dependencies installieren
+# Install dependencies
 pip3 install yfinance numpy
 
-# Watchlist mit Aktien befuellen
+# Seed the watchlist with stocks
 python3 admin_stocks.py seed
 ```
 
 ---
 
-## Schritt 5: Testen
+## Step 5: Test Everything
 
 ```bash
 # Test 1: Telegram Bot
-python3 send_telegram.py "Hallo von Silver Hawk!"
-# -> Du solltest eine Nachricht in Telegram bekommen
+python3 send_telegram.py "Hello from Silver Hawk!"
+# -> You should receive a message in Telegram
 
-# Test 2: Watchlist anzeigen
+# Test 2: Show watchlist
 python3 browse_stocks.py
-# -> Zeigt die Watchlist (noch ohne Preise)
+# -> Shows the watchlist (no prices yet)
 
-# Test 3: Preise aktualisieren
+# Test 3: Update prices
 python3 update_stocks.py
-# -> Holt aktuelle Preise, RSI, SMAs
+# -> Fetches current prices, RSI, SMAs
 
-# Test 4: Watchlist nochmal anzeigen
+# Test 4: Show watchlist again
 python3 browse_stocks.py
-# -> Jetzt mit Preisen, RSI, Ratings!
+# -> Now with prices, RSI, ratings!
 ```
 
 ---
 
-## Schritt 6: GitHub Actions einrichten (empfohlen!)
+## Step 6: Set Up GitHub Actions (recommended!)
 
-Damit laufen Preis-Updates automatisch - auch wenn dein Rechner aus ist.
+This runs price updates automatically - even when your computer is off.
 
-1. Gehe zu deinem Fork auf GitHub
+1. Go to your fork on GitHub
 2. **Settings > Secrets and variables > Actions**
-3. Fuege diese 2 Secrets hinzu:
+3. Add these 2 secrets:
 
-| Secret | Wert |
-|--------|------|
-| `TELEGRAM_BOT_TOKEN` | Dein Bot Token aus Schritt 2 |
-| `TELEGRAM_CHAT_ID` | Deine Chat ID aus Schritt 2 |
+| Secret | Value |
+|--------|-------|
+| `TELEGRAM_BOT_TOKEN` | Your Bot Token from Step 2 |
+| `TELEGRAM_CHAT_ID` | Your Chat ID from Step 2 |
 
-4. Gehe zu **Actions** Tab
-5. Klicke **"I understand my workflows, go ahead and enable them"**
-6. Fertig! Der **Stock Updater** (`update_stocks.yml`) aktualisiert Preise alle 30 Min automatisch.
+4. Go to the **Actions** tab
+5. Click **"I understand my workflows, go ahead and enable them"**
+6. Done! The **Stock Updater** (`update_stocks.yml`) automatically updates prices every 30 min.
 
-### Optional: Preis-Alerts einrichten
+### Optional: Price Alerts
 
-Fuer automatische Preis-Alerts (Telegram-Benachrichtigungen bei grossen Moves):
+For automatic price alerts (Telegram notifications on big moves):
 
 ```bash
-# Template kopieren und mit deinen Stocks befuellen
+# Copy template and add your stocks
 cp tracker_check_template.py tracker_check.py
 ```
 
-Bearbeite `tracker_check.py` und fuege deine Symbole + Alert-Levels hinzu. Dann aktiviert `tracker.yml` automatische Alerts:
-- Stuendliche Zusammenfassungen (leise)
-- Sofort-Alerts bei grossen Moves (>1.5% in 5 Min)
-- Alerts wenn wichtige Preis-Levels erreicht werden
+Edit `tracker_check.py` and add your symbols + alert levels. Then `tracker.yml` will automatically send:
+- Hourly summaries (silent)
+- Instant alerts on big moves (>1.5% in 5 min)
+- Alerts when important price levels are reached
 
 ---
 
-## Aktien analysieren
+## Analyze Stocks
 
-Starte Claude Code und gib ein:
+Start Claude Code and type:
 
 ```
-Analysiere AAPL @prompts/00_master.md
+Analyze AAPL @prompts/00_master.md
 ```
 
-Das startet eine 4-Schritt-Analyse:
-1. Daten sammeln (yfinance + News)
-2. Bull vs Bear Debatte
-3. Urteil + Risikoanalyse
-4. Trading Card an deinen Telegram Bot
+This launches a 4-step analysis:
+1. Data collection (yfinance + news)
+2. Bull vs Bear debate
+3. Verdict + risk analysis
+4. Trading card sent to your Telegram bot
 
-Schau mit `python3 browse_stocks.py` was auf der Watchlist steht, oder analysiere jedes beliebige Symbol.
+Check `python3 browse_stocks.py` to see what's on the watchlist, or analyze any symbol you want.
 
 ---
 
-## Sprache aendern
+## Language Setting
 
-Die Analyse-Ausgabe ist standardmaessig auf **Deutsch**. Um auf Englisch umzustellen:
+The analysis prompts default to **German** output. To switch to English:
 
-Oeffne `prompts/00_master.md` in deinem Fork und aendere:
+Open `prompts/00_master.md` in your fork and change:
 ```
 {{LANGUAGE}} = English
 ```
 
-Alle Analysen, Tabellen und Texte kommen dann auf Englisch.
-
-> English speakers: see `ONBOARDING_EN.md` for the full setup guide in English.
+This will make all analysis output appear in English.
 
 ---
 
-## Watchlist verwalten
+## Manage Your Watchlist
 
 ```bash
-# Aktie hinzufuegen
+# Add a stock
 python3 admin_stocks.py add MSFT "Microsoft" Technology
 
-# Aktie entfernen
+# Remove a stock
 python3 admin_stocks.py remove MSFT
 
-# Alle anzeigen
+# Show all
 python3 admin_stocks.py list
 ```
 
@@ -173,19 +171,19 @@ python3 admin_stocks.py list
 
 ## FAQ
 
-**Kostet das was?**
-Claude Pro: $20/Monat. Telegram und GitHub Actions: kostenlos.
+**Does this cost anything?**
+Claude Pro: $20/month. Telegram and GitHub Actions: free.
 
-**Kann jemand meine Daten sehen?**
-Nein. Du hast deinen eigenen Bot und deine eigenen Alerts. Alles komplett privat.
+**Can anyone see my data?**
+No. You have your own bot and your own alerts. Everything is completely private.
 
-**Muss ich Coding koennen?**
-Nein! Du brauchst nur Terminal oeffnen und die obigen Befehle ausfuehren.
+**Do I need to know how to code?**
+No! You just need to open Terminal and run the commands above.
 
-**Kann ich eigene Aktien zur Watchlist hinzufuegen?**
-Ja! `python3 admin_stocks.py add TSLA "Tesla" "Automotive"` - du bist Admin deiner eigenen Watchlist.
+**Can I add my own stocks to the watchlist?**
+Yes! `python3 admin_stocks.py add TSLA "Tesla" "Automotive"` - you are the admin of your own watchlist.
 
-**Wie aktualisiere ich den Code?**
+**How do I update the code?**
 ```bash
 git remote add upstream https://github.com/AbdullahKaratas/NotifyMeClaude.git
 git pull upstream main

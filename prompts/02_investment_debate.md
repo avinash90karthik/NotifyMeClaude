@@ -1,4 +1,4 @@
-# SCHRITT 2: INVESTMENT DEBATE
+# STEP 2: INVESTMENT DEBATE
 
 **Asset:** {{SYMBOL}}
 
@@ -8,320 +8,320 @@
 
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║  DIE DEBATE IST DAS HERZSTUECK - NICHT DAS BEIWERK!         ║
+║  THE DEBATE IS THE CORE PIECE - NOT A FORMALITY!             ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  ✅ JEDES Argument: 4-6 Saetze mit konkreten Zahlen          ║
-║  ✅ JEDER Analyst MUSS den Chart referenzieren               ║
-║  ✅ Bear MUSS Bull-Argumente explizit widerlegen             ║
-║  ✅ Kursziel mit Begruendung (Chart-Level referenzieren)     ║
-║  ✅ 3 vollstaendige Runden inkl. Finale Synthese!             ║
-║  ✅ SHORT-Trade Bewertung am Ende (PFLICHT!)                 ║
-║  ✅ RSI-Divergenz in technischer Argumentation nutzen!       ║
+║  ✅ EVERY argument: 4-6 sentences with concrete numbers      ║
+║  ✅ EVERY analyst MUST reference the chart                    ║
+║  ✅ Bear MUST explicitly refute Bull arguments                ║
+║  ✅ Price target with reasoning (reference chart levels)      ║
+║  ✅ 3 complete rounds incl. Final Synthesis!                  ║
+║  ✅ SHORT trade evaluation at the end (MANDATORY!)            ║
+║  ✅ Use RSI divergence in technical argumentation!            ║
 ║                                                               ║
-║  ❌ NICHT 1-2 Satz Argumente schreiben                       ║
-║  ❌ NICHT die Debate als Formalitaet behandeln               ║
-║  ❌ NICHT automatisch LONG bevorzugen - sei NEUTRAL!         ║
+║  ❌ Do NOT write 1-2 sentence arguments                      ║
+║  ❌ Do NOT treat the debate as a formality                    ║
+║  ❌ Do NOT automatically favor LONG - stay NEUTRAL!           ║
 ║                                                               ║
-║  Wenn du merkst dass du abkuerzt -> STOPP -> Mach es richtig!║
+║  If you notice you're cutting corners -> STOP -> Do it right! ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
-**Input:** Daten aus Schritt 1 (Preis, Technicals, Chart, News, Makro, Fundamentals, **RSI-Divergenz**, **NSI**, **Regime**)
-Referenziere auch den JSON-Block aus Schritt 1 fuer strukturierte Datenpunkte.
+**Input:** Data from Step 1 (Price, Technicals, Chart, News, Macro, Fundamentals, **RSI Divergence**, **NSI**, **Regime**)
+Also reference the JSON block from Step 1 for structured data points.
 
 ---
 
-## RUNDE 1: BULL ANALYST
+## ROUND 1: BULL ANALYST
 
-**These:** {{SYMBOL}} wird STEIGEN
+**Thesis:** {{SYMBOL}} will RISE
 
-### CHART-ANALYSE (BULL):
-> Analysiere den Chart aus bullischer Perspektive:
-> - Was siehst du im Candlestick-Pattern? (Bullish Engulfing, Hammer, etc.)
-> - Wie verhaelt sich der Preis zu den SMAs?
-> - Was sagt der RSI - gibt es **bullische Divergenzen** (aus Schritt 1 Daten!)?
-> - **RSI-Delta: Dreht der RSI nach oben? Slope positiv?**
-> - Ist das Volume bei Up-Days hoeher? (Akkumulation)
-> - Was zeigt der CMF/OBV? (Positiv = Geldfluss rein)
-> - Welche bullischen Chart-Patterns erkennst du?
+### CHART ANALYSIS (BULL):
+> Analyze the chart from a bullish perspective:
+> - What do you see in the candlestick pattern? (Bullish Engulfing, Hammer, etc.)
+> - How is the price behaving relative to the SMAs?
+> - What does the RSI say - are there **bullish divergences** (from Step 1 data!)?
+> - **RSI Delta: Is the RSI turning upward? Slope positive?**
+> - Is volume higher on up days? (Accumulation)
+> - What does the CMF/OBV show? (Positive = money flowing in)
+> - What bullish chart patterns do you recognize?
 
-### Argument 1: TECHNISCH
-> Erklaere ausfuehrlich: Welche technischen Signale sprechen fuer einen Anstieg?
-> - Nenne konkrete Zahlen (RSI, **RSI-Delta**, MACD, SMA Werte)
-> - **Wenn bullische Divergenz erkannt: Dies ist ein STARKES Argument!**
-> - Vergleiche mit historischen Mustern
-> - Zeige Chart-Formationen auf
-> - **Referenziere spezifische Beobachtungen aus dem Chart!**
-> - **Minimum 4 Saetze!**
+### Argument 1: TECHNICAL
+> Explain in detail: What technical signals support a rise?
+> - Cite concrete numbers (RSI, **RSI Delta**, MACD, SMA values)
+> - **If bullish divergence detected: This is a STRONG argument!**
+> - Compare with historical patterns
+> - Identify chart formations
+> - **Reference specific observations from the chart!**
+> - **Minimum 4 sentences!**
 
-### Argument 2: NEWS & KATALYSATOREN
-> Erklaere ausfuehrlich: Welche aktuellen Events treiben den Preis?
-> - **Nutze den News Sentiment Index (NSI) aus Schritt 1.7b als Datengrundlage!**
-> - Nenne konkrete News-Headlines mit Datum
-> - Erklaere den Zusammenhang zum Preis
-> - Quantifiziere den Impact wenn moeglich
-> - **Minimum 4 Saetze!**
+### Argument 2: NEWS & CATALYSTS
+> Explain in detail: What current events are driving the price?
+> - **Use the News Sentiment Index (NSI) from Step 1.7b as data basis!**
+> - Cite concrete news headlines with dates
+> - Explain the connection to the price
+> - Quantify the impact if possible
+> - **Minimum 4 sentences!**
 
 ### Argument 3: FUNDAMENTAL
-> Erklaere ausfuehrlich: Welche fundamentalen Faktoren unterstuetzen?
-> - Supply/Demand Zahlen
-> - ETF Flows, COT Daten
-> - Industrie-Nachfrage
-> - **Minimum 4 Saetze!**
+> Explain in detail: What fundamental factors provide support?
+> - Supply/Demand numbers
+> - ETF Flows, COT data
+> - Industry demand
+> - **Minimum 4 sentences!**
 
-### Argument 4: MAKRO
-> Erklaere ausfuehrlich: Welches Makro-Umfeld hilft?
-> - Fed Policy, Zinsen
-> - USD Staerke/Schwaeche
-> - Inflation, Geopolitik
-> - **Minimum 4 Saetze!**
+### Argument 4: MACRO
+> Explain in detail: What macro environment helps?
+> - Fed Policy, interest rates
+> - USD strength/weakness
+> - Inflation, geopolitics
+> - **Minimum 4 sentences!**
 
-**Bull-Kursziel:** $XX.XX (+XX%)
-**Zeithorizont:** X Wochen/Monate
-**Begruendung fuer Kursziel:** [2-3 Saetze warum genau dieses Level - referenziere Chart-Resistance!]
+**Bull price target:** $XX.XX (+XX%)
+**Time horizon:** X weeks/months
+**Reasoning for price target:** [2-3 sentences why exactly this level - reference chart resistance!]
 
 ```
-✅ [BULL RUNDE 1 ABGESCHLOSSEN]
+✅ [BULL ROUND 1 COMPLETED]
 ```
 
 ---
 
-## RUNDE 1: BEAR ANALYST
+## ROUND 1: BEAR ANALYST
 
-**These:** {{SYMBOL}} wird FALLEN
+**Thesis:** {{SYMBOL}} will FALL
 
-**JEDES Argument muss 4-6 Saetze haben - WIDERLEGE die Bull-Argumente!**
+**EVERY argument must have 4-6 sentences - REFUTE the Bull arguments!**
 
-### CHART-ANALYSE (BEAR):
-> Analysiere den Chart aus bearischer Perspektive:
-> - Was siehst du im Candlestick-Pattern? (Bearish Engulfing, Shooting Star, etc.)
-> - Ist der Preis an Widerstaenden abgeprallt?
-> - Was sagt der RSI - ueberkauft? **Bearische Divergenzen?**
-> - **RSI-Delta: Faellt der RSI weiter? Auch bei Oversold keine Wende?**
-> - Ist das Volume bei Down-Days hoeher? (Distribution)
-> - Was zeigt der CMF/OBV? (Negativ = Geldfluss raus)
-> - Welche bearischen Chart-Patterns erkennst du? (H&S, Double Top, etc.)
+### CHART ANALYSIS (BEAR):
+> Analyze the chart from a bearish perspective:
+> - What do you see in the candlestick pattern? (Bearish Engulfing, Shooting Star, etc.)
+> - Has the price been rejected at resistance levels?
+> - What does the RSI say - overbought? **Bearish divergences?**
+> - **RSI Delta: Is the RSI still falling? No reversal even at oversold?**
+> - Is volume higher on down days? (Distribution)
+> - What does the CMF/OBV show? (Negative = money flowing out)
+> - What bearish chart patterns do you recognize? (H&S, Double Top, etc.)
 
-### Argument 1: TECHNISCH
-> Erklaere ausfuehrlich: Welche technischen Warnsignale gibt es?
-> - RSI ueberkauft? Divergenzen?
-> - **Wenn RSI oversold aber KEIN positives Delta: "Oversold kann oversoldER werden"**
-> - Widerstandszonen die nicht durchbrochen wurden?
-> - Historische Muster die auf Korrektur hindeuten?
-> - **Referenziere spezifische Beobachtungen aus dem Chart!**
-> - **Minimum 4 Saetze! Widerlege Bull-Argument 1!**
+### Argument 1: TECHNICAL
+> Explain in detail: What technical warning signals exist?
+> - RSI overbought? Divergences?
+> - **If RSI oversold but NO positive delta: "Oversold can get MORE oversold"**
+> - Resistance zones that were not broken?
+> - Historical patterns suggesting a correction?
+> - **Reference specific observations from the chart!**
+> - **Minimum 4 sentences! Refute Bull Argument 1!**
 
-### Argument 2: NEWS & RISIKEN
-> Erklaere ausfuehrlich: Welche negativen News/Risiken gibt es?
-> - Konkrete Headlines mit Datum
-> - Gegenwind-Faktoren
-> - Was koennte schiefgehen?
-> - **Minimum 4 Saetze! Widerlege Bull-Argument 2!**
+### Argument 2: NEWS & RISKS
+> Explain in detail: What negative news/risks exist?
+> - Concrete headlines with dates
+> - Headwind factors
+> - What could go wrong?
+> - **Minimum 4 sentences! Refute Bull Argument 2!**
 
-### Argument 3: FUNDAMENTAL SCHWAECHEN
-> Erklaere ausfuehrlich: Welche fundamentalen Probleme gibt es?
-> - Ueberangebot?
-> - Nachfrage-Rueckgang?
-> - Bewertung zu hoch?
-> - **Minimum 4 Saetze! Widerlege Bull-Argument 3!**
+### Argument 3: FUNDAMENTAL WEAKNESSES
+> Explain in detail: What fundamental problems exist?
+> - Oversupply?
+> - Demand decline?
+> - Valuation too high?
+> - **Minimum 4 sentences! Refute Bull Argument 3!**
 
-### Argument 4: MAKRO GEGENWIND
-> Erklaere ausfuehrlich: Welches Makro-Umfeld schadet?
+### Argument 4: MACRO HEADWINDS
+> Explain in detail: What macro environment is harmful?
 > - Fed hawkish?
-> - USD stark?
-> - Risikoappetit steigt = weniger Safe Haven?
-> - **Minimum 4 Saetze! Widerlege Bull-Argument 4!**
+> - USD strong?
+> - Risk appetite rising = less safe haven demand?
+> - **Minimum 4 sentences! Refute Bull Argument 4!**
 
-**Bear-Kursziel:** $XX.XX (-XX%)
-**Zeithorizont:** X Wochen/Monate
-**Begruendung fuer Kursziel:** [2-3 Saetze warum genau dieses Level - referenziere Chart-Support!]
-
-```
-✅ [BEAR RUNDE 1 ABGESCHLOSSEN]
-```
-
----
-
-## RUNDE 2: BULL KONTER
-
-**Jeder Konter muss 3-4 Saetze haben!**
-
-**Konter zu Bear-Argument 1 (Technisch):**
-> [Warum ist das Bear-Argument falsch oder uebertrieben? 3-4 Saetze mit Daten!]
-
-**Konter zu Bear-Argument 2 (News/Risiken):**
-> [Warum sind die Risiken eingepreist oder uebertrieben? 3-4 Saetze!]
-
-**Konter zu Bear-Argument 3 (Fundamental):**
-> [Warum sind die fundamentalen Bedenken unbegruendet? 3-4 Saetze!]
-
-**Neues Bull-Argument:**
-> [Ein zusaetzliches Argument das noch nicht genannt wurde. 3-4 Saetze!]
+**Bear price target:** $XX.XX (-XX%)
+**Time horizon:** X weeks/months
+**Reasoning for price target:** [2-3 sentences why exactly this level - reference chart support!]
 
 ```
-✅ [BULL RUNDE 2 ABGESCHLOSSEN]
+✅ [BEAR ROUND 1 COMPLETED]
 ```
 
 ---
 
-## RUNDE 2: BEAR KONTER
+## ROUND 2: BULL REBUTTAL
 
-**Jeder Konter muss 3-4 Saetze haben!**
+**Every rebuttal must have 3-4 sentences!**
 
-**Konter zu Bull-Argument 1 (Technisch):**
-> [Warum ist das Bull-Argument zu optimistisch? 3-4 Saetze mit Daten!]
+**Rebuttal to Bear Argument 1 (Technical):**
+> [Why is the Bear argument wrong or exaggerated? 3-4 sentences with data!]
 
-**Konter zu Bull-Argument 2 (News/Katalysatoren):**
-> [Warum sind die Katalysatoren eingepreist? 3-4 Saetze!]
+**Rebuttal to Bear Argument 2 (News/Risks):**
+> [Why are the risks priced in or exaggerated? 3-4 sentences!]
 
-**Konter zu Bull-Argument 3 (Fundamental):**
-> [Warum sind die Fundamentals nicht so stark? 3-4 Saetze!]
+**Rebuttal to Bear Argument 3 (Fundamental):**
+> [Why are the fundamental concerns unfounded? 3-4 sentences!]
 
-**Neues Bear-Argument:**
-> [Ein zusaetzliches Risiko das noch nicht genannt wurde. 3-4 Saetze!]
-
-```
-✅ [BEAR RUNDE 2 ABGESCHLOSSEN]
-```
-
----
-
-## RUNDE 3: FINALE SYNTHESE
-
-### BULL FINAL (Pflicht: 4-6 Saetze!)
-> Nach 2 Runden Debatte: Was ist dein STAERKSTES verbleibendes Argument?
-> - Welches Bear-Argument konntest du NICHT widerlegen? Wie gehst du damit um?
-> - Was ist dein finales Kursziel nach Beruecksichtigung aller Gegenargumente?
-> - Wie hoch ist deine Konfidenz (0-100%) fuer den LONG-Trade?
-
-**Bull Finale Konfidenz:** XX%
-**Angepasstes Kursziel:** $XX.XX
-
-### BEAR FINAL (Pflicht: 4-6 Saetze!)
-> Nach 2 Runden Debatte: Was ist dein STAERKSTES verbleibendes Argument?
-> - Welches Bull-Argument konntest du NICHT widerlegen? Wie gehst du damit um?
-> - Was ist dein finales Kursziel nach Beruecksichtigung aller Gegenargumente?
-> - Wie hoch ist deine Konfidenz (0-100%) fuer den SHORT-Trade?
-
-**Bear Finale Konfidenz:** XX%
-**Angepasstes Kursziel:** $XX.XX
+**New Bull Argument:**
+> [An additional argument not yet mentioned. 3-4 sentences!]
 
 ```
-✅ [RUNDE 3: FINALE SYNTHESE ABGESCHLOSSEN]
+✅ [BULL ROUND 2 COMPLETED]
 ```
 
 ---
 
-## SHORT-TRADE BEWERTUNG
+## ROUND 2: BEAR REBUTTAL
+
+**Every rebuttal must have 3-4 sentences!**
+
+**Rebuttal to Bull Argument 1 (Technical):**
+> [Why is the Bull argument too optimistic? 3-4 sentences with data!]
+
+**Rebuttal to Bull Argument 2 (News/Catalysts):**
+> [Why are the catalysts priced in? 3-4 sentences!]
+
+**Rebuttal to Bull Argument 3 (Fundamental):**
+> [Why are the fundamentals not as strong? 3-4 sentences!]
+
+**New Bear Argument:**
+> [An additional risk not yet mentioned. 3-4 sentences!]
+
+```
+✅ [BEAR ROUND 2 COMPLETED]
+```
+
+---
+
+## ROUND 3: FINAL SYNTHESIS
+
+### BULL FINAL (Mandatory: 4-6 sentences!)
+> After 2 rounds of debate: What is your STRONGEST remaining argument?
+> - Which Bear argument could you NOT refute? How do you deal with it?
+> - What is your final price target after considering all counterarguments?
+> - How high is your confidence (0-100%) for the LONG trade?
+
+**Bull Final Confidence:** XX%
+**Adjusted Price Target:** $XX.XX
+
+### BEAR FINAL (Mandatory: 4-6 sentences!)
+> After 2 rounds of debate: What is your STRONGEST remaining argument?
+> - Which Bull argument could you NOT refute? How do you deal with it?
+> - What is your final price target after considering all counterarguments?
+> - How high is your confidence (0-100%) for the SHORT trade?
+
+**Bear Final Confidence:** XX%
+**Adjusted Price Target:** $XX.XX
+
+```
+✅ [ROUND 3: FINAL SYNTHESIS COMPLETED]
+```
+
+---
+
+## SHORT TRADE EVALUATION
 
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║  PFLICHT: Bewerte ob ein SHORT-Trade attraktiver waere!      ║
+║  MANDATORY: Evaluate whether a SHORT trade would be better!  ║
 ║                                                               ║
-║  Das System darf NICHT nur LONG-Signale produzieren.         ║
-║  Geld verdienen geht in beide Richtungen.                    ║
+║  The system must NOT only produce LONG signals.              ║
+║  Money can be made in both directions.                       ║
 ║                                                               ║
-║  Trade Republic hat Long UND Short Turbos!                   ║
+║  Trade Republic has Long AND Short Turbos!                   ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
 ### LONG vs SHORT Scorecard
 
-| Kriterium | LONG Score (0-10) | SHORT Score (0-10) |
+| Criterion | LONG Score (0-10) | SHORT Score (0-10) |
 |-----------|-------------------|---------------------|
-| Technische Signale | X/10 | X/10 |
-| News-Momentum | X/10 | X/10 |
+| Technical Signals | X/10 | X/10 |
+| News Momentum | X/10 | X/10 |
 | Fundamentals | X/10 | X/10 |
-| Makro-Umfeld | X/10 | X/10 |
-| Chart-Pattern | X/10 | X/10 |
+| Macro Environment | X/10 | X/10 |
+| Chart Pattern | X/10 | X/10 |
 | Risk/Reward | X/10 | X/10 |
-| **GESAMT** | **XX/60** | **XX/60** |
+| **TOTAL** | **XX/60** | **XX/60** |
 
-### Empfehlung
+### Recommendation
 
 ```
 LONG Score:  XX/60
 SHORT Score: XX/60
-Differenz:   XX Punkte zugunsten [LONG/SHORT]
+Difference:  XX points in favor of [LONG/SHORT]
 ```
 
-**Wenn SHORT Score > LONG Score ODER Differenz < 5 Punkte:**
-> Erarbeite ein konkretes SHORT-Setup:
-> - SHORT Entry: $XX.XX (welches Resistance-Level?)
-> - SHORT KO: $XX.XX (ueber welchem Widerstand?)
-> - SHORT Target: $XX.XX (welcher Support?)
-> - Warum SHORT hier besser ist: [2-3 Saetze]
+**If SHORT Score > LONG Score OR Difference < 5 points:**
+> Develop a concrete SHORT setup:
+> - SHORT Entry: $XX.XX (which resistance level?)
+> - SHORT KO: $XX.XX (above which resistance?)
+> - SHORT Target: $XX.XX (which support?)
+> - Why SHORT is better here: [2-3 sentences]
 
-**Wenn LONG klar besser (Differenz > 10 Punkte):**
-> LONG bestaetigt. Weiter mit Schritt 3 als LONG-Trade.
+**If LONG is clearly better (Difference > 10 points):**
+> LONG confirmed. Proceed to Step 3 as LONG trade.
 
-**Wenn unklar (Differenz 5-10 Punkte):**
-> Beide Setups in Schritt 3 ausarbeiten. Judge entscheidet.
+**If unclear (Difference 5-10 points):**
+> Develop both setups in Step 3. Judge decides.
 
 ```
-✅ [SHORT-TRADE BEWERTUNG ABGESCHLOSSEN]
+✅ [SHORT TRADE EVALUATION COMPLETED]
 ```
 
 ---
 
-## REGIME-KONTEXT FUER DEBATE
+## REGIME CONTEXT FOR DEBATE
 
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║  REGIME beeinflusst die Argument-Gewichtung!                  ║
+║  REGIME influences argument weighting!                        ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
 ║  TRENDING:                                                    ║
-║  → Technische Trend-Argumente (SMA, MACD) STAERKER gewichten ║
-║  → RSI-Oversold/Overbought weniger relevant                  ║
-║  → "Der Trend ist dein Freund" — gegen den Trend braucht     ║
-║    SEHR starke Gegenargumente                                ║
+║  → Weight technical trend arguments (SMA, MACD) STRONGER     ║
+║  → RSI oversold/overbought less relevant                     ║
+║  → "The trend is your friend" — going against the trend      ║
+║    requires VERY strong counterarguments                      ║
 ║                                                               ║
 ║  RANGE:                                                       ║
-║  → Oszillator-Argumente (RSI, BB) STAERKER gewichten         ║
-║  → Trend-Argumente weniger relevant (Ausbruch nicht gestartet)║
-║  → Support/Resistance-Levels besonders wichtig               ║
+║  → Weight oscillator arguments (RSI, BB) STRONGER            ║
+║  → Trend arguments less relevant (breakout not started)       ║
+║  → Support/Resistance levels especially important            ║
 ║                                                               ║
 ║  CHOPPY:                                                      ║
-║  → ALLE technischen Argumente SCHWAECHER gewichten           ║
-║  → News + Fundamentals gewinnen an Gewicht                   ║
-║  → Konfidenz grundsaetzlich niedriger ansetzen               ║
+║  → Weight ALL technical arguments WEAKER                     ║
+║  → News + Fundamentals gain more weight                      ║
+║  → Set confidence generally lower                            ║
 ║                                                               ║
 ║  TRANSITIONAL:                                                ║
-║  → Standard-Gewichtung, auf Regime-Wechsel achten            ║
-║  → Fruehe Trend-Signale beobachten (MACD Crossover, ADX >20) ║
+║  → Standard weighting, watch for regime change               ║
+║  → Observe early trend signals (MACD Crossover, ADX >20)     ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
-**Aktuelles Regime (aus Schritt 1): [TRENDING/RANGE/CHOPPY/TRANSITIONAL]**
-→ Argument-Gewichtung entsprechend anpassen!
+**Current Regime (from Step 1): [TRENDING/RANGE/CHOPPY/TRANSITIONAL]**
+→ Adjust argument weighting accordingly!
 
 ---
 
 ## ENFORCEMENT
 
-- ✅ Minimum 4-6 Saetze pro Argument mit konkreten Zahlen
-- ✅ Jeder Analyst MUSS den Chart referenzieren
-- ✅ Bear MUSS Bull-Argumente explizit widerlegen
-- ✅ **RSI-Delta und Divergenz in technischen Argumenten verwenden!**
-- ✅ Kursziel mit Begruendung (Chart-Level referenzieren)
-- ✅ 3 vollstaendige Runden durchgefuehrt (inkl. Finale Synthese)
-- ✅ Finale Konfidenz-Werte angegeben (Bull + Bear)
-- ✅ Keine generischen Aussagen - nur konkrete Daten
-- ✅ SHORT-Trade Scorecard ausgefuellt
-- ✅ SHORT-Setup ausgearbeitet wenn Score es verlangt
-- ✅ **Regime-Kontext beruecksichtigt (Argument-Gewichtung angepasst)**
+- ✅ Minimum 4-6 sentences per argument with concrete numbers
+- ✅ Every analyst MUST reference the chart
+- ✅ Bear MUST explicitly refute Bull arguments
+- ✅ **Use RSI Delta and divergence in technical arguments!**
+- ✅ Price target with reasoning (reference chart levels)
+- ✅ 3 complete rounds completed (incl. Final Synthesis)
+- ✅ Final confidence values provided (Bull + Bear)
+- ✅ No generic statements - only concrete data
+- ✅ SHORT trade scorecard filled out
+- ✅ SHORT setup developed if score requires it
+- ✅ **Regime context considered (argument weighting adjusted)**
 
 ---
 
 ## OUTPUT JSON
 
-**WICHTIG: Der JSON-Block ist ZUSAETZLICH zur Prosa. Er ersetzt NICHTS.**
+**IMPORTANT: The JSON block is IN ADDITION to the prose. It replaces NOTHING.**
 
-Generiere am Ende von Schritt 2 diesen strukturierten Output:
+Generate this structured output at the end of Step 2:
 
 ```json
 {
@@ -341,8 +341,8 @@ Generiere am Ende von Schritt 2 diesen strukturierten Output:
 }
 ```
 
-Fuelle ALLE Felder mit den tatsaechlichen Werten aus der Debate!
+Fill ALL fields with the actual values from the debate!
 
 ```
-✅ [SCHRITT 2: INVESTMENT DEBATE ABGESCHLOSSEN]
+✅ [STEP 2: INVESTMENT DEBATE COMPLETED]
 ```

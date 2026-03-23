@@ -1,11 +1,11 @@
-# SCHRITT 4: ZUSAMMENFASSUNG & VERSAND
+# STEP 4: SUMMARY & DELIVERY
 
 **Asset:** {{SYMBOL}}
 
 ---
 
-**Input:** ALLE Outputs der vorherigen Schritte (Daten, Debate, Judge, Risk)
-Referenziere die JSON-Blöcke aus Schritt 1, 2 und 3 fuer strukturierte Datenpunkte.
+**Input:** ALL outputs from the previous steps (Data, Debate, Judge, Risk)
+Reference the JSON blocks from Steps 1, 2, and 3 for structured data points.
 
 ---
 
@@ -13,48 +13,48 @@ Referenziere die JSON-Blöcke aus Schritt 1, 2 und 3 fuer strukturierte Datenpun
 
 ```
 ╔══════════════════════════════════════════════════════╗
-║  {{SYMBOL}} ANALYSE                                  ║
+║  {{SYMBOL}} ANALYSIS                                 ║
 ╠══════════════════════════════════════════════════════╣
 ║                                                      ║
-║  Preis:     $XX.XX (EUR XX.XX)                       ║
-║  Signal:    [LONG / SHORT / HOLD]                    ║
-║  Konfidenz: XX%                                      ║
-║  ATR:       X.X% ($XX.XX/Tag)                        ║
+║  Price:      $XX.XX (EUR XX.XX)                      ║
+║  Signal:     [LONG / SHORT / HOLD]                   ║
+║  Confidence: XX%                                     ║
+║  ATR:        X.X% ($XX.XX/day)                       ║
 ║                                                      ║
 ╠══════════════════════════════════════════════════════╣
-║  KO-LEVEL (ATR + Chart kombiniert)                   ║
+║  KO LEVEL (ATR + Chart combined)                     ║
 ╠══════════════════════════════════════════════════════╣
-║  ATR-basiert:   $XX.XX (Xx ATR, Asset-Klasse: XXX)   ║
-║  Chart-basiert: $XX.XX (unter Support $XX.XX)        ║
-║  → FINALES KO:  $XX.XX (XX.X% Abstand)              ║
-║  → Hebel:       ~Xx                                  ║
-║  Stop-Loss:     $XX.XX (mental, ueber KO)            ║
+║  ATR-based:   $XX.XX (Xx ATR, asset class: XXX)      ║
+║  Chart-based: $XX.XX (below support $XX.XX)          ║
+║  → FINAL KO:  $XX.XX (XX.X% distance)               ║
+║  → Leverage:  ~Xx                                    ║
+║  Stop-Loss:   $XX.XX (mental, above KO)              ║
 ║                                                      ║
 ╠══════════════════════════════════════════════════════╣
-║  POSITIONS-EMPFEHLUNG (% vom Portfolio)              ║
+║  POSITION RECOMMENDATION (% of portfolio)            ║
 ╠══════════════════════════════════════════════════════╣
-║  Lotto (5%):       XXX EUR - [Produkt + KO]         ║
-║  Klein (15%):      XXX EUR - [Produkt + KO]         ║
-║  Standard (30%):   XXX EUR - [Produkt + KO]         ║
-║  Ohne Hebel (20%): XXX EUR - [ETF/ETC/Aktie]        ║
+║  Lotto (5%):        XXX EUR - [Product + KO]         ║
+║  Small (15%):       XXX EUR - [Product + KO]         ║
+║  Standard (30%):    XXX EUR - [Product + KO]         ║
+║  No Leverage (20%): XXX EUR - [ETF/ETC/Stock]        ║
 ║                                                      ║
-║  Max. Verlust bei Stop: XXX EUR (XX% Portfolio)      ║
-║                                                      ║
-╠══════════════════════════════════════════════════════╣
-║  EXITS (gestaffelt)                                  ║
-╠══════════════════════════════════════════════════════╣
-║  Sell 1: $XX.XX (XX%) - [Begruendung]               ║
-║  Sell 2: $XX.XX (XX%) - [Begruendung]               ║
-║  Sell 3: $XX.XX (Rest) - [Stretch-Ziel]             ║
-║  Time-Stop: X Tage ohne Bewegung → halbieren        ║
+║  Max. loss at stop: XXX EUR (XX% portfolio)          ║
 ║                                                      ║
 ╠══════════════════════════════════════════════════════╣
-║  ENTRY-TIMING (datenbasiert!)                        ║
+║  EXITS (staged)                                      ║
 ╠══════════════════════════════════════════════════════╣
-║  Bester Entry: [PRE-MARKET/FIRST-HOUR DIP/BEI OPEN] ║
+║  Sell 1: $XX.XX (XX%) - [Rationale]                  ║
+║  Sell 2: $XX.XX (XX%) - [Rationale]                  ║
+║  Sell 3: $XX.XX (Rest) - [Stretch target]            ║
+║  Time-Stop: X days without movement → cut in half    ║
+║                                                      ║
+╠══════════════════════════════════════════════════════╣
+║  ENTRY TIMING (data-driven!)                         ║
+╠══════════════════════════════════════════════════════╣
+║  Best Entry: [PRE-MARKET/FIRST-HOUR DIP/AT OPEN]    ║
 ║  Pre-Market Win:    XX% | First-Hour: XX% | Open: XX%║
-║  Aktuelles Gap:     +X.X%                            ║
-║  → [Konkrete Empfehlung mit Uhrzeit]                ║
+║  Current Gap:       +X.X%                            ║
+║  → [Concrete recommendation with time]              ║
 ║                                                      ║
 ╠══════════════════════════════════════════════════════╣
 ║  SUPPORT              │  RESISTANCE                  ║
@@ -64,116 +64,116 @@ Referenziere die JSON-Blöcke aus Schritt 1, 2 und 3 fuer strukturierte Datenpun
 ║  S3: $XX.XX           │  R3: $XX.XX                  ║
 ║                                                      ║
 ╠══════════════════════════════════════════════════════╣
-║  RISIKO-CHECK                                        ║
+║  RISK CHECK                                          ║
 ╠══════════════════════════════════════════════════════╣
-║  Sektor-Konzentration: XX% [Sektor]  [✅/⚠️]       ║
-║  Offene Positionen gleiche Richtung: X  [✅/⚠️]    ║
-║  Naechstes Event: [Event] am [Datum]  [✅/⚠️]      ║
-║  Risk-Budget verbraucht: XX%  [✅/⚠️]               ║
+║  Sector concentration: XX% [Sector]  [✅/⚠️]       ║
+║  Open positions same direction: X  [✅/⚠️]         ║
+║  Next event: [Event] on [Date]  [✅/⚠️]            ║
+║  Risk budget used: XX%  [✅/⚠️]                     ║
 ║                                                      ║
 ╠══════════════════════════════════════════════════════╣
-║  ZEITHORIZONTE                                       ║
+║  TIME HORIZONS                                       ║
 ╠══════════════════════════════════════════════════════╣
-║  Kurzfristig:  [LONG/SHORT/HOLD]                     ║
-║  Mittelfristig:[LONG/SHORT/HOLD]                     ║
-║  Langfristig:  [LONG/SHORT/HOLD]                     ║
+║  Short-term:  [LONG/SHORT/HOLD]                      ║
+║  Medium-term: [LONG/SHORT/HOLD]                      ║
+║  Long-term:   [LONG/SHORT/HOLD]                      ║
 ║                                                      ║
 ╚══════════════════════════════════════════════════════╝
 ```
 
 ---
 
-## AUSFUEHRLICHE ANALYSE ({{LANGUAGE}}, 500-800 Woerter)
+## DETAILED ANALYSIS ({{LANGUAGE}}, 500-800 words)
 
-**PFLICHT! Minimum 500 Woerter!**
+**MANDATORY! Minimum 500 words!**
 
-Schreibe eine vollstaendige Analyse mit folgender Struktur:
+Write a complete analysis with the following structure:
 
-**1. EINLEITUNG (50-100 Woerter)**
-- Aktueller Kontext: Was passiert gerade mit dem Asset?
-- Warum ist jetzt ein wichtiger Zeitpunkt fuer eine Analyse?
+**1. INTRODUCTION (50-100 words)**
+- Current context: What is happening with the asset right now?
+- Why is now an important time for an analysis?
 
-**2. TECHNISCHE SITUATION (100-150 Woerter)**
-- Beschreibe den aktuellen Chart-Zustand
-- Wichtige Levels und was sie bedeuten
-- Trend-Staerke und -Richtung
-- **RSI-Delta und Divergenz-Befund erwaehnen!**
-- **Referenziere deine Chart-Beobachtungen!**
+**2. TECHNICAL SITUATION (100-150 words)**
+- Describe the current chart state
+- Key levels and what they mean
+- Trend strength and direction
+- **Mention RSI delta and divergence findings!**
+- **Reference your chart observations!**
 
-**3. FUNDAMENTALE FAKTOREN (100-150 Woerter)**
-- Was treibt das Asset fundamental?
-- Supply/Demand Situation
-- Relevante Makro-Faktoren
+**3. FUNDAMENTAL FACTORS (100-150 words)**
+- What drives the asset fundamentally?
+- Supply/demand situation
+- Relevant macro factors
 
-**4. NEWS & KATALYSATOREN (100-150 Woerter)**
-- Die wichtigsten aktuellen News
-- Kommende Events die den Preis bewegen koennten
-- Sentiment-Einschaetzung
+**4. NEWS & CATALYSTS (100-150 words)**
+- The most important current news
+- Upcoming events that could move the price
+- Sentiment assessment
 
-**5. RISIKEN (50-100 Woerter)**
-- Was koennte schiefgehen?
-- Was wuerde die These invalidieren?
-- **Korrelations-Risiko zu bestehenden Positionen!**
+**5. RISKS (50-100 words)**
+- What could go wrong?
+- What would invalidate the thesis?
+- **Correlation risk to existing positions!**
 
-**6. FAZIT & HANDLUNGSEMPFEHLUNG (100-150 Woerter)**
-- Klare Empfehlung: Was soll der Trader tun?
-- Entry-Strategie
-- Risk Management (max. Verlust in EUR und % vom Portfolio)
-- Zeithorizont
-- **Gewinne mitnehmen!** Gestaffelte Exits einhalten!
-
----
+**6. CONCLUSION & ACTION RECOMMENDATION (100-150 words)**
+- Clear recommendation: What should the trader do?
+- Entry strategy
+- Risk management (max. loss in EUR and % of portfolio)
+- Time horizon
+- **Take profits!** Follow staged exits!
 
 ---
 
 ---
 
-## VALIDIERUNG VOR VERSAND (PFLICHT!)
+---
 
-Pruefe JEDEN Punkt bevor du sendest. Bei einem ❌ → STOPP und korrigieren!
+## VALIDATION BEFORE DELIVERY (MANDATORY!)
 
-| # | Check | Kriterium |
+Check EVERY point before sending. If any ❌ → STOP and correct!
+
+| # | Check | Criterion |
 |---|-------|-----------|
-| 1 | Portfolio gelesen? | portfolio.md gelesen |
-| 2 | yfinance-Daten? | Preis, ATR, RSI aus yfinance (nicht Web-Suche) |
-| 3 | RSI-Divergenz geprueft? | Delta, Slope und Divergenz-Check ausgefuehrt |
-| 4 | Stop-Loss vorhanden? | Jeder Trade hat einen Stop (mental oder TR) |
-| 5 | KO berechnet? | KO = MAX(ATR-basiert, Chart-basiert), nicht geschaetzt |
-| 6 | SHORT geprueft? | Scorecard ausgefuellt, SHORT-Setup wenn Score >= LONG |
-| 7 | Wechselkurs live? | EUR/USD aus yfinance, nicht hardcodiert |
-| 8 | Positionen in %? | Empfehlungen in % vom Portfolio, nicht feste EUR |
-| 9 | Korrelation OK? | Sektor-Konzentration < 60% nach diesem Trade |
-| 10 | Risk-Budget OK? | Max. 10% Verlust pro Trade, 40% gesamt |
+| 1 | Portfolio read? | portfolio.md read |
+| 2 | yfinance data? | Price, ATR, RSI from yfinance (not web search) |
+| 3 | RSI divergence checked? | Delta, slope and divergence check performed |
+| 4 | Stop-loss present? | Every trade has a stop (mental or TR) |
+| 5 | KO calculated? | KO = MAX(ATR-based, Chart-based), not estimated |
+| 6 | SHORT evaluated? | Scorecard filled out, SHORT setup if score >= LONG |
+| 7 | Exchange rate live? | EUR/USD from yfinance, not hardcoded |
+| 8 | Positions in %? | Recommendations in % of portfolio, not fixed EUR |
+| 9 | Correlation OK? | Sector concentration < 60% after this trade |
+| 10 | Risk budget OK? | Max. 10% loss per trade, 40% total |
 
-Zeige die Checkliste im Output:
-✅ oder ❌ pro Punkt, mit konkretem Wert.
+Show the checklist in the output:
+✅ or ❌ per item, with concrete value.
 
 ---
 
-## TELEGRAM VERSAND (PFLICHT!)
+## TELEGRAM DELIVERY (MANDATORY!)
 
-**Sende die Trading Card als Telegram-Nachricht:**
+**Send the Trading Card as a Telegram message:**
 
 ```bash
 source .env
 python send_telegram.py "$(cat <<'EOF'
-🎯 {{SYMBOL}} ANALYSE
+🎯 {{SYMBOL}} ANALYSIS
 
-Signal: [LONG/SHORT/HOLD] | Konfidenz: XX%
-Preis: $XX.XX | KO: $XX.XX (XX.X%)
-Stop: $XX.XX | Hebel: ~Xx
+Signal: [LONG/SHORT/HOLD] | Confidence: XX%
+Price: $XX.XX | KO: $XX.XX (XX.X%)
+Stop: $XX.XX | Leverage: ~Xx
 
 Exits: $XX.XX (XX%) → $XX.XX (XX%) → $XX.XX (Rest)
-Time-Stop: X Tage
+Time-Stop: X days
 
-⚠️ Risiko: Max. XXX EUR (XX% Portfolio)
-📊 Sektor-Konz.: XX% [Sektor]
-📈 RSI-Divergenz: [Bullisch/Bearisch/Keine]
+⚠️ Risk: Max. XXX EUR (XX% portfolio)
+📊 Sector conc.: XX% [Sector]
+📈 RSI divergence: [Bullish/Bearish/None]
 EOF
 )"
 ```
 
-**Chart als Foto senden (wenn vorhanden):**
+**Send chart as photo (if available):**
 ```bash
 source .env 2>/dev/null
 CHART_FILE="${CHART_OUTPUT_DIR:-charts}/{{SYMBOL}}_chart.png"
@@ -183,37 +183,37 @@ from send_telegram import send_photo
 send_photo('$CHART_FILE', '📊 {{SYMBOL}} Chart')
 "
 else
-  echo "Kein Chart vorhanden — uebersprungen"
+  echo "No chart available — skipped"
 fi
 ```
 
 ---
 
-## PORTFOLIO.MD AKTUALISIEREN (PFLICHT!)
+## UPDATE PORTFOLIO.MD (MANDATORY!)
 
-Nach JEDER Analyse: `memory/portfolio.md` aktualisieren.
-Das ist die Single Source of Truth fuer den Portfolio-Stand.
+After EVERY analysis: update `memory/portfolio.md`.
+This is the Single Source of Truth for the portfolio state.
 
-- Neue Position? → In "Offene Positionen" eintragen
-- Position geschlossen? → In "Geschlossene Trades" verschieben + P&L
-- Sektor-Verteilung neu berechnen
-- Anstehende Events aktualisieren
-- Datum der letzten Aktualisierung updaten
+- New position? → Add to "Open Positions"
+- Position closed? → Move to "Closed Trades" + P&L
+- Recalculate sector distribution
+- Update upcoming events
+- Update last modification date
 
 ---
 
 ## ENFORCEMENT
 
-- ✅ Trading Card mit allen Key-Facts inkl. KO-Methode und Risiko-Check
-- ✅ Positions-Empfehlung in % vom Portfolio (nicht feste EUR-Betraege)
-- ✅ Minimum 500 Woerter in der Analyse
-- ✅ **RSI-Divergenz in Analyse und Telegram erwaehnt**
-- ✅ Chart via Telegram senden (wenn vorhanden)
-- ✅ Telegram-Nachricht mit Trading Card senden (PFLICHT!)
-- ✅ Chart als Telegram-Foto senden (wenn vorhanden)
-- ✅ portfolio.md aktualisieren (PFLICHT!)
+- ✅ Trading Card with all key facts incl. KO method and risk check
+- ✅ Position recommendation in % of portfolio (not fixed EUR amounts)
+- ✅ Minimum 500 words in the analysis
+- ✅ **RSI divergence mentioned in analysis and Telegram**
+- ✅ Send chart via Telegram (if available)
+- ✅ Send Telegram message with Trading Card (MANDATORY!)
+- ✅ Send chart as Telegram photo (if available)
+- ✅ Update portfolio.md (MANDATORY!)
 
 ```
-✅ [SCHRITT 4: ZUSAMMENFASSUNG & VERSAND ABGESCHLOSSEN]
-🏁 [ANALYSE KOMPLETT]
+✅ [STEP 4: SUMMARY & DELIVERY COMPLETED]
+🏁 [ANALYSIS COMPLETE]
 ```

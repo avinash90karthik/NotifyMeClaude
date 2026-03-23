@@ -1,260 +1,249 @@
-# Silver Hawk Trading — Strategie v5
+# Silver Hawk Trading — Strategy v5
 
-> **Status:** Aktiv ab 18.03.2026 — Live-Testing läuft
-> **Basis:** Abdullahs Kern-Idee + Claude-Feedback + Kompromiss
-> **Ziel:** Verluste drastisch reduzieren, Gewinne voll mitnehmen
-> **Kontext:** März-Rest als Live-Test, April-Start mit ~6.000€
+> **Status:** Active
+> **Basis:** v3 core rules + Scout/Confirmation entry system
+> **Goal:** Drastically reduce losses, fully capture gains
 
 ---
 
-## KERN-PRINZIP
+## CORE PRINCIPLE
 
 ```
-v3: Volle Position rein → Stop → voller Verlust
-v5: 60% sofort, 40% bei Bestätigung → Fehl-Trade = 40% weniger Verlust
+v3: Full position in → stop → full loss
+v5: 60% immediately, 40% on confirmation → failed trade = 40% less loss
 ```
 
 ---
 
-## ENTRY IN 2 TRANCHEN
+## ENTRY IN 2 TRANCHES
 
-### Phase 1: SCOUT (60% der geplanten Position)
+### Phase 1: SCOUT (60% of planned position)
 
-- **Wann:** Beim 4-Schritt-Analyse-Signal (≥60% Konfidenz)
-- **Sofort bei Entry:** Limit-Sell für 50% der Scout-Position bei +20% Cert
-- **Stop:** Analyse-Stop (ATR + Chart, wie v3)
+- **When:** On the 4-step analysis signal (≥60% confidence)
+- **Immediately on entry:** Limit sell for 50% of scout position at +20% cert
+- **Stop:** Analysis stop (ATR + chart, same as v3)
 
-### Phase 2: BESTÄTIGUNG (restliche 40%)
+### Phase 2: CONFIRMATION (remaining 40%)
 
-- **Trigger (einer reicht):**
-  - Nächster Handelstag schließt GRÜN (Basiswert, nicht Cert)
-  - Position ist +5% im Plus auf Cert-Ebene
-  - Neues technisches Signal (Breakout, Volume-Spike, SMA-Reclaim)
-- **Wenn keine Bestätigung nach 2 Tagen:**
-  - Scout läuft allein weiter mit originalem Stop
-  - Kein Nachkauf → nächste Analyse abwarten
-- **Bei Bestätigung:**
-  - 40% nachkaufen (ggf. anderer Cert-Preis!)
-  - Limit-Sell für 50% der Gesamt-Position bei +20% Cert
-  - Scout-Stop hochziehen auf Break-Even
+- **Trigger (one is enough):**
+  - Next trading day closes GREEN (underlying, not cert)
+  - Position is +5% up on cert level
+  - New technical signal (breakout, volume spike, SMA reclaim)
+- **If no confirmation after 2 days:**
+  - Scout runs alone with original stop
+  - No follow-up → wait for next analysis
+- **On confirmation:**
+  - Buy 40% follow-up (possibly different cert price!)
+  - Limit sell for 50% of total position at +20% cert
+  - Raise scout stop to break-even
 
-### Kein Nachkauf wenn:
+### No follow-up when:
 
-- Scout ist >10% im Plus (Entry verpasst, zu teuer)
-- Scout ist >10% im Minus (Trade funktioniert nicht wie geplant)
-- ATR(5) > ATR(14) × 1,5 (Vola-Spike seit Entry)
-- Neues VETO aus Risk-Audit (Slots voll, Sektor >60%)
-- Earnings <3 Tage entfernt
+- Scout is >10% up (entry missed, too expensive)
+- Scout is >10% down (trade not working as planned)
+- ATR(5) > ATR(14) × 1.5 (volatility spike since entry)
+- New VETO from risk audit (slots full, sector >60%)
+- Earnings <3 days away
 
-### Ausnahme: Event-Trades
+### Exception: Event Trades
 
-- Post-Earnings Dip-Buys, FOMC-Reaktionen = zeitkritisch
-- → 100% sofort wie v3 (kein Bestätigungs-Entry)
-- → Begründung: Move passiert in 30 Minuten, 60/40 funktioniert nicht
+- Post-earnings dip buys, FOMC reactions = time-critical
+- → 100% immediately like v3 (no confirmation entry)
+- → Reason: Move happens in 30 minutes, 60/40 doesn't work
 
 ---
 
-## EXIT-REGELN (v5)
+## EXIT RULES (v5)
 
-### Gewinn-Exits (gestaffelt ab +30%)
+### Profit Exits (tiered from +30%)
 
-| Cert im Plus | Aktion |
+| Cert Up | Action |
 |---|---|
-| **+10%** | Stop → Break-Even (Scout bei 2 Tranchen) |
-| **+20%** | **50% SOFORT verkaufen** (v3 Kern-Regel!) |
-| **+30%** | Trail-Stop auf +15% |
-| **+40%** | Trail-Stop auf +25% |
-| **+50%** | Trail-Stop auf +35% |
-| **+60%+** | Trail immer 15% unter aktuellem Hoch |
+| **+10%** | Stop → break-even (scout in 2-tranche setup) |
+| **+20%** | **50% SELL IMMEDIATELY** (v3 core rule!) |
+| **+30%** | Trail stop to +15% |
+| **+40%** | Trail stop to +25% |
+| **+50%** | Trail stop to +35% |
+| **+60%+** | Trail always 15% below current high |
 
-### Trail-Abstand nach Asset-Typ
+### Trail Distance by Asset Type
 
-| Asset-Typ | Min. Trail-Abstand |
+| Asset Type | Min Trail Distance |
 |---|---|
-| Large Cap Aktien | 1,5x ATR |
+| Large Cap Stocks | 1.5x ATR |
 | Mid/Small Cap | 2x ATR |
-| Rohstoffe | 2,5x ATR |
-| Index | 1,5x ATR |
+| Commodities | 2.5x ATR |
+| Index | 1.5x ATR |
 
-> Trail NIEMALS enger als 1,5x ATR — sonst triggert Intraday-Noise.
+> Trail NEVER tighter than 1.5x ATR — otherwise intraday noise triggers it.
 
-### Verlust-Stop (NICHT gestaffelt!)
+### Loss Stop (NOT tiered!)
 
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║  EIN STOP FÜR ALLES — KEINE VERHANDLUNG!                    ║
+║  ONE STOP FOR EVERYTHING — NO NEGOTIATING!                   ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  Stop kommt aus der 4-Schritt-Analyse:                       ║
-║  → ATR-basiert + Chart-Support kombiniert                    ║
-║  → Mentaler Stop ÜBER dem KO-Level                           ║
-║  → Bei Stop-Trigger: ALLES verkaufen, keine Teile            ║
+║  Stop comes from the 4-step analysis:                        ║
+║  → ATR-based + chart support combined                        ║
+║  → Mental stop ABOVE the KO level                            ║
+║  → On stop trigger: SELL EVERYTHING, no partial              ║
 ║                                                               ║
-║  Warum KEIN gestaffelter Stop:                               ║
-║  1. Turbo-Noise triggert frühe Stufen zu oft                 ║
-║  2. Jede Stufe ist ein Punkt zum "Verhandeln"                ║
-║  3. MU war -24% vor +20% — gestaffelt hätte verloren         ║
+║  Why NO tiered stop:                                         ║
+║  1. Turbo noise triggers early tiers too often               ║
+║  2. Each tier is a point to "negotiate"                      ║
+║  3. Positions can dip -24% before rallying +20%              ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
 ---
 
-## POSITIONSGRÖSSEN (v5)
+## POSITION SIZES (v5)
 
-### Konfidenz → Gesamtgröße → Tranchen
+### Confidence → Total Size → Tranches
 
-| Konfidenz | Gesamt | Scout (60%) | Bestätigung (40%) |
+| Confidence | Total | Scout (60%) | Confirmation (40%) |
 |---|---|---|---|
-| 60-65% | Klein 15% | 9% | 6% |
+| 60-65% | Small 15% | 9% | 6% |
 | 65-70% | Standard 20% | 12% | 8% |
 | 70%+ | Standard 25% | 15% | 10% |
 
-### Beispiel bei 6.000€ Portfolio (April)
+### Example at 5,000 Portfolio
 
-| Konfidenz | Gesamt | Scout | Bestätigung | Max. Verlust* |
+| Confidence | Total | Scout | Confirmation | Max Loss* |
 |---|---|---|---|---|
-| 60-65% | 900€ | 540€ | 360€ | ~108€ (Scout only) / ~180€ (voll) |
-| 65-70% | 1.200€ | 720€ | 480€ | ~144€ / ~240€ |
-| 70%+ | 1.500€ | 900€ | 600€ | ~180€ / ~300€ |
+| 60-65% | 750 | 450 | 300 | ~90 (scout only) / ~150 (full) |
+| 65-70% | 1,000 | 600 | 400 | ~120 / ~200 |
+| 70%+ | 1,250 | 750 | 500 | ~150 / ~250 |
 
-*Max. Verlust bei -20% Stop auf Cert.
-
----
-
-## WORST-CASE-SZENARIEN
-
-### A: Scout scheitert sofort (kein Nachkauf)
-
-```
-Geplant: 1.200€ | Investiert: 720€ (60% Scout)
-Stop: -20% auf Cert | Verlust: -144€ (statt -240€ bei v3)
-Ersparnis: 96€ = 40% weniger Verlust
-```
-
-### B: Scout + Bestätigung, dann Stop
-
-```
-Geplant: 1.200€ | Investiert: 1.200€
-Scout auf BE nach Bestätigung
-Stop: Scout 0€ + Bestätigung -20% × 480€ = -96€
-Gesamt: -96€ (statt -240€ bei v3)
-```
-
-### C: Voller Trade läuft (Best Case)
-
-```
-Geplant: 1.200€ | Investiert: 1.200€
-+20%: 50% verkauft = +120€ gesichert
-+40%: Trail auf +25% = mind. +150€
-Gesamt: +270€+ (identisch zu v3)
-```
+*Max loss at -20% stop on cert.
 
 ---
 
-## V5 vs V3 — VERGLEICH
+## WORST-CASE SCENARIOS
 
-| Metrik | v3 | v5 |
+### A: Scout fails immediately (no follow-up)
+
+```
+Planned: 1,000 | Invested: 600 (60% scout)
+Stop: -20% on cert | Loss: -120 (instead of -200 with v3)
+Savings: 80 = 40% less loss
+```
+
+### B: Scout + confirmation, then stop
+
+```
+Planned: 1,000 | Invested: 1,000
+Scout on BE after confirmation
+Stop: Scout 0 + Confirmation -20% × 400 = -80
+Total: -80 (instead of -200 with v3)
+```
+
+### C: Full trade runs (best case)
+
+```
+Planned: 1,000 | Invested: 1,000
++20%: 50% sold = +100 secured
++40%: Trail at +25% = at least +125
+Total: +225+ (identical to v3)
+```
+
+---
+
+## V5 vs V3 — COMPARISON
+
+| Metric | v3 | v5 |
 |---|---|---|
-| Entry | 100% auf einmal | 60% sofort, 40% bei Bestätigung |
-| Max. Verlust bei Fehl-Trade | 100% der Position | 60% der Position |
-| Verlust wenn bestätigt + scheitert | 100% × Stop | Scout BE + 40% × Stop |
-| Gewinne mitnehmen | 50% bei +20% | 50% bei +20% (identisch) |
-| Trailing Stops | Nur BE | Gestaffelt (+15/+25/+35%) |
-| Stop-Verhandlung | 1 Entscheidung | 1 Entscheidung (identisch) |
-| Psycho-Effekt bei Verlust | Großer Verlust = Tilt | 40% kleinerer Verlust |
-| Gewinn bei vollem Trade | Identisch | ~5% weniger (höherer Avg) |
+| Entry | 100% at once | 60% immediately, 40% on confirmation |
+| Max loss on failed trade | 100% of position | 60% of position |
+| Loss when confirmed + fails | 100% × stop | Scout BE + 40% × stop |
+| Take profits | 50% at +20% | 50% at +20% (identical) |
+| Trailing stops | BE only | Tiered (+15/+25/+35%) |
+| Stop negotiation | 1 decision | 1 decision (identical) |
+| Psychological effect on loss | Large loss = tilt | 40% smaller loss |
+| Profit on full trade | Identical | ~5% less (higher avg entry) |
 
 ---
 
-## REGELN DIE VON V3 BLEIBEN
+## RULES CARRIED OVER FROM V3
 
-- ≥60% Konfidenz-Gate — KEINE Ausnahme
-- Max. 3 offene Positionen gleichzeitig
-- Max. 10% Verlust pro Trade
-- Max. 40% gleichzeitig riskiert
-- Max. 60% Sektor-Konzentration
-- KO-Abstand: ≥2x ATR (Rohstoffe ≥3x)
-- ATR >7%: NUR ohne Hebel (Aktie direkt OK)
-- 50% bei +20% SOFORT raus
-- Hedge-System: 3. Slot als Index-SHORT bei 2 LONGs + Makro-Risiko
-- After-Hours/Wochenend-Gap-Risiko beachten
-- FOMC/Earnings: min. 50% vorher sichern
-- Time-Stops: 3 Tage ohne +5% → halbieren, 5 Tage → raus
+- ≥60% confidence gate — NO exceptions
+- Max 3 open positions simultaneously
+- Max 10% loss per trade
+- Max 40% simultaneously at risk
+- Max 60% sector concentration
+- KO distance: ≥2x ATR (commodities ≥3x)
+- ATR >7%: ONLY no leverage (stock directly OK)
+- 50% at +20% IMMEDIATELY out
+- Hedge system: 3rd slot as index SHORT with 2 LONGs + macro risk
+- After-hours/weekend gap risk
+- FOMC/Earnings: secure at least 50% beforehand
+- Time stops: 3 days without +5% → halve, 5 days → exit
 
 ---
 
-## RISK SCORE KLARSTELLUNG (v5.1, 19.03.2026)
+## RISK SCORE CLARIFICATION
 
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║  yfinance Risk Score (1-10) ist KEIN VETO-Grund!            ║
+║  yfinance Risk Score (1-10) is NOT a VETO reason!            ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  WARUM: Risk Score misst nur historische Volatilität +       ║
-║  Bilanz-Kennzahlen. Er erfasst NICHT:                        ║
-║  - Qualitative De-Risking (Meta $15B Backstop)               ║
-║  - Strategic Investments (NVIDIA $2B)                         ║
-║  - Revenue-Wachstum (479% YoY)                               ║
-║  - Analyst Upgrades                                          ║
+║  WHY: Risk Score only measures historical volatility +       ║
+║  balance sheet metrics. It does NOT capture:                  ║
+║  - Qualitative de-risking (backstop deals)                   ║
+║  - Strategic investments                                     ║
+║  - Revenue growth                                            ║
+║  - Analyst upgrades                                          ║
 ║                                                               ║
-║  PLTR und NBIS haben beide Risk 10/10 — aber PLTR ist       ║
-║  eine $370B Firma mit $7B Cash. Der Score ist zu stumpf.     ║
+║  WHAT COUNTS INSTEAD (real VETO rules):                      ║
+║  V1: ATR >7% → no turbo (stock directly OK)                 ║
+║  V2: CHOPPY + Score <50 → VETO (THAT is the real filter)    ║
+║  V3: ≥3 open positions → no new trade                       ║
+║  V4: Sector >60% → correlation risk                         ║
+║  V5: Drawdown >20% → 24h pause                              ║
 ║                                                               ║
-║  WAS STATTDESSEN ZÄHLT (echte VETO-Regeln):                 ║
-║  V1: ATR >7% → kein Turbo (Aktie direkt OK)                ║
-║  V2: CHOPPY + Score <50 → VETO (DAS ist der echte Filter)  ║
-║  V3: ≥3 offene Positionen → kein neuer Trade                ║
-║  V4: Sektor >60% → Korrelationsrisiko                       ║
-║  V5: Drawdown >20% → 24h Pause                              ║
-║                                                               ║
-║  Risk Score wird DOKUMENTIERT aber nicht als VETO genutzt.   ║
+║  Risk Score is DOCUMENTED but not used as VETO.              ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
 ---
 
-## POST-FOMC LEARNING (v5.1, 19.03.2026)
+## POST-FOMC LEARNING
 
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║  NACH HAWKISCHEM FOMC: 3-5 TAGE WARTEN!                     ║
+║  AFTER HAWKISH FOMC: WAIT 3-5 DAYS!                         ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  Gelernt am 19.03.2026 (ENR.DE: -44€ in 1,5h)              ║
+║  LONG after hawkish FOMC:                                    ║
+║  → Macro works AGAINST you                                   ║
+║  → Wait 3-5 days, discount technical signals (-5%)           ║
+║  → "Relative strength for 1 day" = NOT a sustainable signal  ║
 ║                                                               ║
-║  LONG nach hawkisch FOMC:                                    ║
-║  → Makro arbeitet GEGEN dich                                 ║
-║  → 3-5 Tage warten, technische Signale abwerten (-5%)       ║
-║  → "Relative Stärke an 1 Tag" = KEIN nachhaltiges Signal    ║
+║  SHORT after hawkish FOMC:                                   ║
+║  → Macro works WITH you                                      ║
+║  → BUT: RSI oversold bounce risk                             ║
+║  → WAIT for bounce, then short                               ║
 ║                                                               ║
-║  SHORT nach hawkisch FOMC:                                   ║
-║  → Makro arbeitet MIT dir                                    ║
-║  → ABER: RSI-Oversold-Bounce-Risiko beachten                ║
-║  → Auf Bounce WARTEN, dann shorten                           ║
-║                                                               ║
-║  Konfidenz-Adjustment:                                       ║
-║  Tag 1-2 nach FOMC: -5% (LONG) / -3% (SHORT)              ║
-║  Tag 3-4: -3% / -1%                                         ║
-║  Ab Tag 5: 0% / 0%                                          ║
+║  Confidence adjustment:                                      ║
+║  Day 1-2 after FOMC: -5% (LONG) / -3% (SHORT)              ║
+║  Day 3-4: -3% / -1%                                         ║
+║  From day 5: 0% / 0%                                        ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
 ---
 
-## LIVE-TEST TRACKING (ab 18.03.2026)
+## LIVE-TEST TRACKING
 
-| # | Datum | Symbol | Scout | Bestätigt? | Nachkauf | Ergebnis | v3-Vergleich | Notes |
+| # | Date | Symbol | Scout | Confirmed? | Follow-up | Result | v3 Comparison | Notes |
 |---|---|---|---|---|---|---|---|---|
-| 1 | 19.03 | ENR.DE | 183€ (76 Stk, 2,41€) | NEIN (Stop vorher) | NEIN | **-44,56€** | v3 wäre -89€ | Stop 1,83€ nach 1,5h. Post-FOMC Makro überrollte SMA50-Reclaim. **v5 hat Verlust HALBIERT!** |
+| 1 | | | | | | | | |
 | 2 | | | | | | | | |
 | 3 | | | | | | | | |
 
-**v5.1 Änderungen (19.03.2026):**
-- Risk Score (yfinance) KEIN VETO mehr — zu stumpf, erfasst keine qualitativen Faktoren
-- Post-FOMC Learning eingebaut: 3-5 Tage warten, Konfidenz-Adjustment nach Tagen
-- Nachkauf-Regel klargestellt: AKTUELLER Stand zählt, nicht historischer Tiefpunkt
-
-> Ziel: 10 Trades bis Ende März/Anfang April. Dann v5 evaluieren.
+> Goal: Track 10 trades to evaluate v5 performance vs v3.

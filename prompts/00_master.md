@@ -1,58 +1,58 @@
-# MULTI-AGENT TRADING ANALYSE - ORCHESTRATOR
+# MULTI-AGENT TRADING ANALYSIS - ORCHESTRATOR
 
 **Asset:** {{SYMBOL}}
-**Sprache / Language:** {{LANGUAGE}} *(Standard: Deutsch)*
+**Language:** {{LANGUAGE}} *(Default: English)*
 
 ---
 
-## ABLAUF
+## PROCEDURE
 
-Du führst eine vollständige Multi-Agent Trading-Analyse für **{{SYMBOL}}** durch.
+You will conduct a complete Multi-Agent Trading Analysis for **{{SYMBOL}}**.
 
-Lies und führe die folgenden 4 Prompts **nacheinander** aus. Jeder Schritt baut auf den vorherigen auf.
+Read and execute the following 4 prompts **sequentially**. Each step builds on the previous ones.
 
-### Schritt 1: Datensammlung
+### Step 1: Data Collection
 ```
-Lies: prompts/01_data_collection.md
+Read: prompts/01_data_collection.md
 ```
-- Führe ALLE Aktionen aus (yfinance, Chart, News, Makro)
-- **Output:** Strukturierter Datenblock mit Preis, Technicals, Chart-Analyse, News, Fundamentals
+- Execute ALL actions (yfinance, chart, news, macro)
+- **Output:** Structured data block with price, technicals, chart analysis, news, fundamentals
 
-### Schritt 2: Investment Debate
+### Step 2: Investment Debate
 ```
-Lies: prompts/02_investment_debate.md
+Read: prompts/02_investment_debate.md
 ```
-- **Input:** Datenblock + Chart aus Schritt 1
-- Führe 2 vollständige Debate-Runden durch (Bull vs Bear)
-- **Output:** Vollständiges Debate-Transkript
+- **Input:** Data block + chart from Step 1
+- Conduct 2 full debate rounds (Bull vs Bear)
+- **Output:** Complete debate transcript
 
-### Schritt 3: Judge, Risk & Positionierung
+### Step 3: Judge, Risk & Positioning
 ```
-Lies: prompts/03_judge_risk.md
+Read: prompts/03_judge_risk.md
 ```
-- **Input:** Datenblock aus Schritt 1 + Debate aus Schritt 2 + Chart
-- Judge bewertet unabhängig, gibt Signal + Konfidenz
-- 3 Risk-Analysten definieren KO-Levels (ATR-basiert!)
-- Positions-Matrix: 4 Szenarien (Mini/Klein/Standard/Ohne Hebel)
-- Stop-Loss Strategie mit mentalem Stop über KO
-- **Output:** Signal, Konfidenz, 3 KO-Strategien, Positions-Empfehlungen
+- **Input:** Data block from Step 1 + debate from Step 2 + chart
+- Judge evaluates independently, provides signal + confidence
+- 3 Risk Analysts define KO levels (ATR-based!)
+- Position matrix: 4 scenarios (Mini/Small/Standard/No Leverage)
+- Stop-loss strategy with mental stop above KO
+- **Output:** Signal, confidence, 3 KO strategies, position recommendations
 
-### Schritt 4: Zusammenfassung & Versand
+### Step 4: Summary & Delivery
 ```
-Lies: prompts/04_summary_send.md
+Read: prompts/04_summary_send.md
 ```
-- **Input:** ALLE Outputs der vorherigen Schritte
-- Trading Card, ausführliche Analyse, JSON Output
-- Chart + Analyse via Telegram senden
-- **Output:** Telegram-Nachricht mit vollständiger Analyse
+- **Input:** ALL outputs from previous steps
+- Trading card, detailed analysis, JSON output
+- Send chart + analysis via Telegram
+- **Output:** Telegram message with complete analysis
 
 ---
 
-## QUALITAETS-ANFORDERUNGEN
+## QUALITY REQUIREMENTS
 
-- **KEIN Schritt darf übersprungen werden**
-- **yfinance IMMER zuerst** - keine Web-Suche für Preisdaten
-- **Chart wird von JEDEM Agenten analysiert**
-- **Jedes Argument: 4-6 Sätze mit konkreten Zahlen**
-- **Sprache:** {{LANGUAGE}} (Standard: Deutsch). Alle Analysen, Tabellen und Texte in dieser Sprache. JSON-Keys bleiben Englisch.
-- **Wenn du merkst dass du abkürzt -> STOPP -> Mach es richtig!**
+- **NO step may be skipped**
+- **yfinance ALWAYS first** - no web search for price data
+- **Chart is analyzed by EVERY agent**
+- **Every argument: 4-6 sentences with concrete numbers**
+- **Language:** {{LANGUAGE}} (Default: English). All analyses, tables, and text in this language. JSON keys remain in English.
+- **If you notice you are cutting corners -> STOP -> Do it properly!**
