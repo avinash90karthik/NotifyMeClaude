@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 import numpy as np
 import yfinance as yf
 
-from indicators import calc_adx, calc_bollinger, detect_regime, detect_rsi_divergence
+from indicators import calc_adx, calc_bollinger, detect_regime
 
 try:
     from wavelet_utils import wavelet_denoise

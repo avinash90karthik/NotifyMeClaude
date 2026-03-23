@@ -312,6 +312,7 @@ Curated watchlist managed via `admin_stocks.py`, updated automatically via GitHu
 | Morning Screener | `morning_screener.yml` | 08:00 CET (weekdays) | LONG/SHORT scoring, top picks |
 | Reddit Gems | `reddit_gems.yml` | 07:00 CET (weekdays) | Reddit trending stocks via ApeWisdom |
 | Weekly Reflection | `reflect.yml` | Friday 20:00 CET | Trade statistics, duration, patterns |
+| Prediction Fill | `prediction_fill.yml` | 22:15 CET (weekdays, after TR cert close) | Fill real outcomes, analyze prediction quality |
 
 Secrets needed: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 
