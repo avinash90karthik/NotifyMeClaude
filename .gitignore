@@ -27,3 +27,5 @@ memory/tracker_state.json
 memory/entry_timing_cache.json
 memory/preopen_patterns.json
 memory/watchlist.json
+memory/predictions.db
+memory/predictions_export.csv

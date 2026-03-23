@@ -2,396 +2,133 @@
 
 **Asset:** {{SYMBOL}}
 
----
-
-**Input:** Data from Step 1 + Debate from Step 2 (incl. Final Confidence from Round 3) + Chart
-Reference the JSON blocks from Steps 1 and 2 for structured data points.
-
-Consult `memory/reflections.md` for historical performance data (win rate, patterns, risk/reward).
-
-**ATTENTION:** Check the date in reflections.md. If older than 7 days → run `python reflect.py`!
+**Input:** Data (Step 1) + Debate (Step 2) + Chart. Consult `memory/reflections.md`.
 
 ---
 
-## INVESTMENT JUDGE
+## Judge Verdict
 
-**The Judge MUST use the chart as an independent source!**
+Analyze INDEPENDENTLY from Bull/Bear. Use the chart as your own source.
 
-### JUDGE CHART ANALYSIS
+| Factor | Assessment | Weight |
+|--------|------------|--------|
+| Bull strength (/10) | [top 2 arguments] | |
+| Bear strength (/10) | [top 2 arguments] | |
+| Chart signal | [what YOU see] | |
+| RSI divergence | [bullish/bearish/none + strength] | |
+| NSI (from Step 1) | [value + classification] | |
+| Regime | [from Step 1] | |
+| Short interest | [squeeze potential?] | |
+| Pre-open pattern | [confirms/contradicts?] | |
 
-**Analyze the chart INDEPENDENTLY from Bull/Bear:**
+### Confidence Adjustments
 
-| Aspect | Your Observation | Weighting |
-|--------|-----------------|-----------|
-| Trend Direction | [What do you see?] | High/Medium/Low |
-| SMA Configuration | [Golden/Death Cross?] | High/Medium/Low |
-| RSI Signal | [Overbought/Oversold/Neutral?] | High/Medium/Low |
-| **RSI Delta/Divergence** | [Is RSI turning? Divergence detected?] | **High** |
-| Volume Confirmation | [Does volume confirm the trend?] | High/Medium/Low |
-| Money Flow (CMF) | [Accumulation/Distribution?] | High/Medium/Low |
-| Chart Pattern | [Recognizable patterns?] | High/Medium/Low |
+| Condition | Adjustment |
+|-----------|------------|
+| TRENDING + signal WITH trend | +5% |
+| TRENDING + signal AGAINST trend | -10% |
+| RANGE + signal at S/R level | +3% |
+| CHOPPY | -5% to -10% |
+| Pre-open pattern hit >=60% same direction | +3% |
+| Pre-open pattern hit <50% | -5% |
+| Reflection: win rate for bracket <30% | -5% |
 
-**RSI Divergence Verdict:**
-> If bullish divergence at RSI <35: Strong argument for an impending trend reversal.
-> If RSI oversold BUT delta negative and no divergence: Waterfall risk, NOT a buy signal!
-> Divergence data from Step 1 must be EXPLICITLY referenced here!
+### Decision
 
-**Chart Verdict:** The chart favors [BULL/BEAR/NEUTRAL] because [1-2 sentences]
+| Horizon | Signal | Confidence |
+|---------|--------|------------|
+| Short-term (1-5d) | LONG/SHORT/HOLD | XX% |
+| Medium-term (2-8w) | LONG/SHORT/HOLD | XX% |
+| Long-term (3m+) | LONG/SHORT/HOLD | XX% |
 
-### VERDICT
-
-Analyze the Bull vs Bear arguments from Step 2:
-
-**Argument Assessment:**
-
-| Side | Strength | Best Arguments |
-|------|----------|----------------|
-| 🐂 Bull | X/10 | [Top 2 arguments] |
-| 🐂 Bull Final Confidence | XX% | [From Round 3] |
-| 🐻 Bear | X/10 | [Top 2 arguments] |
-| 🐻 Bear Final Confidence | XX% | [From Round 3] |
-| 📊 Chart | X/10 | [What does the chart say?] |
-| 📈 RSI Divergence | [Bullish/Bearish/None] | [Signal strength] |
-| 📰 News Sentiment (NSI) | [X.XX] | [Strongly bullish / Slightly bullish / Neutral / Bearish] |
-| 🔄 Regime | [TRENDING/RANGE/CHOPPY/TRANSITIONAL] | [Signal aligned with regime?] |
-| 🩳 Short Interest | X% Float / X Days | [Squeeze potential or bearish signal?] |
-| 🎯 Pre-Open Pattern | [Verdict + Hit%] | [Confirms/contradicts signal? Gap fill timing?] |
-
-**Decisive Factors:**
-1. [Most important factor]
-2. [Second most important factor]
-3. [Third most important factor]
-
-### PRE-OPEN PATTERN ADJUSTMENT
-
-```
-╔═══════════════════════════════════════════════════════════════╗
-║  PRE-OPEN PATTERN → ENTRY TIMING & CONFIDENCE                ║
-╠═══════════════════════════════════════════════════════════════╣
-║                                                               ║
-║  Pattern Hit Rate ≥60% AND same direction as signal:          ║
-║  → Confidence +3% (pattern confirms signal)                  ║
-║                                                               ║
-║  Pattern Hit Rate <50% BUT signal says LONG/SHORT:            ║
-║  → Confidence -5% (pattern warns: historically poor!)         ║
-║                                                               ║
-║  Gap Fill Rate ≥80%:                                          ║
-║  → Entry recommendation: AFTER US open (gap will be filled)  ║
-║  → Document entry timing in Trading Card!                     ║
-║                                                               ║
-║  BB Squeeze <10%:                                             ║
-║  → Breakout imminent, direction uncertain                    ║
-║  → Reduce position one tier OR wait for trigger               ║
-║                                                               ║
-║  Pre-Open Verdict: [LONG/SHORT/WAIT/NO TRADE]                ║
-║  Pattern Hit Rate: XX% [Direction]                            ║
-║  Gap Fill: XX%                                                ║
-║  → Adjustment: [+X% / -X% / 0%]                              ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
-```
-
-### REGIME ADJUSTMENT
-
-```
-╔═══════════════════════════════════════════════════════════════╗
-║  CONFIDENCE ADJUSTMENT based on Regime                       ║
-╠═══════════════════════════════════════════════════════════════╣
-║                                                               ║
-║  TRENDING + Signal WITH Trend:     Confidence +5%            ║
-║  TRENDING + Signal AGAINST Trend:  Confidence -10%           ║
-║  RANGE + Signal at S/R Level:      Confidence +3%            ║
-║  RANGE + Signal in mid-range:      Confidence -5%            ║
-║  CHOPPY:                           Confidence -5% to -10%    ║
-║  TRANSITIONAL:                     No adjustment             ║
-║                                                               ║
-║  Regime: [TRENDING/RANGE/CHOPPY/TRANSITIONAL]                ║
-║  Signal Direction vs Trend: [WITH/AGAINST/NEUTRAL]            ║
-║  → Adjustment: [+X% / -X% / 0%]                             ║
-║  → Confidence before adjustment: XX%                         ║
-║  → Confidence after adjustment: XX%                          ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
-```
-
-### REFLECTION-BASED ADJUSTMENT
-
-Read `memory/reflections.md` and adjust:
-
-| Reflection Finding | Adjustment |
-|---|---|
-| Win rate confidence bracket < 30% | Confidence -5% for this bracket |
-| Win rate LONG < 40% AND signal=LONG | Warning: "LONG historically weak" |
-| Win rate SHORT < 40% AND signal=SHORT | Warning: "SHORT historically weak" |
-| Pattern DISCIPLINE_VIOLATION > 2x | Additional enforcement check |
-| Avg duration winners < 3 days | Tighten time-stop to 3/5 days |
-
-**Applied Adjustments:** [List all applied adjustments here or "None"]
-
-### DECISION
-
-```
-╔═══════════════════════════════════════════════════════╗
-║  SIGNAL & CONFIDENCE BY TIME HORIZON                  ║
-╠═══════════════════════════════════════════════════════╣
-║                                                       ║
-║  Short-term (1-5 days):   [LONG/SHORT/HOLD]  [XX]%  ║
-║  Medium-term (2-8 weeks): [LONG/SHORT/HOLD]  [XX]%  ║
-║  Long-term (3+ months):   [LONG/SHORT/HOLD]  [XX]%  ║
-║                                                       ║
-║  → TRADE SIGNAL (short-term): [LONG/SHORT/HOLD]      ║
-║  → TRADE CONFIDENCE: [XX]%                           ║
-║                                                       ║
-╚═══════════════════════════════════════════════════════╝
-```
-
-The **TRADE SIGNAL** is always the short-term verdict — this is what determines entry/exit for turbo trades. Medium and long-term provide context only.
-
-**Reasoning:** [2-3 sentences why this decision - incl. chart confirmation and RSI divergence!]
-
-### Confidence Score Reference:
-| Value | Meaning |
-|-------|---------|
-| 0.85-1.00 | Extremely strong - all signals aligned |
-| 0.70-0.84 | Strong - clear direction |
-| 0.55-0.69 | Moderate - some opposing factors |
-| 0.40-0.54 | Weak - rather HOLD |
-| < 0.40 | Unclear - HOLD or IGNORE |
+**TRADE SIGNAL = short-term verdict (this drives turbo entry/exit)**
+**Reasoning:** [2-3 sentences including chart + divergence]
 
 ---
 
-## KO LEVEL ANALYSIS
+## KO Level Calculation
 
-Based on the signal: **[LONG/SHORT]**
+**Always: KO = whichever is FURTHER from price (ATR-based or chart-based)**
 
-```
-╔═══════════════════════════════════════════════════════════════╗
-║  KO CALCULATION: ATR + CHART SUPPORT COMBINED                 ║
-╠═══════════════════════════════════════════════════════════════╣
-║                                                               ║
-║  STEP A: Determine ATR multiplier by asset class             ║
-║  STEP B: Identify chart support/resistance                   ║
-║  STEP C: KO = whichever is FURTHER from price                ║
-║                                                               ║
-║  ❌ NEVER place KO between price and support!                ║
-║  ❌ NEVER use only ATR OR only chart - ALWAYS both!          ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
-```
+### A: ATR-based KO
 
-### STEP A: ATR Multiplier by Asset Class
+| Asset Class | Multiplier | Examples |
+|-------------|-----------|---------|
+| Large Cap | 2.0x ATR | NVDA, AAPL, MSFT |
+| Mid/Small Cap | 2.5x ATR | ARM, IREN, VST |
+| Commodities | 3.0x ATR | GC=F, SI=F |
+| Crypto-related | 3.0x ATR | MSTR, COIN |
 
-ATR (14) from Step 1: **$XX.XX (X.X%)**
+ATR(14) from Step 1: $XX.XX (X.X%)
+ATR-KO (LONG): Price - (ATR x multiplier) = **$XX.XX**
+ATR-KO (SHORT): Price + (ATR x multiplier) = **$XX.XX**
 
-| Asset Class | Examples | ATR Multiplier | Why |
-|-------------|----------|----------------|-----|
-| Large Cap Stocks | NVDA, AAPL, MSFT | 2.0x ATR | Stable order books, low gap risk |
-| Mid/Small Cap Stocks | ARM, IREN, VST | 2.5x ATR | Thinner liquidity, stronger earnings moves |
-| Commodities (Gold, Silver) | GC=F, SI=F | 3.0x ATR | Macro shocks (Fed, tariffs, geopolitics), overnight gap risk |
-| Crypto-related | MSTR, COIN | 3.0x ATR | Extreme volatility, 24/7 underlying |
-| Leveraged Indices | QQQ, SPY Turbos | 2.0x ATR | Broadly diversified, less single-stock risk |
+If ATR5/ATR14 > 1.5: increase multiplier by +0.5
+If earnings < 5 days: increase multiplier by +0.5
 
-**Determine the asset class of {{SYMBOL}}:** [Class]
-**ATR Multiplier:** [X.Xx]
-**ATR-based KO Level (LONG):** Price - (ATR x Multiplier) = $XX.XX - ($XX.XX x X.X) = **$XX.XX**
-**ATR-based KO Level (SHORT):** Price + (ATR x Multiplier) = $XX.XX + ($XX.XX x X.X) = **$XX.XX**
+### B: Chart-based KO
 
-### STEP B: Chart Support as Minimum Distance
+Identify strongest support (LONG) or resistance (SHORT) from Step 1.
+Chart-KO: Below strongest support + 0.5-1% buffer = **$XX.XX**
 
-Identify the relevant chart levels from Step 1:
+### C: Final KO
 
-| Level | Price | Strength (1-5) | Reasoning |
-|-------|-------|-----------------|-----------|
-| Nearest Support (S1) | $XX.XX | X/5 | [Why is this a support?] |
-| Strong Support (S2) | $XX.XX | X/5 | [Why?] |
-| Critical Support (S3) | $XX.XX | X/5 | [Why?] |
-
-**Chart-based KO Level:** Below the strongest relevant support + buffer (0.5-1%)
-→ Support at $XX.XX → KO at **$XX.XX** (Support - X%)
-
-### STEP C: FINAL KO LEVEL
-
-```
-╔═══════════════════════════════════════════════════════════════╗
-║                                                               ║
-║  RULE: KO = whichever level is FURTHER from price            ║
-║                                                               ║
-║  ATR-based:    $XX.XX (XX.X% from price)                     ║
-║  Chart-based:  $XX.XX (XX.X% from price)                     ║
-║                                                               ║
-║  → FINAL KO:  $XX.XX (XX.X% from price)                     ║
-║  → Leverage:  ~Xx                                            ║
-║  → Method:    [ATR / Chart / Both equal]                     ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
-```
-
-**Reasoning:** [2-3 sentences why this KO level. Which chart level provides protection? Why is the ATR distance (in)sufficient?]
-
-### EARNINGS / EVENT WARNING
-
-```
-⚠️ EARNINGS/EVENT CHECK:
-- Next earnings date: [Date or "none within 2 weeks"]
-- Other events (Fed, CPI, etc.): [Date]
-- IF event < 5 trading days away:
-  → Increase ATR multiplier by +0.5 (earnings gaps!)
-  → OR partially close position before event
-```
+| Method | Level | Distance from price |
+|--------|-------|-------------------|
+| ATR-based | $XX.XX | XX.X% |
+| Chart-based | $XX.XX | XX.X% |
+| **FINAL KO** | **$XX.XX** | **XX.X%** |
 
 ---
 
-## RISK-PER-TRADE CHECK
+## Trade Plan
 
-```
-╔═══════════════════════════════════════════════════════════════╗
-║  PORTFOLIO PROTECTION                                        ║
-╠═══════════════════════════════════════════════════════════════╣
-║                                                               ║
-║  Portfolio value (from portfolio.md): XXX EUR                ║
-║  Max. loss per trade (10%):           XXX EUR                ║
-║  Max. simultaneously at risk (40%):   XXX EUR                ║
-║  Currently at risk (open positions):  XXX EUR                ║
-║  Remaining risk budget:               XXX EUR                ║
-║                                                               ║
-║  ⚠️ If risk budget exhausted → NO new trade!                ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
-```
+**Entry:** $XX.XX | **KO:** $XX.XX | **Stop (mental, above KO):** $XX.XX
+
+**Exits (v5):**
+| Cert level | Action | Portion |
+|------------|--------|---------|
+| +20% | SELL immediately | 50% |
+| +30% | Trail stop to +15% | hold |
+| +40% | Trail stop to +25% | hold |
+| +50% | Trail stop to +35% | rest |
+
+**Time stops:** 3 days <5% profit halve | 5 days sideways exit | Earnings <2 days secure 50%
+
+**Expected duration:** [1-3d momentum / 2-4d pullback / 1-2d event] If >5d: warn about turbo suitability.
 
 ---
 
-## TRADE PLAN
+## Risk Audit (VETO CHECK)
 
-**Based on the analysis - concrete action recommendation:**
-
-### Entry
-| Action | Price | Reasoning |
-|--------|-------|-----------|
-| **Buy** | $XX.XX | [Why enter here?] |
-| **KO Level** | $XX.XX | [ATR + Chart combined] |
-
-### Exits (staggered)
-| Action | Price | Portion | Reasoning |
-|--------|-------|---------|-----------|
-| **Sell** | $XX.XX | XX% | [Which resistance level?] |
-| **Sell** | $XX.XX | XX% | [Next target?] |
-| **Sell** | $XX.XX | Rest | [Stretch target?] |
-
-### Stops
-| Action | Price | Portion | Reasoning |
-|--------|-------|---------|-----------|
-| **Stop** | $XX.XX | XX% | [Mental stop ABOVE KO!] |
-| **Stop** | $XX.XX | Rest | [Absolute limit?] |
-
-### Time Stops
-| Condition | Action |
-|-----------|--------|
-| After 3 trading days <5% in profit | Halve position |
-| After 5 trading days sideways | Close position |
-| Earnings < 2 days away | Secure at least 50% |
-
-### Trade Duration Expectation (MANDATORY!)
-
-```
-╔═══════════════════════════════════════════════════════════════╗
-║  EXPECTED TRADE DURATION                                      ║
-╠═══════════════════════════════════════════════════════════════╣
-║                                                               ║
-║  Historically: Winners run 2-3 days (median)                 ║
-║  → If a trade is not +5% in profit after 3 days,            ║
-║    the thesis is probably WRONG.                              ║
-║                                                               ║
-║  TRADE DURATION ESTIMATE:                                     ║
-║  Fill in here:                                                ║
-║  • Setup type: [from table below]                            ║
-║  • Expected duration: [X days]                               ║
-║  • Reasoning: [Catalyst timing, event distance, etc.]        ║
-║  • If > 5 days expected: WARNING — not suited for turbos     ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
-```
-
-**Setup Type → Expected Duration:**
-
-| Setup Type | Expected Duration | Example |
-|------------|-------------------|---------|
-| **Momentum Breakout** | 1-3 days | Breakout above resistance with volume |
-| **Pullback Entry** | 2-4 days | Pullback to SMA50 in uptrend |
-| **Mean Reversion** | 1-2 days | RSI <30 bounce, short-term snap-back |
-| **Event/Earnings** | 1-2 days | Catalyst-driven (CPI, FOMC, earnings) |
-| **Hedge (Index SHORT)** | 3-7 days | Protection during macro risk |
-| **Trend Following** | 5-10 days | Longer trend, preferably WITHOUT leverage |
-
-> **If setup type is "Trend Following" → WARNING: Turbo leverage unsuitable for >5 days. Consider buying the stock directly or without leverage!**
-
-### Watch Zones
-| Zone | Price Range | What to do? |
-|------|-------------|-------------|
-| [Zone 1] | $XX - $XX | [Watch / Add / Sell?] |
-| [Zone 2] | $XX - $XX | [Watch / Add / Sell?] |
-
----
-
-## RISK AUDIT (VETO CHECK)
-
-```
-╔═══════════════════════════════════════════════════════════════╗
-║  INDEPENDENT RISK AUDIT — CAN BLOCK THE TRADE!               ║
-╠═══════════════════════════════════════════════════════════════╣
-║  Any single VETO rule can prevent the trade.                  ║
-║  Check EVERY rule explicitly with ✅ or ❌!                   ║
-╚═══════════════════════════════════════════════════════════════╝
-```
-
-| # | Rule | Check | Status |
+| # | Rule | Value | Status |
 |---|------|-------|--------|
-| V1 | ATR > 7%? | ATR = X.X% | ✅/❌ VETO |
-| V2 | Regime CHOPPY + Score < 50? | Regime = [X], Score = [X] | ✅/❌ VETO |
-| V3 | >= 3 open positions? | Currently: X/3 | ✅/❌ VETO |
-| V4 | Sector > 60% after new trade? | [Sector]: X% | ✅/❌ VETO |
-| V5 | Monthly drawdown > 20%? | March P&L: X% | ✅/❌ VETO |
-| W1 | Earnings < 5 trading days? | [Date or "No"] | ✅/⚠️ |
-| W2 | Correlation with open position? | [Yes/No — which one?] | ✅/⚠️ |
-| W3 | KO distance < 2x ATR? (Commodities < 3x) | KO distance = X.Xx ATR | ✅/⚠️ |
-| W4 | Signal against SMA200 direction? | SMA200 trend = [UP/DOWN] | ✅/⚠️ |
+| V1 | ATR >7%? | ATR=X.X% | PASS/VETO |
+| V2 | CHOPPY + Score <50? | Regime=X, Score=X | PASS/VETO |
+| V3 | >=3 positions open? | X/3 | PASS/VETO |
+| V4 | Sector >60%? | Sector: X% | PASS/VETO |
+| V5 | Monthly drawdown >20%? | P&L: X% | PASS/VETO |
+| W1 | Earnings <5 days? | Date | PASS/WARN |
+| W2 | Correlation with open? | [which] | PASS/WARN |
+| W3 | KO <2x ATR? | Distance=X.Xx | PASS/WARN |
+| W4 | Against SMA200 trend? | SMA200=[up/down] | PASS/WARN |
 
-**Risk Audit Result:**
-
-```
-╔═══════════════════════════════════════╗
-║  ✅ TRADE APPROVED                    ║  (if all VETOs passed)
-║  ⛔ TRADE BLOCKED — [Reason]         ║  (if at least 1 VETO)
-╚═══════════════════════════════════════╝
-```
+**Result:** APPROVED / BLOCKED -- [reason]
 
 ---
 
-## ENFORCEMENT
+## Risk-Per-Trade
 
-- ✅ Judge analyzes chart INDEPENDENTLY from Bull/Bear
-- ✅ **RSI divergence explicitly considered in Judge verdict**
-- ✅ Signal box with LONG/SHORT/HOLD + Confidence%
-- ✅ KO level calculated with BOTH methods (ATR + Chart)
-- ✅ ATR multiplier differentiated by asset class
-- ✅ KO is ALWAYS below the strongest support (LONG) / above resistance (SHORT)
-- ✅ Earnings/event warning checked
-- ✅ Risk-per-trade check against portfolio limit
-- ✅ Staggered sell plan with concrete prices and percentages
-- ✅ Time stops defined
-- ✅ Stop levels based on support zones
-- ✅ **Risk Audit: All 5 VETO rules + 4 WARNINGs explicitly checked (MANDATORY!)**
-- ✅ **Regime adjustment applied (confidence before/after documented)**
-- ✅ **Pre-Open Pattern adjustment applied (hit rate + gap fill + BB squeeze)**
-- ✅ **Reflection-based adjustment checked**
+| Metric | Value |
+|--------|-------|
+| Portfolio value | XXX EUR |
+| Max loss per trade (10%) | XXX EUR |
+| Currently at risk | XXX EUR |
+| Remaining risk budget | XXX EUR |
 
 ---
 
-## OUTPUT JSON
-
-**IMPORTANT: The JSON block is IN ADDITION to the prose. It replaces NOTHING.**
-
-Generate this structured output at the end of Step 3:
+## Output
 
 ```json
 {
@@ -404,27 +141,20 @@ Generate this structured output at the end of Step 3:
     "medium_term_2_8w": 0,
     "long_term_3m_plus": 0
   },
-  "regime": "TRENDING|RANGE|CHOPPY|TRANSITIONAL",
-  "regime_adjustment_pct": 0,
+  "regime": "",
   "ko_level_usd": 0.00,
   "ko_method": "ATR|CHART",
   "entry_usd": 0.00,
-  "exits": [
-    {"price_usd": 0.00, "pct": 50},
-    {"price_usd": 0.00, "pct": 30},
-    {"price_usd": 0.00, "pct": 20}
-  ],
-  "stops": [
-    {"price_usd": 0.00, "pct": 100}
-  ],
-  "risk_per_trade_pct": 0.0,
+  "stop_usd": 0.00,
+  "target_usd": 0.00,
+  "exits": [{"price": 0, "pct": 50}],
+  "risk_per_trade_eur": 0,
   "vetoes": [],
-  "warnings": []
+  "warnings": [],
+  "approved": true
 }
 ```
 
-Fill ALL fields with the actual values from the analysis!
-
 ```
-✅ [STEP 3: JUDGE & RISK COMPLETED]
+[STEP 3 COMPLETE]
 ```

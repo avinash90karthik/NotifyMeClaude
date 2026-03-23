@@ -143,7 +143,7 @@ These rules are checked BEFORE every analysis is sent:
 ### Current State
 
 Portfolio (open/closed positions, cash) lives in `memory/portfolio.md` — that is the single source of truth.
-Analyses are sent via Telegram. No database access needed.
+Analyses are sent via Telegram. Predictions tracked in `memory/predictions.db`.
 
 ---
 
@@ -189,14 +189,35 @@ Analyses are sent via Telegram. No database access needed.
 
 Language defaults to English. Change `{{LANGUAGE}}` in `prompts/00_master.md` if needed.
 
-4-step pipeline in `prompts/`:
+### Data Collection Script
 
-| Step | File | Agent Role |
-|------|------|-----------|
-| 1 | `01_data_collection.md` | yfinance data, chart, news, macro, ATR/volatility, short interest, **correlation check**, **event calendar** |
-| 2 | `02_investment_debate.md` | Bull vs Bear debate (3 rounds), **SHORT trade scorecard** |
-| 3 | `03_judge_risk.md` | Judge decision + confidence %, **ATR + chart combined KO calculation**, risk-per-trade check, time stops |
-| 4 | `04_summary_send.md` | Trading card, chart → **Telegram delivery**, `memory/portfolio.md` update |
+**`collect_data.py`** - Automated data collection, replaces inline Python from prompts.
+- `python collect_data.py NVDA` - Full collection with human-readable + JSON output
+- `python collect_data.py NVDA --json-only` - JSON only (for piping)
+- Collects: price, RSI (delta/divergence/slope), MACD, ATR (event check), ADX, regime, SMA50/200, short interest, S/R, earnings, market status
+- Uses ETF proxy for futures (SI=F→SLV, GC=F→GLD)
+- Imports shared indicators from `indicators.py`
+
+### Prediction Database
+
+**`prediction_db.py`** - SQLite DB tracking every analysis prediction vs real outcomes.
+- `python prediction_db.py record SYMBOL --direction LONG --confidence 68 --entry 135.50 --stop 128.00 --target 155.00 --ko 120.00` - Record prediction
+- `python prediction_db.py fill` - Fill real market outcomes for open predictions (run daily)
+- `python prediction_db.py analyze [--telegram]` - Analyze prediction quality (confidence vs outcomes)
+- `python prediction_db.py list` - Show all predictions
+- `python prediction_db.py export` - Export as CSV
+- `python prediction_db.py trade ID --actual-entry X --actual-exit X --actual-pnl X` - Mark as traded
+- DB file: `memory/predictions.db` (gitignored)
+- Answers: Does higher confidence = better results? Stop trigger rate? +20% cert hit rate?
+
+### 4-Step Pipeline
+
+| Step | File | Purpose |
+|------|------|---------|
+| 1 | `01_data_collection.md` | Run `collect_data.py`, chart, news, macro, correlation check |
+| 2 | `02_investment_debate.md` | Bull vs Bear debate (2 rounds + synthesis), SHORT scorecard |
+| 3 | `03_judge_risk.md` | Signal + confidence, KO calculation, risk audit, trade plan |
+| 4 | `04_summary_send.md` | Trading card, Telegram delivery, prediction DB record, portfolio update |
 
 ### Key Analysis Features
 - Each analysis produces concrete entry/exit/stop/KO recommendations based on technicals
@@ -205,8 +226,9 @@ Language defaults to English. Change `{{LANGUAGE}}` in `prompts/00_master.md` if
 - **SHORT trades evaluated equally** via LONG vs SHORT scorecard in step 2
 - Position sizing in % of portfolio (10% lottery / 25% small / 35% standard / 20% no leverage)
 - Risk-per-trade capped at 10% portfolio
-- Time stops: 5 days without movement → halve, 8 days → exit
+- Time stops: 3 days without +5% → halve, 5 days → exit
 - Correlation check against open positions before each new trade
+- **Every prediction recorded in DB** — enables backtesting against real outcomes
 
 ### Chart Generation
 

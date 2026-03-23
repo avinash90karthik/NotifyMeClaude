@@ -1,58 +1,29 @@
-# MULTI-AGENT TRADING ANALYSIS - ORCHESTRATOR
+# MULTI-AGENT TRADING ANALYSIS
 
-**Asset:** {{SYMBOL}}
-**Language:** {{LANGUAGE}} *(Default: English)*
+**Asset:** {{SYMBOL}} | **Language:** {{LANGUAGE}} (Default: English)
 
----
+## Pipeline
 
-## PROCEDURE
+Execute these 4 steps sequentially. Each builds on the previous.
 
-You will conduct a complete Multi-Agent Trading Analysis for **{{SYMBOL}}**.
+| Step | File | Purpose |
+|------|------|---------|
+| 1 | `prompts/01_data_collection.md` | Run `python collect_data.py {{SYMBOL}}`, chart, news, macro |
+| 2 | `prompts/02_investment_debate.md` | Bull vs Bear debate (2 rounds + synthesis), SHORT scorecard |
+| 3 | `prompts/03_judge_risk.md` | Signal + confidence, KO calculation, risk audit, trade plan |
+| 4 | `prompts/04_summary_send.md` | Trading card, Telegram delivery, portfolio.md update |
 
-Read and execute the following 4 prompts **sequentially**. Each step builds on the previous ones.
+## Rules (always active)
 
-### Step 1: Data Collection
+- Strategy rules: `memory/strategy_v5.md` and `CLAUDE.md`
+- Portfolio state: `memory/portfolio.md` (read BEFORE Step 1)
+- yfinance = truth for all price data (never web search for prices)
+- Every trade needs: entry, stop, KO, exits, time-stop
+- No step may be skipped
+
+## Quality Gate
+
+Before completing Step 4, record the prediction in the database:
+```bash
+python prediction_db.py record {{SYMBOL}} --direction [LONG|SHORT] --confidence [XX] --entry [XX.XX] --stop [XX.XX] --target [XX.XX] --ko [XX.XX]
 ```
-Read: prompts/01_data_collection.md
-```
-- Execute ALL actions (yfinance, chart, news, macro)
-- **Output:** Structured data block with price, technicals, chart analysis, news, fundamentals
-
-### Step 2: Investment Debate
-```
-Read: prompts/02_investment_debate.md
-```
-- **Input:** Data block + chart from Step 1
-- Conduct 2 full debate rounds (Bull vs Bear)
-- **Output:** Complete debate transcript
-
-### Step 3: Judge, Risk & Positioning
-```
-Read: prompts/03_judge_risk.md
-```
-- **Input:** Data block from Step 1 + debate from Step 2 + chart
-- Judge evaluates independently, provides signal + confidence
-- 3 Risk Analysts define KO levels (ATR-based!)
-- Position matrix: 4 scenarios (Mini/Small/Standard/No Leverage)
-- Stop-loss strategy with mental stop above KO
-- **Output:** Signal, confidence, 3 KO strategies, position recommendations
-
-### Step 4: Summary & Delivery
-```
-Read: prompts/04_summary_send.md
-```
-- **Input:** ALL outputs from previous steps
-- Trading card, detailed analysis, JSON output
-- Send chart + analysis via Telegram
-- **Output:** Telegram message with complete analysis
-
----
-
-## QUALITY REQUIREMENTS
-
-- **NO step may be skipped**
-- **yfinance ALWAYS first** - no web search for price data
-- **Chart is analyzed by EVERY agent**
-- **Every argument: 4-6 sentences with concrete numbers**
-- **Language:** {{LANGUAGE}} (Default: English). All analyses, tables, and text in this language. JSON keys remain in English.
-- **If you notice you are cutting corners -> STOP -> Do it properly!**
