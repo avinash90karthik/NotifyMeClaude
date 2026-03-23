@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Silver Hawk Trading - Morning Screener v3.
+"""Silver Hawk Trading - Morning Screener v5.
 Scans NASDAQ-100 + custom watchlist + futures before market open.
 Scores LONG and SHORT independently with RSI delta, divergence, ADX,
 directional volume, Bollinger squeeze, and wrong-side penalties.
@@ -177,7 +177,7 @@ def passes_hard_gates(sym, d, min_volume=None):
 
 
 def score_long(d, regime=None, decompose=False):
-    """Score LONG potential (0-100). v4 Trend/Momentum scoring.
+    """Score LONG potential (0-100). v5 Trend/Momentum scoring.
     Rewards: uptrend + pullback + momentum resuming.
     Penalizes: falling knives, no trend, overextended.
     regime: optional dict with 'trend', 'oscillator', 'overall' weight multipliers.
@@ -343,7 +343,7 @@ def score_long(d, regime=None, decompose=False):
 
 
 def score_short(d, regime=None, decompose=False):
-    """Score SHORT potential (0-100). v4 Trend/Momentum scoring.
+    """Score SHORT potential (0-100). v5 Trend/Momentum scoring.
     Rewards: downtrend + bounce to resistance + momentum fading.
     Penalizes: strong uptrends, oversold bounces.
     If decompose=True, returns (score, signals, components) with per-indicator breakdown.
@@ -775,7 +775,7 @@ def build_message(all_data, positions, sector_map, scan_time, total_scanned, pos
         r = d.get('regime', 'TRANSITIONAL')
         regime_counts[r] = regime_counts.get(r, 0) + 1
 
-    msg = f'<b>MORNING SCREENER v4</b> | {scan_time}\n'
+    msg = f'<b>MORNING SCREENER v5</b> | {scan_time}\n'
     msg += f'Gescannt: {total_scanned} | Bestanden: {len(passed)}\n'
     regime_str = ' '.join(f'{r[0]}:{c}' for r, c in sorted(regime_counts.items()))
     msg += f'Regimes: {regime_str}\n'
@@ -878,7 +878,7 @@ def send_telegram(text):
 def main():
     now = datetime.now(timezone.utc)
     scan_time = now.strftime('%d.%m.%Y %H:%M UTC')
-    print(f'[{now.strftime("%H:%M:%S")} UTC] Morning Screener v3')
+    print(f'[{now.strftime("%H:%M:%S")} UTC] Morning Screener v5')
 
     print('  Fetching NASDAQ-100 list...')
     ndx100, ndx100_sectors, ndx100_names = fetch_nasdaq100_symbols()

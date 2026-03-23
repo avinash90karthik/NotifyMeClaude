@@ -287,7 +287,6 @@ Curated watchlist managed via `admin_stocks.py`, updated automatically via GitHu
 |----------|------|----------|---------|
 | Stock Updater | `update_stocks.yml` | Every 30 min (market hours) | Update prices, RSI, SMAs |
 | Watchlist Check | `watchlist_check.yml` | 07:30 + 21:15 CET (weekdays) | Top 5 LONG/SHORT from personal watchlist |
-| Portfolio Check | `portfolio_check.yml` | 3x daily (08:00, 15:00, 21:00 CET) | RSI alerts, stop/KO proximity |
 | Morning Screener | `morning_screener.yml` | 08:00 CET (weekdays) | LONG/SHORT scoring, top picks |
 | Reddit Gems | `reddit_gems.yml` | 07:00 CET (weekdays) | Reddit trending stocks via ApeWisdom |
 | Weekly Reflection | `reflect.yml` | Friday 20:00 CET | Trade statistics, duration, patterns |

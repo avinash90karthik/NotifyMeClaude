@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Silver Hawk Trading - Watchlist Check.
 Scans personal watchlist (memory/watchlist.md) 2x daily.
-Scores LONG and SHORT independently with v4 Trend/Momentum scoring.
+Scores LONG and SHORT independently with v5 Trend/Momentum scoring.
 Stateless — no state file needed, no git commit.
 Runs at 07:30 + 21:15 CET via GitHub Actions."""
 

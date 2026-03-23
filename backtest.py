@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Silver Hawk Trading - Backtest Engine.
-Validates v4 scoring against historical data using a rolling-window approach.
+Validates v5 scoring against historical data using a rolling-window approach.
 Uses the same calc_technicals() and score_long()/score_short() as production.
 
 Usage:
@@ -45,7 +45,7 @@ def parse_watchlist_symbols():
 
 
 def backtest_symbol(symbol, period='2y', forward_days=None, capture_components=False):
-    """Backtest v4 scoring for a symbol over a historical period.
+    """Backtest v5 scoring for a symbol over a historical period.
 
     Rolling-window approach: for each trading day in the backtest period,
     compute technicals using only data up to that day, score long + short,

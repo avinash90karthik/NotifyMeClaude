@@ -125,7 +125,7 @@ def calc_bollinger(close, sma_period=20, num_std=2, lookback=120):
 
 
 def calc_technicals(batch_data, symbols, single=False):
-    """Calculate all v4 technicals from batch OHLCV data.
+    """Calculate all v5 technicals from batch OHLCV data.
 
     Applies wavelet denoising to Close/High/Low before indicator calculation.
     Price and change_pct always come from raw (undenoised) data."""

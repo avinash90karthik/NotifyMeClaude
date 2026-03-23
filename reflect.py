@@ -121,7 +121,7 @@ def _detect_patterns(notiz, pnl_eur):
         patterns.append('STOP_TRIGGERED')
     if 'break-even' in notiz_lower or 'be-stop' in notiz_lower or 'be ' in notiz_lower:
         patterns.append('BREAK_EVEN')
-    if '50%' in notiz and ('+20%' in notiz or '+29%' in notiz or 'v3' in notiz_lower):
+    if '50%' in notiz and ('+20%' in notiz or '+29%' in notiz or 'v3' in notiz_lower or 'v5' in notiz_lower):
         patterns.append('V3_PARTIAL_EXIT')
     if 'runner' in notiz_lower:
         patterns.append('RUNNER')
@@ -361,7 +361,7 @@ def analyze_trades(trades, analyses):
     avg_loss = round(sum(t['pnl_eur'] for t in losses) / len(losses), 2) if losses else 0
     rr_ratio = round(abs(avg_win / avg_loss), 2) if avg_loss != 0 else float('inf')
 
-    # v3 Compliance
+    # Strategy Compliance (50% at +20% rule)
     v3_exits = len([t for t in trades if 'V3_PARTIAL_EXIT' in t['patterns']])
     discipline_violations = len([t for t in trades if 'DISCIPLINE_VIOLATION' in t['patterns']])
     below_gate = len([t for t in trades if 'BELOW_GATE' in t['patterns']])
@@ -464,7 +464,7 @@ def generate_reflections_md(stats, trades):
     pattern_meanings = {
         'STOP_TRIGGERED': 'Stop-Loss ausgelöst',
         'BREAK_EVEN': 'Break-Even Exit',
-        'V3_PARTIAL_EXIT': '50% bei +20% verkauft (v3 Regel)',
+        'V3_PARTIAL_EXIT': '50% bei +20% verkauft (Kern-Regel)',
         'RUNNER': 'Runner-Position (Rest nach Teilverkauf)',
         'DISCIPLINE_VIOLATION': 'Disziplin-Verstoß (ohne Analyse/Gier)',
         'BELOW_GATE': 'Trade unter 60% Konfidenz-Gate',
@@ -504,7 +504,7 @@ def generate_reflections_md(stats, trades):
         '',
         '---',
         '',
-        '## v3 Compliance',
+        '## Strategy Compliance',
         '',
         f'| Metrik | Wert | Status |',
         f'|--------|------|--------|',
@@ -543,7 +543,7 @@ def generate_reflections_md(stats, trades):
 
     if stats['v3_partial_exits'] > 0:
         v3_pnl = stats['pattern_stats'].get('V3_PARTIAL_EXIT', {}).get('total_pnl', 0)
-        lines.append(f'- 🟢 **{stats["v3_partial_exits"]} v3 Teilverkäufe** brachten {v3_pnl:+.2f} EUR — Kern-Strategie funktioniert!')
+        lines.append(f'- 🟢 **{stats["v3_partial_exits"]} Teilverkäufe bei +20%** brachten {v3_pnl:+.2f} EUR — Kern-Strategie funktioniert!')
 
     lines.append('')
     return '\n'.join(lines)
@@ -612,7 +612,7 @@ def main():
     print(f'  Win-Rate: {stats["win_rate"]}% ({stats["wins"]}/{stats["total_trades"]})')
     print(f'  Total P&L: {stats["total_pnl"]:+.2f} EUR')
     print(f'  Risk/Reward: {stats["rr_ratio"]:.2f}')
-    print(f'  v3 Partial Exits: {stats["v3_partial_exits"]}')
+    print(f'  Partial Exits (+20%): {stats["v3_partial_exits"]}')
     print(f'  Discipline Violations: {stats["discipline_violations"]}')
 
     # Generate reflections.md
