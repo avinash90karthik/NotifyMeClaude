@@ -72,11 +72,11 @@ Reference the JSON blocks from Steps 1, 2, and 3 for structured data points.
 ║  Risk budget used: XX%  [✅/⚠️]                     ║
 ║                                                      ║
 ╠══════════════════════════════════════════════════════╣
-║  TIME HORIZONS                                       ║
+║  TIME HORIZONS (with confidence)                     ║
 ╠══════════════════════════════════════════════════════╣
-║  Short-term:  [LONG/SHORT/HOLD]                      ║
-║  Medium-term: [LONG/SHORT/HOLD]                      ║
-║  Long-term:   [LONG/SHORT/HOLD]                      ║
+║  Short (1-5d):   [LONG/SHORT/HOLD]  XX% ← TRADE    ║
+║  Medium (2-8W):  [LONG/SHORT/HOLD]  XX%             ║
+║  Long (3M+):     [LONG/SHORT/HOLD]  XX%             ║
 ║                                                      ║
 ╚══════════════════════════════════════════════════════╝
 ```

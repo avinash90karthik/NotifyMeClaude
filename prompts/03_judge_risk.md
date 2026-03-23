@@ -131,11 +131,21 @@ Read `memory/reflections.md` and adjust:
 ### DECISION
 
 ```
-╔═══════════════════════════════════════╗
-║  SIGNAL: [LONG / SHORT / HOLD]        ║
-║  CONFIDENCE: [XX]%                    ║
-╚═══════════════════════════════════════╝
+╔═══════════════════════════════════════════════════════╗
+║  SIGNAL & CONFIDENCE BY TIME HORIZON                  ║
+╠═══════════════════════════════════════════════════════╣
+║                                                       ║
+║  Short-term (1-5 days):   [LONG/SHORT/HOLD]  [XX]%  ║
+║  Medium-term (2-8 weeks): [LONG/SHORT/HOLD]  [XX]%  ║
+║  Long-term (3+ months):   [LONG/SHORT/HOLD]  [XX]%  ║
+║                                                       ║
+║  → TRADE SIGNAL (short-term): [LONG/SHORT/HOLD]      ║
+║  → TRADE CONFIDENCE: [XX]%                           ║
+║                                                       ║
+╚═══════════════════════════════════════════════════════╝
 ```
+
+The **TRADE SIGNAL** is always the short-term verdict — this is what determines entry/exit for turbo trades. Medium and long-term provide context only.
 
 **Reasoning:** [2-3 sentences why this decision - incl. chart confirmation and RSI divergence!]
 
@@ -389,6 +399,11 @@ Generate this structured output at the end of Step 3:
   "symbol": "{{SYMBOL}}",
   "signal": "LONG|SHORT|HOLD",
   "confidence_pct": 0,
+  "confidence_by_horizon": {
+    "short_term_1_5d": 0,
+    "medium_term_2_8w": 0,
+    "long_term_3m_plus": 0
+  },
   "regime": "TRENDING|RANGE|CHOPPY|TRANSITIONAL",
   "regime_adjustment_pct": 0,
   "ko_level_usd": 0.00,
