@@ -16,23 +16,36 @@ Each user runs their own independent instance: own Telegram bot, own GitHub Acti
 - **Plattform:** Trade Republic
 - **Gehandelte Assets:** Aktien, Rohstoffe (Gold, Silber) - alles via Turbos
 
-### TRADING-STRATEGIE v3 (ab April 2026)
+### TRADING-STRATEGIE v5 (aktiv ab 18.03.2026)
 
 > Ziel: +15% Baseline / +30% Stretch pro Monat
 > Wenn Baseline erreicht → konservativer werden, nicht aggressiver.
+> Vollständige v5-Regeln: `memory/strategy_v5_draft.md`
 
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║  KERN-STRATEGIE v3 — IMMER EINHALTEN!                        ║
+║  KERN-STRATEGIE v5 — IMMER EINHALTEN!                        ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  1. 50% bei +20% SOFORT RAUS, Rest Trailing Stop auf BE     ║
-║     → Runner-Ziel +40-60% auf die zweite Hälfte             ║
-║  2. Rücksetzer abwarten → gleiche oder bessere Position rein ║
-║  3. MAX 3 offene Positionen gleichzeitig                     ║
-║  4. Stop IMMER beim Kauf setzen — keine Ausnahme             ║
-║  5. Rücksetzer kommt immer — Geduld zahlt sich aus           ║
-║  6. ≥60% Konfidenz-Gate — KEINE Ausnahme, auch kein "Lotto" ║
+║  ENTRY (NEU v5):                                             ║
+║  1. 60% SCOUT sofort beim Signal                             ║
+║  2. 40% BESTÄTIGUNG erst wenn: nächster Tag grün ODER +5%   ║
+║  3. Kein Nachkauf wenn Scout >10% im Plus ODER >10% im Minus║
+║  4. Event-Trades (Earnings/FOMC): 100% sofort wie v3         ║
+║                                                               ║
+║  EXITS (v3 + NEU):                                           ║
+║  5. 50% bei +20% SOFORT RAUS (v3 Kern-Regel!)               ║
+║  6. Rest: Trail-Stop auf BE, dann gestaffelt hochziehen:     ║
+║     +30% → Stop +15% / +40% → Stop +25% / +50% → Stop +35% ║
+║                                                               ║
+║  STOPS (v3 — NICHT gestaffelt!):                             ║
+║  7. EIN Stop für alles — KEINE Verhandlung!                  ║
+║  8. Stop IMMER beim Kauf setzen — keine Ausnahme             ║
+║                                                               ║
+║  REGELN (v3):                                                ║
+║  9. MAX 3 offene Positionen gleichzeitig                     ║
+║  10. ≥60% Konfidenz-Gate — KEINE Ausnahme, auch kein "Lotto"║
+║  11. Rücksetzer kommt immer — Geduld zahlt sich aus          ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
