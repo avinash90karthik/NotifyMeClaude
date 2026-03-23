@@ -23,18 +23,18 @@ Each user runs their own independent instance: own Telegram bot, own GitHub Acti
 ║  1. 60% SCOUT immediately on signal                          ║
 ║  2. 40% CONFIRMATION only when: next day green OR +5%        ║
 ║  3. No follow-up if Scout >10% up OR >10% down               ║
-║  4. Event trades (Earnings/FOMC): 100% immediately (v3 rule) ║
+║  4. Event trades (Earnings/FOMC): 100% immediately           ║
 ║                                                               ║
-║  EXITS (v3 + v5):                                            ║
-║  5. 50% at +20% IMMEDIATELY OUT (v3 core rule!)              ║
+║  EXITS:                                                       ║
+║  5. 50% at +20% IMMEDIATELY OUT — no exceptions!             ║
 ║  6. Rest: trail stop to BE, then raise incrementally:        ║
 ║     +30% → stop +15% / +40% → stop +25% / +50% → stop +35% ║
 ║                                                               ║
-║  STOPS (v3 — NOT tiered!):                                   ║
+║  STOPS (NOT tiered!):                                        ║
 ║  7. ONE stop for everything — NO negotiating!                ║
 ║  8. Stop ALWAYS set at purchase — no exceptions              ║
 ║                                                               ║
-║  RULES (v3):                                                 ║
+║  RULES:                                                      ║
 ║  9. MAX 3 open positions simultaneously                      ║
 ║  10. ≥60% confidence gate — NO exceptions, no "lottery"      ║
 ║  11. Pullbacks always come — patience pays off               ║
