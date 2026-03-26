@@ -25,7 +25,7 @@ export function PriceChart({ symbol }: { symbol: string }) {
 
     const chart = createChart(chartRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: '#0a0e17' },
+        background: { type: ColorType.Solid, color: '#111827' },
         textColor: '#64748b',
         fontFamily: "'JetBrains Mono', monospace",
         fontSize: 10,

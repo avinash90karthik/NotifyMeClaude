@@ -98,7 +98,7 @@ export function TrackRecord() {
             {data.pnl_timeline.map((t, i) => (
               <div key={i} style={{
                 display: 'flex', alignItems: 'center', gap: 12,
-                padding: '6px 0', borderBottom: '1px solid #0a0e17',
+                padding: '6px 0', borderBottom: '1px solid #111827',
               }}>
                 <span style={{ fontSize: 10, color: '#475569', width: 80 }}>{t.date.split(' ')[0]}</span>
                 <span style={{ fontSize: 11, color: '#94a3b8', width: 60, fontWeight: 600 }}>{t.symbol}</span>

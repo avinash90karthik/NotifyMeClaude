@@ -92,7 +92,7 @@ function DashboardContent() {
   return (
     <div style={{
       fontFamily: "'JetBrains Mono', 'SF Mono', 'Fira Code', monospace",
-      background: '#0a0e17',
+      background: '#111827',
       color: '#c8d6e5',
       minHeight: '100vh',
     }}>
