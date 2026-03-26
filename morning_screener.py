@@ -789,6 +789,20 @@ def build_message(all_data, positions, sector_map, scan_time, total_scanned, pos
     # Risk audit
     pf_state = parse_portfolio_summary()
 
+    # Commodity & Futures prices
+    commodity_syms = {'GC=F': 'Gold', 'SI=F': 'Silver'}
+    commodity_parts = []
+    for csym, cname in commodity_syms.items():
+        cd = all_data.get(csym)
+        if cd and cd.get('close'):
+            cprice = cd['close']
+            cchg = cd.get('change_pct', 0)
+            crsi = cd.get('rsi', 0)
+            arrow = '+' if cchg >= 0 else ''
+            commodity_parts.append(f'{cname} ${cprice:,.0f} ({arrow}{cchg:.1f}%) RSI {crsi:.0f}')
+    if commodity_parts:
+        msg += f'\n<b>COMMODITIES</b>\n  ' + ' | '.join(commodity_parts) + '\n'
+
     msg += f'\n<b>TOP LONG</b>\n'
     if top_long and top_long[0][0] >= MIN_SCORE:
         for i, (sc, sym, sec, d, sig) in enumerate(top_long, 1):

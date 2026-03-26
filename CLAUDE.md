@@ -4,7 +4,7 @@
 
 Trading notification system built around a Telegram bot and a multi-agent analysis framework. All notifications, price alerts, and analysis results are delivered via Telegram.
 
-Each user runs their own independent instance: own Telegram bot, own GitHub Actions. No database required — portfolio state lives in `memory/portfolio.md`. See `ONBOARDING.md` for setup instructions.
+Each user runs their own independent instance: own Telegram bot, own GitHub Actions. Portfolio state lives in `memory/predictions.db` (single source of truth). See `ONBOARDING.md` for setup instructions.
 
 ---
 
@@ -131,7 +131,7 @@ Concrete trading decisions (entry, exit, stop, KO distance) come from the 4-step
 
 These rules are checked BEFORE every analysis is sent:
 
-1. **portfolio.md first** — read portfolio from `memory/portfolio.md` BEFORE step 1 begins
+1. **portfolio first** — run `python prediction_db.py portfolio` BEFORE step 1 begins
 2. **yfinance = truth** — no price, ATR, RSI without yfinance source
 3. **Stop-loss mandatory** — every trade needs a stop (mental or broker)
 4. **Never invent KO** — KO comes from ATR + chart, never estimated
@@ -142,8 +142,9 @@ These rules are checked BEFORE every analysis is sent:
 
 ### Current State
 
-Portfolio (open/closed positions, cash) lives in `memory/portfolio.md` — that is the single source of truth.
-Analyses are sent via Telegram. Predictions tracked in `memory/predictions.db`.
+Portfolio state (positions, cash, P&L) lives in `memory/predictions.db` — single source of truth.
+Check with: `python prediction_db.py portfolio`
+ALL analyses are recorded (traded or not) for backtesting.
 
 ---
 
@@ -198,17 +199,21 @@ Language defaults to English. Change `{{LANGUAGE}}` in `prompts/00_master.md` if
 - Uses ETF proxy for futures (SI=F→SLV, GC=F→GLD)
 - Imports shared indicators from `indicators.py`
 
-### Prediction Database
+### Trading Database (v2 — Single Source of Truth)
 
-**`prediction_db.py`** - SQLite DB tracking every analysis prediction vs real outcomes.
-- `python prediction_db.py record SYMBOL --direction LONG --confidence 68 --entry 135.50 --stop 128.00 --target 155.00 --ko 120.00` - Record prediction
-- `python prediction_db.py fill` - Fill real market outcomes for open predictions (run daily)
-- `python prediction_db.py analyze [--telegram]` - Analyze prediction quality (confidence vs outcomes)
-- `python prediction_db.py list` - Show all predictions
+**`prediction_db.py`** - Tracks ALL analyses + portfolio + trades. Replaces portfolio.md.
+- `python prediction_db.py record SYMBOL --direction LONG --confidence 68 --entry 135.50 --stop 128.00 --target 155.00 --ko 120.00 --reason "..."` - Record analysis (always, even if not traded)
+- `python prediction_db.py open ID --shares 75 --cert-price 2.67 [--cert-type turbo]` - Mark as traded
+- `python prediction_db.py confirm ID --shares 49 --cert-price 2.81` - v5 confirmation buy
+- `python prediction_db.py close ID [--shares N] --exit-price 3.31 [--reason target]` - Partial/full exit
+- `python prediction_db.py portfolio` - Show open positions, cash, closed trades
+- `python prediction_db.py cash AMOUNT` - Set cash balance
+- `python prediction_db.py fill` - Fill real market outcomes (run daily, ALL analyses)
+- `python prediction_db.py analyze [--telegram]` - Backtest: traded vs skipped, confidence brackets
+- `python prediction_db.py list [--open|--closed|--analysis]` - Filter by status
 - `python prediction_db.py export` - Export as CSV
-- `python prediction_db.py trade ID --actual-entry X --actual-exit X --actual-pnl X` - Mark as traded
 - DB file: `memory/predictions.db` (gitignored)
-- Answers: Does higher confidence = better results? Stop trigger rate? +20% cert hit rate?
+- Answers: Does confidence predict success? Are we picking the right trades? Traded vs skipped performance?
 
 ### 4-Step Pipeline
 
@@ -228,7 +233,8 @@ Language defaults to English. Change `{{LANGUAGE}}` in `prompts/00_master.md` if
 - Risk-per-trade capped at 10% portfolio
 - Time stops: 3 days without +5% → halve, 5 days → exit
 - Correlation check against open positions before each new trade
-- **Every prediction recorded in DB** — enables backtesting against real outcomes
+- **Every analysis recorded in DB** — ALL analyses (traded + skipped) for backtesting
+- **After analysis:** `record` → user confirms → `open` → `confirm` (v5) → `close`
 
 ### Chart Generation
 
@@ -315,6 +321,58 @@ Curated watchlist managed via `admin_stocks.py`, updated automatically via GitHu
 | Prediction Fill | `prediction_fill.yml` | 22:15 CET (weekdays, after TR cert close) | Fill real outcomes, analyze prediction quality |
 
 Secrets needed: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+
+## Dashboard
+
+**`dashboard/`** — Local web dashboard (Flask API + Vite React). Complements Telegram with interactive charts and analysis views.
+
+### Setup
+```bash
+pip install flask flask-cors          # Backend (one-time)
+cd dashboard/frontend && npm install  # Frontend (one-time)
+bash dashboard/start.sh               # Start dashboard
+# → http://localhost:5173
+```
+
+### Architecture
+```
+predictions.db ─┐
+watchlist.json ──┤   Flask API (:5050)  →  Vite React (:5173)
+yfinance (live) ─┤
+chart PNGs ──────┘
+```
+
+The backend imports existing modules directly (`prediction_db`, `collect_data`, `indicators`). No data duplication — `predictions.db` remains the single source of truth.
+
+### Tabs
+
+| Tab | Purpose |
+|-----|---------|
+| Dashboard | Portfolio overview, open positions, P&L, slots |
+| Scanner | Combo signal scanner — RSI + MACD + BB combinations with strength scores |
+| Chart | 6-month candlestick with SMA50/200, Bollinger, KO zone, stop/entry/target |
+| Track Record | P&L timeline, win rate, discipline tracker (from `close_events` table) |
+| Hedge | Hedge setup analyzer — RSI zone + short signals for open runners |
+
+### Key Files
+- `dashboard/backend/server.py` — Flask API, all endpoints
+- `dashboard/frontend/src/App.tsx` — Tab navigation, first-time user detection
+- `dashboard/frontend/src/components/` — All view components
+
+### First-Time User Detection
+If `predictions.db` has 0 records, the Dashboard and Track Record tabs show a welcome panel explaining how to get started with Claude Code.
+
+### API Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/portfolio` | Portfolio state (positions, cash, slots) |
+| `GET /api/predictions?status=` | All analyses, filterable |
+| `GET /api/ohlcv/<symbol>` | OHLCV + indicators for charting (15min cache) |
+| `GET /api/scan` | Combo signal scan across watchlist |
+| `GET /api/hedge-setup/<symbol>` | Hedge analysis for a symbol |
+| `GET /api/track-record` | Trade history from close_events |
+| `GET /api/collect/<symbol>` | Live technical data (15min cache) |
 
 ## Onboarding
 
