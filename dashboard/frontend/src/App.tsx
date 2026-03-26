@@ -20,7 +20,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'hedge', label: 'Hedge' },
 ]
 
-const SYMBOLS = ['ENR.DE', 'ASTS', 'MU']
+// Symbol tabs are derived from open positions in the DB — no hardcoded symbols
 
 function WelcomePanel() {
   return (
@@ -48,7 +48,7 @@ function WelcomePanel() {
           <span style={{ color: '#f59e0b', fontWeight: 700 }}>1.</span>{' '}
           Run an analysis:{' '}
           <code style={{ background: '#1e293b', padding: '2px 8px', borderRadius: 4, fontSize: 11, color: '#22c55e' }}>
-            /analyse-stock NVDA
+            /analyse-stock SYMBOL
           </code>
         </div>
         <div>
@@ -76,7 +76,7 @@ function WelcomePanel() {
 
 function DashboardContent() {
   const [tab, setTab] = useState<Tab>('dashboard')
-  const [symbol, setSymbol] = useState('ENR.DE')
+  const [symbol, setSymbol] = useState('')
   const [customSymbol, setCustomSymbol] = useState('')
 
   const { data: predictions, isLoading: predictionsLoading } = useQuery<Position[]>({
@@ -84,6 +84,16 @@ function DashboardContent() {
     queryFn: () => api.predictions(),
     staleTime: 60_000,
   })
+
+  // Derive symbol tabs from open positions — no hardcoded symbols
+  const openSymbols = predictions
+    ? [...new Set(predictions.filter(p => p.status === 'open').map(p => p.symbol))]
+    : []
+
+  // Set default symbol to first open position (once loaded)
+  if (!symbol && openSymbols.length > 0) {
+    setSymbol(openSymbols[0])
+  }
 
   const isFirstTimeUser = !predictionsLoading && predictions && predictions.length === 0
 
@@ -156,7 +166,7 @@ function DashboardContent() {
           borderBottom: '1px solid #111827',
           alignItems: 'center',
         }}>
-          {SYMBOLS.map(s => (
+          {openSymbols.map(s => (
             <button
               key={s}
               onClick={() => setSymbol(s)}

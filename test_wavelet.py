@@ -28,9 +28,10 @@ def test_basic_denoise():
         print('SKIP: PyWavelets not installed — fallback mode only')
         return test_fallback_mode()
 
-    # Fetch test data
-    print('\nFetching AAPL 1y data...')
-    ticker = yf.Ticker('AAPL')
+    # Fetch test data (use any liquid large-cap symbol)
+    TEST_SYMBOL = 'SPY'  # ETF — avoids referencing specific stocks
+    print(f'\nFetching {TEST_SYMBOL} 1y data...')
+    ticker = yf.Ticker(TEST_SYMBOL)
     hist = ticker.history(period='1y')
     close = hist['Close']
     print(f'  Data points: {len(close)}')
@@ -95,7 +96,7 @@ def test_indicator_comparison():
     print('INDICATOR COMPARISON: RAW vs DENOISED')
     print('=' * 60)
 
-    hist = yf.Ticker('AAPL').history(period='1y')
+    hist = yf.Ticker('SPY').history(period='1y')
     close_raw = hist['Close']
     close_den = wavelet_denoise(close_raw)
 

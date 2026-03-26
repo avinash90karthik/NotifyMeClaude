@@ -70,7 +70,7 @@ def _parse_trade_line(symbol_raw, pnl_raw, notiz, month):
     if not symbol or symbol.startswith('GESAMT') or symbol.startswith('Zinsen'):
         return None
 
-    # Extract base symbol (e.g. "ENR.DE" from "ENR.DE LONG KO 138,40 (50%)")
+    # Extract base symbol (e.g. "SYM.DE" from "SYM.DE LONG KO 138,40 (50%)")
     base_match = re.match(r'([A-Za-z0-9=.\-^]+)', symbol)
     base_symbol = base_match.group(1) if base_match else symbol
 

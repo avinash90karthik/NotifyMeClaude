@@ -17,12 +17,13 @@ from indicators import calc_technicals
 from risk_audit import risk_audit, parse_portfolio_summary
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-WATCHLIST_FILE = os.path.join(SCRIPT_DIR, 'memory', 'watchlist.json')
+# Watchlist is stored in predictions.db (loaded via prediction_db.get_watchlist_symbols)
 PORTFOLIO_FILE = os.path.join(SCRIPT_DIR, 'memory', 'portfolio.md')
 PATTERNS_FILE = os.path.join(SCRIPT_DIR, 'memory', 'preopen_patterns.json')
 SNAPSHOTS_FILE = os.path.join(SCRIPT_DIR, 'memory', 'preopen_snapshots.json')
 
-FUTURES = {'SI=F', 'GC=F'}
+# Futures are detected dynamically from the watchlist (symbols containing '=F')
+# No hardcoded symbols — users add futures to their watchlist like any other symbol
 MIN_VOLUME = 100_000
 MIN_SCORE = 25
 TOP_N = 5
@@ -66,11 +67,12 @@ def fetch_nasdaq100_symbols():
 
 
 def get_watchlist():
-    """Load watchlist from memory/watchlist.json."""
-    if not os.path.exists(WATCHLIST_FILE):
+    """Load watchlist from predictions.db (single source of truth)."""
+    try:
+        from prediction_db import get_watchlist_symbols
+        return get_watchlist_symbols()
+    except Exception:
         return []
-    with open(WATCHLIST_FILE) as f:
-        return json.load(f)
 
 
 def get_open_positions():
@@ -159,12 +161,17 @@ def enrich_candidates(symbols, data):
             print(f'  Enrich {sym}: {e}')
 
 
+def is_futures(sym):
+    """Detect futures symbols dynamically (symbols containing '=F')."""
+    return '=F' in sym
+
+
 def passes_hard_gates(sym, d, min_volume=None):
     if min_volume is None:
         min_volume = MIN_VOLUME
     if not d or not d.get('price') or d.get('rsi') is None:
         return False
-    if sym in FUTURES:
+    if is_futures(sym):
         return True
     if (d.get('volume') or 0) < min_volume:
         return False
@@ -789,12 +796,11 @@ def build_message(all_data, positions, sector_map, scan_time, total_scanned, pos
     # Risk audit
     pf_state = parse_portfolio_summary()
 
-    # Commodity & Futures prices
-    commodity_syms = {'GC=F': 'Gold', 'SI=F': 'Silver'}
+    # Commodity & Futures prices (dynamically detected from scanned data)
     commodity_parts = []
-    for csym, cname in commodity_syms.items():
-        cd = all_data.get(csym)
-        if cd and cd.get('close'):
+    for csym, cd in sorted(all_data.items()):
+        if is_futures(csym) and cd and cd.get('close'):
+            cname = csym.replace('=F', '')
             cprice = cd['close']
             cchg = cd.get('change_pct', 0)
             crsi = cd.get('rsi', 0)
@@ -904,7 +910,7 @@ def main():
 
     watchlist_syms = {s['symbol'] for s in watchlist}
     position_syms = {p['symbol'] for p in positions}
-    all_symbols = sorted(set(ndx100) | watchlist_syms | position_syms | FUTURES)
+    all_symbols = sorted(set(ndx100) | watchlist_syms | position_syms)
     total_scanned = len(all_symbols)
     print(f'  Total universe: {total_scanned} symbols')
 
@@ -919,8 +925,10 @@ def main():
     name_map = dict(ndx100_names)
     for s in watchlist:
         name_map.setdefault(s['symbol'], s.get('name', s['symbol']))
-    sector_map.setdefault('SI=F', 'Commodities')
-    sector_map.setdefault('GC=F', 'Commodities')
+    # Auto-assign 'Commodities' sector to any futures symbol
+    for sym in all_symbols:
+        if is_futures(sym):
+            sector_map.setdefault(sym, 'Commodities')
 
     print(f'  Phase 1: Batch downloading {total_scanned} symbols...')
     single = len(all_symbols) == 1
@@ -942,7 +950,8 @@ def main():
     short_pre = sorted([(score_short(d, regime=d.get('regime_weights'))[0], sym) for sym, d in passed.items()], reverse=True)
 
     enrich_syms = {sym for _, sym in long_pre[:ENRICH_N]} | {sym for _, sym in short_pre[:ENRICH_N]}
-    enrich_syms |= (FUTURES | position_syms) & set(data.keys())
+    futures_syms = {sym for sym in data if is_futures(sym)}
+    enrich_syms |= (futures_syms | position_syms) & set(data.keys())
 
     print(f'  Phase 2: Enriching {len(enrich_syms)} candidates...')
     enrich_candidates(list(enrich_syms), data)

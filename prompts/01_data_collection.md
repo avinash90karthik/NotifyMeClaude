@@ -6,7 +6,11 @@
 
 ## 1.1 Portfolio Check
 
-Read `memory/portfolio.md`. If any trades happened since last update, update it NOW before continuing.
+```bash
+python prediction_db.py portfolio
+```
+
+Review open positions, cash, and slots before continuing.
 
 ## 1.2 Technical Data (automated)
 
@@ -78,7 +82,7 @@ Via web search:
 
 ## 1.7 Correlation Check
 
-From `memory/portfolio.md`: list open positions with sectors. Check:
+From `prediction_db.py portfolio`: list open positions with sectors. Check:
 - Same sector as {{SYMBOL}}? If >60% concentration after this trade: WARNING
 - Same direction (all LONG)? Diversification risk
 - Correlated with Nasdaq/S&P?

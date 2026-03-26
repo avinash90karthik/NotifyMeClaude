@@ -22,7 +22,7 @@ app = Flask(__name__)
 CORS(app, origins=["http://localhost:5173"])
 
 DB_PATH = os.path.join(PROJECT_ROOT, 'memory', 'predictions.db')
-WATCHLIST_PATH = os.path.join(PROJECT_ROOT, 'memory', 'watchlist.json')
+# Watchlist is stored in predictions.db (via prediction_db.get_watchlist_symbols)
 PATTERNS_PATH = os.path.join(PROJECT_ROOT, 'memory', 'preopen_patterns.json')
 ANALYSES_DIR = os.path.join(PROJECT_ROOT, 'dashboard', 'data', 'analyses')
 
@@ -307,11 +307,9 @@ def ohlcv(symbol):
 
 @app.route('/api/watchlist')
 def watchlist():
-    """Current watchlist data."""
-    if not os.path.exists(WATCHLIST_PATH):
-        return jsonify([])
-    with open(WATCHLIST_PATH) as f:
-        return jsonify(json.load(f))
+    """Current watchlist data from DB."""
+    from prediction_db import get_watchlist_symbols
+    return jsonify(get_watchlist_symbols())
 
 
 @app.route('/api/patterns/<symbol>')
@@ -342,15 +340,16 @@ def scan():
         finally:
             conn.close()
 
-        # Watchlist
-        if os.path.exists(WATCHLIST_PATH):
-            with open(WATCHLIST_PATH) as f:
-                wl = json.load(f)
-                for s in wl[:20]:  # Limit to 20
-                    symbols.add(s.get('symbol', ''))
+        # Watchlist from DB
+        from prediction_db import get_watchlist_symbols
+        for s in get_watchlist_symbols():
+            symbols.add(s['symbol'])
 
-        # Always include core positions
-        symbols.update(['ENR.DE', 'ASTS', 'MU', 'GC=F'])
+        # Extra symbol from frontend (e.g. custom symbol tab)
+        extra = request.args.get('extra', '').strip().upper()
+        if extra:
+            symbols.add(extra)
+
         symbols.discard('')
 
         results = []

@@ -6,7 +6,7 @@
 
 ---
 
-## 1. Record Prediction (BEFORE sending!)
+## 1. Record Analysis (ALWAYS — even HOLD signals!)
 
 ```bash
 python prediction_db.py record {{SYMBOL}} \
@@ -17,7 +17,13 @@ python prediction_db.py record {{SYMBOL}} \
   --target [XX.XX] \
   --ko [XX.XX] \
   --regime [TRENDING|RANGE|CHOPPY|TRANSITIONAL] \
-  --atr-pct [X.X]
+  --atr-pct [X.X] \
+  --reason "Brief thesis summary"
+```
+
+**After user confirms trade:**
+```bash
+python prediction_db.py open ID --shares XX --cert-price XX.XX [--cert-type turbo|warrant|stock]
 ```
 
 ## 2. Trading Card (Telegram format)
@@ -52,7 +58,7 @@ Structure: Introduction, Technical Situation (include RSI divergence), Fundament
 
 | # | Check | Value | Status |
 |---|-------|-------|--------|
-| 1 | portfolio.md read? | | |
+| 1 | portfolio (DB) checked? | | |
 | 2 | yfinance data (not web search)? | | |
 | 3 | RSI divergence checked? | | |
 | 4 | Stop-loss present? | | |
@@ -61,7 +67,7 @@ Structure: Introduction, Technical Situation (include RSI divergence), Fundament
 | 7 | EUR/USD live? | | |
 | 8 | Positions in %? | | |
 | 9 | Sector <60%? | | |
-| 10 | Prediction recorded in DB? | | |
+| 10 | Analysis recorded in DB? (always!) | | |
 
 ## 5. Send via Telegram
 
@@ -77,11 +83,12 @@ CHART="${CHART_OUTPUT_DIR:-charts}/{{SYMBOL}}_chart.png"
 [ -f "$CHART" ] && python -c "from send_telegram import send_photo; send_photo('$CHART', '{{SYMBOL}}')"
 ```
 
-## 6. Update portfolio.md
+## 6. Wait for User Confirmation
 
-- Add new position to "Open Positions" (if trade taken)
-- Update sector distribution
-- Update "Last Updated" date
+- Analysis is recorded as `analysis` status
+- When user confirms trade → run `open` command
+- When user confirms v5 confirmation → run `confirm` command
+- Portfolio state auto-updates in DB — no manual file editing
 
 ```
 [STEP 4 COMPLETE -- ANALYSIS FINISHED]

@@ -26,31 +26,28 @@ STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 
 # ══════════════════════════════════════════════════════════════
 
 SYMBOLS = {
-    # 'AAPL': {'name': 'Apple', 'emoji': '🍎'},
-    # 'NVDA': {'name': 'NVIDIA', 'emoji': '🟢'},
-    # 'TSLA': {'name': 'Tesla', 'emoji': '⚡'},
-    # 'GC=F': {'name': 'Gold', 'emoji': '🥇'},
+    # 'SYMBOL': {'name': 'Company Name', 'emoji': '📊'},
 }
 
 ALERT_RULES = {
     'flash_move_pct': 1.5,      # Alert on >1.5% move in 5 minutes
     'big_daily_move_pct': 5.0,  # Alert on >5% intraday change
     # Add price levels per symbol:
-    # 'AAPL': {
-    #     'above': [250, 260],   # Alert when price goes ABOVE these levels
-    #     'below': [220, 210],   # Alert when price goes BELOW these levels
+    # 'SYMBOL': {
+    #     'above': [150, 160],   # Alert when price goes ABOVE these levels
+    #     'below': [120, 110],   # Alert when price goes BELOW these levels
     # },
 }
 
 # AI Trading Context - add notes for your price zones
 TRADING_ZONES = {
-    # 'AAPL': {
+    # 'SYMBOL': {
     #     'bias': 'LONG',
     #     'context': 'Your analysis notes here.',
     #     'zones': [
-    #         {'type': 'BUY',  'price': 220, 'dir': 'below', 'note': 'Strong support zone.'},
-    #         {'type': 'SELL', 'price': 260, 'dir': 'above', 'note': 'Take profits here.'},
-    #         {'type': 'STOP', 'price': 210, 'dir': 'below', 'note': 'Stop-loss! Exit position.'},
+    #         {'type': 'BUY',  'price': 120, 'dir': 'below', 'note': 'Strong support zone.'},
+    #         {'type': 'SELL', 'price': 160, 'dir': 'above', 'note': 'Take profits here.'},
+    #         {'type': 'STOP', 'price': 110, 'dir': 'below', 'note': 'Stop-loss! Exit position.'},
     #     ],
     # },
 }

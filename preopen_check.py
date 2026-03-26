@@ -5,8 +5,8 @@ On-demand check before US open: should you buy NOW or WAIT?
 Uses pattern DB from preopen_backtest.py + live technicals.
 
 Usage:
-    python preopen_check.py MU NVDA AAPL
-    python preopen_check.py MU --telegram
+    python preopen_check.py SYMBOL1 SYMBOL2
+    python preopen_check.py SYMBOL --telegram
 """
 
 import argparse

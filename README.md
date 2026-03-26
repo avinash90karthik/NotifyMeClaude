@@ -30,7 +30,7 @@ pip3 install yfinance numpy
 
 # Run your first analysis
 claude
-> /analyse-stock AAPL
+> /analyse-stock SYMBOL
 ```
 
 Full setup guide: **[ONBOARDING.md](ONBOARDING.md)** (EN) | **[ONBOARDING_DE.md](ONBOARDING_DE.md)** (DE)
@@ -48,9 +48,9 @@ No database required. Portfolio state lives in `memory/portfolio.md`.
 
 ```
 You (Claude Code)
-├── /analyse-stock NVDA          → 4-step analysis → Telegram (text + chart photo)
+├── /analyse-stock SYMBOL         → 4-step analysis → Telegram (text + chart photo)
 ├── python3 browse_stocks.py     → View watchlist
-└── python3 admin_stocks.py add TSLA ...   → Manage watchlist
+└── python3 admin_stocks.py add SYMBOL ...  → Manage watchlist
 
 GitHub Actions (automatic)
 ├── watchlist_check.yml (2x daily)        → Top LONG/SHORT from watchlist → Telegram
@@ -65,7 +65,7 @@ Local State
 ## Analysis Pipeline
 
 ```
-/analyse-stock NVDA
+/analyse-stock SYMBOL
 ```
 
 | Step | What Happens |

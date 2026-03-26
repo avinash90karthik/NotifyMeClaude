@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Silver Hawk Trading - Watchlist Check.
-Scans personal watchlist (memory/watchlist.md) 2x daily.
+Scans personal watchlist (memory/predictions.db) 2x daily.
 Scores LONG and SHORT independently with v5 Trend/Momentum scoring.
 Stateless — no state file needed, no git commit.
 Runs at 07:30 + 21:15 CET via GitHub Actions."""
@@ -15,10 +15,9 @@ from datetime import datetime, timezone
 from indicators import calc_technicals
 from risk_audit import risk_audit, parse_portfolio_summary
 
-WATCHLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'watchlist.md')
+# Watchlist is stored in predictions.db (loaded via prediction_db.get_watchlist_symbols)
 PORTFOLIO_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'portfolio.md')
 
-FUTURES = {'SI=F', 'GC=F'}
 INDEX_FUTURES = ['ES=F', 'NQ=F', 'YM=F']  # S&P, Nasdaq, Dow — for pre-market sentiment
 MIN_VOLUME = 50_000
 MIN_SCORE = 20
@@ -31,30 +30,12 @@ ENRICH_N = 10
 # ---------------------------------------------------------------------------
 
 def parse_watchlist_md():
-    """Parse memory/watchlist.md → list of {symbol, name, sector}."""
-    if not os.path.exists(WATCHLIST_FILE):
+    """Load watchlist from predictions.db (single source of truth)."""
+    try:
+        from prediction_db import get_watchlist_symbols
+        return get_watchlist_symbols()
+    except Exception:
         return []
-    with open(WATCHLIST_FILE) as f:
-        content = f.read()
-    items = []
-    current_sector = 'Unbekannt'
-    for line in content.splitlines():
-        if line.startswith('## ') and not line.startswith('## Legende'):
-            current_sector = line[3:].strip()
-            continue
-        if not line.startswith('|'):
-            continue
-        cols = [c.strip() for c in line.split('|') if c.strip()]
-        if not cols or cols[0] in ('Symbol', '---', '-----'):
-            continue
-        if '---' in cols[0]:
-            continue
-        symbol = cols[0].strip()
-        if not symbol or not re.match(r'^[A-Za-z0-9=.\-^]+$', symbol):
-            continue
-        name = cols[1].strip() if len(cols) > 1 else symbol
-        items.append({'symbol': symbol, 'name': name, 'sector': current_sector})
-    return items
 
 
 def get_open_positions():
@@ -432,9 +413,9 @@ def main():
 
     # 1. Parse watchlist
     watchlist = parse_watchlist_md()
-    print(f'  Watchlist: {len(watchlist)} Symbole aus watchlist.md')
+    print(f'  Watchlist: {len(watchlist)} Symbole aus DB')
     if not watchlist:
-        print('  FEHLER: Keine Symbole in watchlist.md gefunden!')
+        print('  FEHLER: Keine Symbole in predictions.db gefunden!')
         return
 
     # 2. Parse portfolio
@@ -467,7 +448,9 @@ def main():
     short_pre = sorted([(score_short(d, regime=d.get('regime_weights'))[0], sym) for sym, d in passed.items()], reverse=True)
 
     enrich_syms = {sym for _, sym in long_pre[:ENRICH_N]} | {sym for _, sym in short_pre[:ENRICH_N]}
-    enrich_syms |= FUTURES & set(data.keys())
+    from morning_screener import is_futures
+    futures_syms = {sym for sym in data if is_futures(sym)}
+    enrich_syms |= futures_syms & set(data.keys())
 
     # 6. Enrich top candidates
     print(f'  Enriching {len(enrich_syms)} Kandidaten...')

@@ -4,10 +4,10 @@ Validates v5 scoring against historical data using a rolling-window approach.
 Uses the same calc_technicals() and score_long()/score_short() as production.
 
 Usage:
-    python backtest.py AAPL              # Single symbol
-    python backtest.py AAPL NVDA TSM     # Multiple symbols
-    python backtest.py --watchlist       # All from watchlist.md
-    python backtest.py AAPL --telegram   # With Telegram delivery
+    python backtest.py SYMBOL                   # Single symbol
+    python backtest.py SYMBOL1 SYMBOL2 SYMBOL3  # Multiple symbols
+    python backtest.py --watchlist               # All from watchlist
+    python backtest.py SYMBOL --telegram         # With Telegram delivery
 """
 
 import argparse

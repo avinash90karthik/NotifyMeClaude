@@ -13,7 +13,7 @@ export const api = {
   predictions: (status?: string) =>
     get<Position[]>(`/predictions${status ? `?status=${status}` : ''}`),
   prediction: (id: number) => get<Position & { full_analysis?: unknown }>(`/predictions/${id}`),
-  scan: () => get<ScanResult[]>('/scan'),
+  scan: (extra?: string) => get<ScanResult[]>(`/scan${extra ? `?extra=${extra}` : ''}`),
   ohlcv: (symbol: string, period = '6mo') =>
     get<OHLCVData>(`/ohlcv/${symbol}?period=${period}`),
   hedgeSetup: (symbol: string) => get<HedgeSetup>(`/hedge-setup/${symbol}`),

@@ -1,109 +1,22 @@
 #!/usr/bin/env python3
 """Silver Hawk Trading - Admin CLI for managing the stock watchlist.
-Reads and writes memory/watchlist.json."""
+Thin wrapper around prediction_db.py watchlist commands."""
 
-import json
-import os
 import sys
 
-
-WATCHLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'watchlist.json')
-
-
-def load_watchlist():
-    if not os.path.exists(WATCHLIST_FILE):
-        return []
-    with open(WATCHLIST_FILE) as f:
-        return json.load(f)
-
-
-def save_watchlist(stocks):
-    os.makedirs(os.path.dirname(WATCHLIST_FILE), exist_ok=True)
-    with open(WATCHLIST_FILE, 'w') as f:
-        json.dump(stocks, f, indent=2)
-
-
-def list_stocks():
-    stocks = sorted(load_watchlist(), key=lambda s: (s.get('sector', ''), s['symbol']))
-    if not stocks:
-        print('No stocks in watchlist.')
-        return
-
-    current_sector = None
-    print(f'\n{"Symbol":<10} {"Name":<25} {"Sector":<15}')
-    print('-' * 55)
-
-    for s in stocks:
-        sector = s.get('sector') or 'Unknown'
-        if sector != current_sector:
-            current_sector = sector
-            print(f'\n  --- {sector} ---')
-        print(f"{s['symbol']:<10} {s.get('name', ''):<25} {sector:<15}")
-
-    print(f'\nTotal: {len(stocks)} stocks')
-
-
-def add_stock(symbol, name, sector=None):
-    symbol = symbol.upper()
-    stocks = load_watchlist()
-    existing = next((s for s in stocks if s['symbol'] == symbol), None)
-    if existing:
-        existing.update({'name': name, 'sector': sector})
-        print(f'Updated: {symbol}')
-    else:
-        stocks.append({'symbol': symbol, 'name': name, 'sector': sector})
-        print(f'Added: {symbol} ({name}) [{sector or "no sector"}]')
-    save_watchlist(stocks)
-
-
-def remove_stock(symbol):
-    symbol = symbol.upper()
-    stocks = load_watchlist()
-    before = len(stocks)
-    stocks = [s for s in stocks if s['symbol'] != symbol]
-    if len(stocks) < before:
-        save_watchlist(stocks)
-        print(f'Removed: {symbol}')
-    else:
-        print(f'Not found: {symbol}')
-
-
-SEED_STOCKS = [
-    ('AAPL', 'Apple', 'Technology'),
-    ('ARM', 'ARM Holdings', 'Technology'),
-    ('NVDA', 'NVIDIA', 'Technology'),
-    ('GOOGL', 'Alphabet', 'Technology'),
-    ('QBTS', 'D-Wave Quantum', 'Technology'),
-    ('IREN', 'IREN', 'Technology'),
-    ('APLD', 'Applied Digital', 'Technology'),
-    ('SAP.DE', 'SAP SE', 'Technology'),
-    ('ASML', 'ASML Holding', 'Technology'),
-    ('VST', 'Vistra Energy', 'Energy'),
-    ('CEG', 'Constellation Energy', 'Energy'),
-    ('ENR.DE', 'Siemens Energy', 'Energy'),
-    ('SI=F', 'Silver Futures', 'Commodities'),
-    ('GC=F', 'Gold Futures', 'Commodities'),
-]
-
-
-def seed_watchlist():
-    print('Seeding watchlist...')
-    for symbol, name, sector in SEED_STOCKS:
-        add_stock(symbol, name, sector)
-    print(f'\nDone! Seeded {len(SEED_STOCKS)} stocks.')
-
-
-USAGE = """
-Silver Hawk Trading - Stock Admin
+USAGE = """Silver Hawk Trading - Stock Admin
 
 Usage:
-  python admin_stocks.py list                          Show all stocks
-  python admin_stocks.py add NVDA "NVIDIA" Technology  Add a stock
-  python admin_stocks.py remove NVDA                   Remove a stock
-  python admin_stocks.py seed                          Seed initial watchlist
+  python admin_stocks.py list                       Show all stocks
+  python admin_stocks.py add SYMBOL "Name" Sector   Add a stock
+  python admin_stocks.py remove SYMBOL              Remove a stock
+
+All data is stored in memory/predictions.db (single source of truth).
 """
 
 if __name__ == '__main__':
+    from prediction_db import get_watchlist_symbols, get_db
+
     if len(sys.argv) < 2:
         print(USAGE)
         sys.exit(1)
@@ -111,19 +24,43 @@ if __name__ == '__main__':
     cmd = sys.argv[1].lower()
 
     if cmd == 'list':
-        list_stocks()
+        symbols = get_watchlist_symbols()
+        if not symbols:
+            print('Watchlist is empty.')
+            print('Add symbols: python admin_stocks.py add SYMBOL "Name" Sector')
+            sys.exit(0)
+        cur_sector = None
+        for s in sorted(symbols, key=lambda x: (x['sector'], x['symbol'])):
+            if s['sector'] != cur_sector:
+                cur_sector = s['sector']
+                print(f'\n  --- {cur_sector} ---')
+            print(f"  {s['symbol']:<10} {s['name']}")
+        print(f'\nTotal: {len(symbols)} symbols')
+
     elif cmd == 'add':
-        if len(sys.argv) < 4:
-            print('Usage: python admin_stocks.py add SYMBOL "Name" [Sector]')
+        if len(sys.argv) < 5:
+            print('Usage: python admin_stocks.py add SYMBOL "Name" Sector')
             sys.exit(1)
-        sector = sys.argv[4] if len(sys.argv) > 4 else None
-        add_stock(sys.argv[2], sys.argv[3], sector)
+        sym, name, sector = sys.argv[2].upper(), sys.argv[3], sys.argv[4]
+        conn = get_db()
+        conn.execute(
+            'INSERT INTO watchlist (symbol, name, sector) VALUES (?, ?, ?) '
+            'ON CONFLICT(symbol) DO UPDATE SET name=excluded.name, sector=excluded.sector, active=1',
+            (sym, name, sector))
+        conn.commit()
+        conn.close()
+        print(f'Added: {sym} ({name}, {sector})')
+
     elif cmd == 'remove':
         if len(sys.argv) < 3:
             print('Usage: python admin_stocks.py remove SYMBOL')
             sys.exit(1)
-        remove_stock(sys.argv[2])
-    elif cmd == 'seed':
-        seed_watchlist()
+        sym = sys.argv[2].upper()
+        conn = get_db()
+        r = conn.execute('UPDATE watchlist SET active=0 WHERE symbol=?', (sym,))
+        conn.commit()
+        conn.close()
+        print(f'Removed: {sym}' if r.rowcount else f'Not found: {sym}')
+
     else:
         print(USAGE)

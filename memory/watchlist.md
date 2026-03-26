@@ -13,29 +13,25 @@ Organize your watchlist by sector. Add symbols you want to track.
 
 | Symbol | Name | Price | Trend | Tracker | Note |
 |--------|------|-------|-------|---------|------|
-| AAPL | Apple | — | — | | Example |
-| NVDA | NVIDIA | — | — | | Example |
+| SYMBOL | Your Stock | — | — | | Add your own |
 
 ### Semiconductors
 
 | Symbol | Name | Price | Trend | Tracker | Note |
 |--------|------|-------|-------|---------|------|
-| ASML | ASML | — | — | | Example |
-| TSM | TSMC (ADR) | — | — | | Example |
+| SYMBOL | Your Stock | — | — | | Add your own |
 
 ### Energy
 
 | Symbol | Name | Price | Trend | Tracker | Note |
 |--------|------|-------|-------|---------|------|
-| VST | Vistra | — | — | | Example |
-| CEG | Constellation Energy | — | — | | Example |
+| SYMBOL | Your Stock | — | — | | Add your own |
 
 ### Commodities
 
 | Symbol | Name | Price | Trend | Tracker | Note |
 |--------|------|-------|-------|---------|------|
-| GC=F | Gold Futures | — | — | | Example |
-| SI=F | Silver Futures | — | — | | Example |
+| SYMBOL | Your Commodity | — | — | | Add your own |
 
 ---
 

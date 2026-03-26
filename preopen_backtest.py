@@ -8,10 +8,10 @@ data through yesterday, then measure what happened intraday from hourly bars.
 Produces pattern statistics: "Score 75+ in TRENDING + MACD bullish -> 72% hit rate".
 
 Usage:
-    python preopen_backtest.py                    # Full watchlist
-    python preopen_backtest.py --symbols NVDA MU  # Specific symbols
-    python preopen_backtest.py --telegram         # With Telegram report
-    python preopen_backtest.py --min-samples 30   # Higher sample threshold
+    python preopen_backtest.py                              # Full watchlist
+    python preopen_backtest.py --symbols SYMBOL1 SYMBOL2    # Specific symbols
+    python preopen_backtest.py --telegram                   # With Telegram report
+    python preopen_backtest.py --min-samples 30             # Higher sample threshold
 """
 
 import argparse

@@ -58,7 +58,7 @@ Each user runs their own independent instance: own Telegram bot, own GitHub Acti
 ║  • Size: Lottery 10% — NEVER larger than smallest LONG pos   ║
 ║  • Same exit rules: 50% at +20%, rest trail                  ║
 ║  • CLOSE hedge when macro risk decreases                     ║
-║  • DAX SHORT preferred (lower ATR than Nasdaq, EU hours)     ║
+║  • Choose index by trading hours + ATR (e.g. DAX, Nasdaq)    ║
 ║                                                               ║
 ║  WHEN NOT TO HEDGE:                                          ║
 ║  • Only 1 LONG open → use 3rd slot for next trade            ║
@@ -118,7 +118,7 @@ Concrete trading decisions (entry, exit, stop, KO distance) come from the 4-step
 - **Confidence gate:** Only trades with ≥60% confidence from the analysis — NO exceptions
 - **Take profits** when the analysis shows it — don't let winners turn into losers
 - **LONG and SHORT are equal** — the analysis decides direction, not a bias
-- **Situational hedge** — with 2 LONGs + high macro risk → 3rd slot as index SHORT (DAX preferred)
+- **Situational hedge** — with 2 LONGs + high macro risk → 3rd slot as index SHORT (choose index by trading hours + ATR)
 - **KO calculation: ATR + chart combined** — KO always below strongest support (LONG) or above resistance (SHORT). ATR multiplier by asset class (large cap 2x, small cap 2.5x, commodities 3x)
 - **ATR event check** — ATR(5) vs ATR(14) before every trade. If ATR(5) > ATR(14) × 1.5 → one tier smaller
 - **Time stops** — after 3 days without +5%, halve; after 5 days, exit
@@ -193,8 +193,8 @@ Language defaults to English. Change `{{LANGUAGE}}` in `prompts/00_master.md` if
 ### Data Collection Script
 
 **`collect_data.py`** - Automated data collection, replaces inline Python from prompts.
-- `python collect_data.py NVDA` - Full collection with human-readable + JSON output
-- `python collect_data.py NVDA --json-only` - JSON only (for piping)
+- `python collect_data.py SYMBOL` - Full collection with human-readable + JSON output
+- `python collect_data.py SYMBOL --json-only` - JSON only (for piping)
 - Collects: price, RSI (delta/divergence/slope), MACD, ATR (event check), ADX, regime, SMA50/200, short interest, S/R, earnings, market status
 - Uses ETF proxy for futures (SI=F→SLV, GC=F→GLD)
 - Imports shared indicators from `indicators.py`
@@ -264,7 +264,7 @@ CHART_OUTPUT_DIR=...        # Optional: path to chart output directory
 - Scoring (0-100) for LONG and SHORT independently: RSI (20), SMA200 trend (15), SMA50 pullback/rejection (15), MACD crossover (15), ATR% volatility (20), analyst rating (10), bonus (5)
 - ATR% weighted highest (turbo leverage needs volatility)
 - S&P 500 list fetched from Wikipedia, merged with local watchlist
-- SI=F and GC=F always included (futures bypass hard gates)
+- Futures (symbols with =F suffix) from watchlist bypass volume/market-cap gates
 - Portfolio sector concentration check (60% limit)
 - Marks already-owned stocks, flags upcoming earnings
 - Workflow: `.github/workflows/morning_screener.yml` (08:00 CET, weekdays, 10 min timeout)
@@ -297,8 +297,8 @@ Curated watchlist managed via `admin_stocks.py`, updated automatically via GitHu
 
 **`admin_stocks.py`** - Admin CLI for managing the watchlist.
 - `python admin_stocks.py list` - Show all stocks
-- `python admin_stocks.py add NVDA "NVIDIA" Technology` - Add a stock
-- `python admin_stocks.py remove NVDA` - Deactivate (soft delete)
+- `python admin_stocks.py add SYMBOL "Name" Sector` - Add a stock
+- `python admin_stocks.py remove SYMBOL` - Deactivate (soft delete)
 - `python admin_stocks.py seed` - Seed initial watchlist
 
 **`update_stocks.py`** - Fetches yfinance data and updates watchlist.

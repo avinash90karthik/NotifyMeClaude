@@ -4,8 +4,8 @@ Replaces ~300 lines of inline Python that was embedded in prompts/01_data_collec
 Outputs a structured JSON block that the LLM prompts consume directly.
 
 Usage:
-    python collect_data.py NVDA              # Full collection
-    python collect_data.py NVDA --json-only  # JSON only (for piping)
+    python collect_data.py SYMBOL              # Full collection
+    python collect_data.py SYMBOL --json-only  # JSON only (for piping)
 """
 
 import argparse

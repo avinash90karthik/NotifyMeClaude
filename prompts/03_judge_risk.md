@@ -52,12 +52,12 @@ Analyze INDEPENDENTLY from Bull/Bear. Use the chart as your own source.
 
 ### A: ATR-based KO
 
-| Asset Class | Multiplier | Examples |
-|-------------|-----------|---------|
-| Large Cap | 2.0x ATR | NVDA, AAPL, MSFT |
-| Mid/Small Cap | 2.5x ATR | ARM, IREN, VST |
-| Commodities | 3.0x ATR | GC=F, SI=F |
-| Crypto-related | 3.0x ATR | MSTR, COIN |
+| Asset Class | Multiplier | Criteria |
+|-------------|-----------|----------|
+| Large Cap | 2.0x ATR | Market cap > $50B |
+| Mid/Small Cap | 2.5x ATR | Market cap < $50B |
+| Commodities | 3.0x ATR | Futures (=F suffix) |
+| Crypto-related | 3.0x ATR | BTC/crypto exposure |
 
 ATR(14) from Step 1: $XX.XX (X.X%)
 ATR-KO (LONG): Price - (ATR x multiplier) = **$XX.XX**

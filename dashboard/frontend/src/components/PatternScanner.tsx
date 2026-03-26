@@ -42,8 +42,8 @@ function StrengthBar({ strength }: { strength: number }) {
 
 export function PatternScanner({ symbol }: { symbol: string }) {
   const { data, isLoading, error } = useQuery<ScanResult[]>({
-    queryKey: ['scan'],
-    queryFn: api.scan,
+    queryKey: ['scan', symbol],
+    queryFn: () => api.scan(symbol),
     staleTime: 120_000,
   })
 

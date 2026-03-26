@@ -11,7 +11,7 @@
 - Gewinne: +20% auf 50% = +10% effektiver Ertrag
 - Runner-Realität: Meistens +20% → BE-Stop → 0% auf den Rest
 - Tatsächlicher Durchschnittsgewinn: ~5% effektiv
-- Verluste: -60% (MU war -68%)
+- Verluste: -60% (oder schlimmer bei Turbo-KO)
 - Benötigt 6 Gewinner pro Verlust → 86% Win Rate → unrealistisch
 - Ergebnis: negative P&L trotz 50% Win Rate
 
@@ -43,7 +43,7 @@ Im seltenen Best-Case verlierst du nur ~3% Upside — akzeptabel.
 **Das Problem:** Analyse hat einen Richtungs-Bias.
 - Du hältst LONG → Re-Analysis liest Portfolio → kommt wieder LONG
 - Kollege hat kein Portfolio → bekommt SHORT für dasselbe Symbol am nächsten Tag
-- Beweis: MU am Freitag LONG für dich, am Montag SHORT für Kollegen
+- Beweis: Symbol X am Freitag LONG für dich, am Montag SHORT für Kollegen
 - Die Analyse bestätigt die bestehende Position statt sie objektiv zu prüfen
 
 **Die Lösung: Blind Re-Analysis**
@@ -79,20 +79,20 @@ Im seltenen Best-Case verlierst du nur ~3% Upside — akzeptabel.
 
 ```bash
 # FALSCH (Bias!):
-# "Ich halte MU LONG seit Freitag, -20%. Re-analysiere."
-# → liest portfolio.md → bestätigt LONG → Bias
+# "Ich halte SYMBOL LONG seit Freitag, -20%. Re-analysiere."
+# → liest Portfolio → bestätigt LONG → Bias
 
 # RICHTIG (Blind):
-python collect_data.py MU
-# Dann neue Analyse OHNE portfolio.md, OHNE Positionskontext:
-# "Analysiere MU. Nur technische Daten. LONG oder SHORT? Keine Portfolio-Info."
+python collect_data.py SYMBOL
+# Dann neue Analyse OHNE Portfolio, OHNE Positionskontext:
+# "Analysiere SYMBOL. Nur technische Daten. LONG oder SHORT? Keine Portfolio-Info."
 ```
 
 **Warum das funktioniert:**
 - Kein Confirmation Bias — die Analyse weiß nicht, was du hältst
 - Objektive Richtungsentscheidung basiert nur auf aktuellen Daten
 - Wenn die Richtung kippt, kippt sie für einen Grund
-- Hätte bei MU funktioniert: Blind-Analyse am Montag hätte SHORT gezeigt → Exit bei -20% statt -68%
+- Hätte in der Praxis funktioniert: Blind-Analyse hätte Richtungswechsel erkannt → Exit bei -20% statt Totalverlust
 
 ---
 

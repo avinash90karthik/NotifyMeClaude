@@ -128,7 +128,7 @@ Bearbeite `tracker_check.py` und fuege deine Symbole + Alert-Levels hinzu. Dann 
 Starte Claude Code und gib ein:
 
 ```
-Analysiere AAPL @prompts/00_master.md
+Analysiere SYMBOL @prompts/00_master.md
 ```
 
 Das startet eine 4-Schritt-Analyse:
@@ -160,10 +160,10 @@ Alle Analysen, Tabellen und Texte kommen dann auf Englisch.
 
 ```bash
 # Aktie hinzufuegen
-python3 admin_stocks.py add MSFT "Microsoft" Technology
+python3 admin_stocks.py add SYMBOL "Name" Sector
 
 # Aktie entfernen
-python3 admin_stocks.py remove MSFT
+python3 admin_stocks.py remove SYMBOL
 
 # Alle anzeigen
 python3 admin_stocks.py list
@@ -183,7 +183,7 @@ Nein. Du hast deinen eigenen Bot und deine eigenen Alerts. Alles komplett privat
 Nein! Du brauchst nur Terminal oeffnen und die obigen Befehle ausfuehren.
 
 **Kann ich eigene Aktien zur Watchlist hinzufuegen?**
-Ja! `python3 admin_stocks.py add TSLA "Tesla" "Automotive"` - du bist Admin deiner eigenen Watchlist.
+Ja! `python3 admin_stocks.py add SYMBOL "Name" "Sector"` - du bist Admin deiner eigenen Watchlist.
 
 **Wie aktualisiere ich den Code?**
 ```bash

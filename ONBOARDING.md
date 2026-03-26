@@ -128,7 +128,7 @@ Edit `tracker_check.py` and add your symbols + alert levels. Then `tracker.yml` 
 Start Claude Code and type:
 
 ```
-Analyze AAPL @prompts/00_master.md
+Analyze SYMBOL @prompts/00_master.md
 ```
 
 This launches a 4-step analysis:
@@ -158,10 +158,10 @@ This will make all analysis output appear in English.
 
 ```bash
 # Add a stock
-python3 admin_stocks.py add MSFT "Microsoft" Technology
+python3 admin_stocks.py add SYMBOL "Name" Sector
 
 # Remove a stock
-python3 admin_stocks.py remove MSFT
+python3 admin_stocks.py remove SYMBOL
 
 # Show all
 python3 admin_stocks.py list
@@ -181,7 +181,7 @@ No. You have your own bot and your own alerts. Everything is completely private.
 No! You just need to open Terminal and run the commands above.
 
 **Can I add my own stocks to the watchlist?**
-Yes! `python3 admin_stocks.py add TSLA "Tesla" "Automotive"` - you are the admin of your own watchlist.
+Yes! `python3 admin_stocks.py add SYMBOL "Name" "Sector"` - you are the admin of your own watchlist.
 
 **How do I update the code?**
 ```bash
