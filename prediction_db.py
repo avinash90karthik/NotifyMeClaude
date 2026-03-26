@@ -117,8 +117,18 @@ def get_db():
         name TEXT NOT NULL,
         sector TEXT NOT NULL DEFAULT 'Unknown',
         added_at TEXT NOT NULL DEFAULT (datetime('now')),
-        active INTEGER NOT NULL DEFAULT 1
+        active INTEGER NOT NULL DEFAULT 1,
+        price REAL, change_pct REAL, rsi REAL, sma50 REAL, sma200 REAL,
+        market_cap INTEGER, analyst_rating TEXT, last_updated TEXT
     )''')
+
+    # Migrate: add watchlist columns if missing (for existing DBs)
+    wl_existing = {row[1] for row in conn.execute('PRAGMA table_info(watchlist)').fetchall()}
+    for col, typ in [('price', 'REAL'), ('change_pct', 'REAL'), ('rsi', 'REAL'),
+                     ('sma50', 'REAL'), ('sma200', 'REAL'), ('market_cap', 'INTEGER'),
+                     ('analyst_rating', 'TEXT'), ('last_updated', 'TEXT')]:
+        if col not in wl_existing:
+            conn.execute(f'ALTER TABLE watchlist ADD COLUMN {col} {typ}')
 
     # Migrate: add columns if missing (for existing DBs upgrading to v2)
     existing = {row[1] for row in conn.execute('PRAGMA table_info(predictions)').fetchall()}

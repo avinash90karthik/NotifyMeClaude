@@ -271,9 +271,9 @@ CHART_OUTPUT_DIR=...        # Optional: path to chart output directory
 
 ## Watchlist Check
 
-**`watchlist_check.py`** - 2x daily scan of personal watchlist (`memory/watchlist.md`) with v4 scoring.
-- Parses `memory/watchlist.md` (Markdown tables) for symbols + sectors + names
-- Parses `memory/portfolio.md` for open positions
+**`watchlist_check.py`** - 2x daily scan of personal watchlist from `predictions.db` with v4 scoring.
+- Loads watchlist from `predictions.db` (single source of truth)
+- Reads open positions from `memory/predictions.db` via prediction_db
 - Batch `yf.download()` for all symbols, then individual enrichment for top candidates
 - v4 Trend/Momentum scoring identical to morning_screener.py (RSI, MACD, ADX, ATR%, Bollinger, SMA50/200)
 - Hard gates relaxed vs morning screener: MIN_SCORE 20, volume 50k (watchlist is pre-curated)
@@ -336,8 +336,9 @@ bash dashboard/start.sh               # Start dashboard
 
 ### Architecture
 ```
-predictions.db ─┐
-watchlist.json ──┤   Flask API (:5050)  →  Vite React (:5173)
+predictions.db ──┐
+  (watchlist +   │   Flask API (:5050)  →  Vite React (:5173)
+   portfolio)    │
 yfinance (live) ─┤
 chart PNGs ──────┘
 ```

@@ -112,7 +112,7 @@ Rate each ticker for turbo trading (0-10):
 | **TOTAL (weighted)** | 100% | **X.X** | **X.X** | |
 
 **Sector check against portfolio:**
-- Read open positions from `memory/portfolio.md`
+- Read open positions from `predictions.db` via `python prediction_db.py portfolio`
 - Which ticker diversifies best?
 - ⚠️ If all tickers in same sector as existing positions → WARNING
 

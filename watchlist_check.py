@@ -15,8 +15,7 @@ from datetime import datetime, timezone
 from indicators import calc_technicals
 from risk_audit import risk_audit, parse_portfolio_summary
 
-# Watchlist is stored in predictions.db (loaded via prediction_db.get_watchlist_symbols)
-PORTFOLIO_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'portfolio.md')
+# All data stored in predictions.db (single source of truth)
 
 INDEX_FUTURES = ['ES=F', 'NQ=F', 'YM=F']  # S&P, Nasdaq, Dow — for pre-market sentiment
 MIN_VOLUME = 50_000
@@ -39,73 +38,18 @@ def parse_watchlist_md():
 
 
 def get_open_positions():
-    """Parse open positions from memory/portfolio.md."""
-    if not os.path.exists(PORTFOLIO_FILE):
+    """Load open positions from predictions.db (single source of truth)."""
+    try:
+        from prediction_db import get_db
+        conn = get_db()
+        rows = conn.execute(
+            "SELECT symbol, direction, cert_entry_price, shares FROM predictions WHERE status='open'"
+        ).fetchall()
+        conn.close()
+        return [{'symbol': r['symbol'], 'direction': r['direction'],
+                 'raw': r['symbol']} for r in rows]
+    except Exception:
         return []
-    with open(PORTFOLIO_FILE) as f:
-        content = f.read()
-    positions = []
-    in_section = False
-    in_table = False
-    for line in content.splitlines():
-        if line.startswith('## Offene Positionen'):
-            in_section = True
-            continue
-        if in_section and line.startswith('## '):
-            break
-        if in_section and line.startswith('---'):
-            if in_table:
-                break
-            continue
-        if not in_section or not line.startswith('|'):
-            continue
-        if 'Symbol' in line or '---' in line or 'Richtung' in line:
-            in_table = True
-            continue
-        cols = [c.strip() for c in line.split('|') if c.strip()]
-        if not cols:
-            continue
-        # Skip header row with '#'
-        first = re.sub(r'\*+', '', cols[0]).strip()
-        if not first or first == '#' or first == 'Symbol':
-            continue
-        # Detect column layout: portfolio.md has | # | Symbol | Richtung | ... |
-        # If first col is a number, shift by 1
-        offset = 0
-        if re.match(r'^\d+$', first):
-            offset = 1
-        sym_col = cols[0 + offset] if len(cols) > 0 + offset else ''
-        dir_col = cols[1 + offset] if len(cols) > 1 + offset else ''
-        pnl_col = cols[5 + offset] if len(cols) > 5 + offset else ''
-        ko_col = cols[6 + offset] if len(cols) > 6 + offset else ''
-
-        # Extract base symbol (e.g. "DAX SHORT Turbo KO 25.009" → "DAX")
-        base_sym = re.match(r'([A-Za-z0-9=.\-^]+)', sym_col)
-        if not base_sym:
-            continue
-        sym_clean = base_sym.group(1)
-
-        combined = dir_col.upper() + ' ' + sym_col.upper()
-        if 'LONG' in combined:
-            direction = 'LONG'
-        elif 'SHORT' in combined:
-            direction = 'SHORT'
-        else:
-            direction = '?'
-
-        # Extract P&L percentage
-        pnl_pct = None
-        pnl_match = re.search(r'([+-]?\d+(?:[.,]\d+)?)\s*%', pnl_col) or re.search(r'([+-]?\d+(?:[.,]\d+)?)\s*%', str(cols))
-        if pnl_match:
-            pnl_pct = pnl_match.group(1).replace(',', '.')
-
-        positions.append({
-            'symbol': sym_clean,
-            'direction': direction,
-            'pnl_pct': pnl_pct,
-            'raw': sym_col,
-        })
-    return positions
 
 
 def batch_download(symbols):

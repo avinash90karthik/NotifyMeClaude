@@ -1,22 +1,15 @@
 #!/usr/bin/env python3
 """Silver Hawk Trading - Stock Watchlist Browser.
-Read-only view of the watchlist from memory/watchlist.json."""
+Read-only view of the watchlist from predictions.db."""
 
 import json
-import os
 import sys
 
 
-WATCHLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'watchlist.json')
-
-
 def fetch_stocks():
-    """Load stocks from local watchlist file."""
-    if not os.path.exists(WATCHLIST_FILE):
-        print(f'Watchlist not found: {WATCHLIST_FILE}')
-        return []
-    with open(WATCHLIST_FILE) as f:
-        stocks = json.load(f)
+    """Load stocks from the watchlist table in predictions.db."""
+    from prediction_db import get_watchlist_symbols
+    stocks = get_watchlist_symbols()
     return sorted(stocks, key=lambda s: (s.get('sector', ''), s['symbol']))
 
 
@@ -24,6 +17,7 @@ def format_table(stocks):
     """Format stocks as a readable table grouped by sector."""
     if not stocks:
         print('No stocks in watchlist.')
+        print('Add stocks: python admin_stocks.py add SYMBOL "Name" Sector')
         return
 
     print()

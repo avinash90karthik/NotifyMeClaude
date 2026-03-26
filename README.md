@@ -8,8 +8,8 @@ AI-powered trading analysis and price alerts via Telegram. Built with Claude Cod
 - **LONG & SHORT Signals:** Scorecard-based evaluation ensures SHORT trades are treated equally
 - **3-Step KO Calculation:** ATR-based + chart-support combined, asset-class adjusted (Large Cap 2x, Mid/Small 2.5x, Commodities 3x)
 - **Risk Management:** 10% max per trade, 40% max simultaneous risk, 60% max sector concentration
-- **Portfolio Tracking:** `memory/portfolio.md` as single source of truth — updated after every analysis and trade
-- **Correlation Check:** Reads open positions from `memory/portfolio.md` before every new trade
+- **Portfolio Tracking:** `memory/predictions.db` (SQLite) as single source of truth — updated after every analysis and trade
+- **Correlation Check:** Reads open positions from `memory/predictions.db` before every new trade
 - **Time-Stops:** Halve after 3 days without +5%, close after 5 days sideways, secure 50% before earnings
 - **Price Alerts:** Telegram notifications on big moves, level crossings, and flash spikes
 - **Portfolio Health Check:** 3x daily RSI alerts for all open positions and watchlist
@@ -42,7 +42,7 @@ Full setup guide: **[ONBOARDING.md](ONBOARDING.md)** (EN) | **[ONBOARDING_DE.md]
 - **GitHub Actions** (free) - automated price alerts
 - **yfinance** (free) - all market data
 
-No database required. Portfolio state lives in `memory/portfolio.md`.
+Portfolio state lives in `memory/predictions.db` (SQLite — auto-created on first use).
 
 ## Architecture
 
@@ -59,7 +59,7 @@ GitHub Actions (automatic)
 └── reddit_gems.yml (07:00 CET)           → Reddit trending stocks → Telegram
 
 Local State
-└── memory/portfolio.md                   → Open positions, stops, P&L, analysis log
+└── memory/predictions.db                 → Open positions, stops, P&L, analysis log (SQLite)
 ```
 
 ## Analysis Pipeline
@@ -73,7 +73,7 @@ Local State
 | 1. Data Collection | yfinance prices, RSI, MACD, SMAs, ATR, short interest, news, correlation check, event calendar. Futures (SI=F, GC=F) use ETF proxy for RSI to avoid rollover distortion. |
 | 2. Investment Debate | Bull vs Bear - 2 full rounds + LONG vs SHORT scorecard (6 criteria, /60) |
 | 3. Judge & Risk | Verdict + confidence %, 3-step KO (ATR + chart + take further), position sizing in % of portfolio, time-stops |
-| 4. Trading Card | Summary card + chart → Telegram message + chart photo. `memory/portfolio.md` updated. |
+| 4. Trading Card | Summary card + chart → Telegram message + chart photo. `memory/predictions.db` updated. |
 
 ## Scripts
 
@@ -118,7 +118,7 @@ Secrets needed: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 
 Everything is completely private:
 - Your own Telegram bot
-- No cloud database — state lives in your local `memory/portfolio.md`
+- No cloud database — state lives in your local `memory/predictions.db` (SQLite)
 - Your own GitHub Actions
 - No shared data, no tracking, no accounts
 

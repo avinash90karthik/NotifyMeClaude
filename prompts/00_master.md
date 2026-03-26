@@ -11,12 +11,12 @@ Execute these 4 steps sequentially. Each builds on the previous.
 | 1 | `prompts/01_data_collection.md` | Run `python collect_data.py {{SYMBOL}}`, chart, news, macro |
 | 2 | `prompts/02_investment_debate.md` | Bull vs Bear debate (2 rounds + synthesis), SHORT scorecard |
 | 3 | `prompts/03_judge_risk.md` | Signal + confidence, KO calculation, risk audit, trade plan |
-| 4 | `prompts/04_summary_send.md` | Trading card, Telegram delivery, portfolio.md update |
+| 4 | `prompts/04_summary_send.md` | Trading card, Telegram delivery, prediction DB record |
 
 ## Rules (always active)
 
 - Strategy rules: `memory/strategy_v5.md` and `CLAUDE.md`
-- Portfolio state: `memory/portfolio.md` (read BEFORE Step 1)
+- Portfolio state: `python prediction_db.py portfolio` (run BEFORE Step 1)
 - yfinance = truth for all price data (never web search for prices)
 - Every trade needs: entry, stop, KO, exits, time-stop
 - No step may be skipped

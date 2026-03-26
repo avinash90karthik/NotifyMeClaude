@@ -17,31 +17,14 @@ from datetime import datetime, timezone
 
 import numpy as np
 
-WATCHLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'watchlist.md')
 SCORE_THRESHOLD = 40
 MIN_HISTORY_DAYS = 300  # Need ~1y+ of history
 
 
 def parse_watchlist_symbols():
-    """Extract symbols from memory/watchlist.md."""
-    import re
-    if not os.path.exists(WATCHLIST_FILE):
-        return []
-    with open(WATCHLIST_FILE) as f:
-        content = f.read()
-    symbols = []
-    for line in content.splitlines():
-        if not line.startswith('|'):
-            continue
-        cols = [c.strip() for c in line.split('|') if c.strip()]
-        if not cols or cols[0] in ('Symbol', '---', '-----'):
-            continue
-        if '---' in cols[0]:
-            continue
-        sym = cols[0].strip()
-        if sym and re.match(r'^[A-Za-z0-9=.\-^]+$', sym):
-            symbols.append(sym)
-    return symbols
+    """Load symbols from the watchlist table in predictions.db."""
+    from prediction_db import get_watchlist_symbols
+    return [s['symbol'] for s in get_watchlist_symbols()]
 
 
 def backtest_symbol(symbol, period='2y', forward_days=None, capture_components=False):
@@ -377,7 +360,7 @@ def main():
     if args.watchlist:
         symbols = parse_watchlist_symbols()
         if not symbols:
-            print('No symbols found in watchlist.md')
+            print('No symbols found in watchlist. Use admin_stocks.py to add symbols.')
             sys.exit(1)
         print(f'Backtesting {len(symbols)} watchlist symbols...')
     elif args.symbols:

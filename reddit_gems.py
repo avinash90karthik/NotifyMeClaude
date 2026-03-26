@@ -241,29 +241,21 @@ def send_telegram(text, silent=True):
 
 
 def load_portfolio_symbols():
-    """Load current portfolio symbols from memory/portfolio.md to exclude from gems."""
-    portfolio_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'portfolio.md')
-    if not os.path.exists(portfolio_file):
+    """Load current portfolio symbols from predictions.db to exclude from gems."""
+    import sqlite3
+    db_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'predictions.db')
+    if not os.path.exists(db_file):
         return set()
-    symbols = set()
-    in_table = False
-    with open(portfolio_file) as f:
-        for line in f:
-            if 'Offene Positionen' in line:
-                in_table = True
-                continue
-            if in_table and line.startswith('---'):
-                break
-            if not in_table or not line.startswith('|'):
-                continue
-            if 'Symbol' in line or '---' in line:
-                continue
-            cols = [c.strip() for c in line.split('|') if c.strip()]
-            if cols:
-                sym = cols[0].replace('*', '').strip()
-                if sym and sym.lower() not in ('cash', 'nvda aktie'):
-                    symbols.add(sym)
-    return symbols
+    try:
+        conn = sqlite3.connect(db_file)
+        rows = conn.execute(
+            "SELECT DISTINCT symbol FROM predictions WHERE status='open'"
+        ).fetchall()
+        conn.close()
+        return {row[0] for row in rows}
+    except Exception as e:
+        print(f'  DB error loading portfolio symbols: {e}')
+        return set()
 
 
 def main():

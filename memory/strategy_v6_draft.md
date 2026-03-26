@@ -57,7 +57,7 @@ Im seltenen Best-Case verlierst du nur ~3% Upside — akzeptabel.
 ║                                                               ║
 ║  PROZESS:                                                    ║
 ║  1. STOPP — Keine weitere Aktion ohne Re-Analysis            ║
-║  2. Neue Analyse OHNE portfolio.md lesen                     ║
+║  2. Neue Analyse OHNE Portfolio-DB lesen                      ║
 ║  3. Prompt: "Analysiere SYMBOL jetzt. Kein Portfolio-Kontext" ║
 ║  4. Ergebnis = nackte Richtungsentscheidung                  ║
 ║                                                               ║
@@ -67,7 +67,7 @@ Im seltenen Best-Case verlierst du nur ~3% Upside — akzeptabel.
 ║  • Blind-Analyse = HOLD/NEUTRAL → Position halbieren         ║
 ║                                                               ║
 ║  REGELN:                                                     ║
-║  • NIEMALS portfolio.md im Re-Analysis-Prompt referenzieren  ║
+║  • NIEMALS Portfolio-DB im Re-Analysis-Prompt referenzieren   ║
 ║  • NIEMALS "ich halte LONG, soll ich halten?" fragen         ║
 ║  • IMMER: "Analysiere X, von Null, blind"                    ║
 ║  • Confidence der Blind-Analyse muss ≥55% sein für Halten   ║
@@ -129,7 +129,7 @@ python collect_data.py SYMBOL
 Analysiere {{SYMBOL}} — BLIND CHECK
 
 REGELN:
-- Lies NICHT portfolio.md
+- Lies NICHT die Portfolio-DB (predictions.db)
 - Du weißt NICHT, ob eine Position offen ist
 - Du weißt NICHT, in welche Richtung eine Position läuft
 - Entscheide NUR basierend auf aktuellen technischen Daten

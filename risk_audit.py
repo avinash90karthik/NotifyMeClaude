@@ -3,101 +3,51 @@
 Independent risk check with veto power. Runs after scoring, before output.
 Any single VETO blocks the trade candidate from appearing as recommended."""
 
-import os
-import re
-
-PORTFOLIO_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'portfolio.md')
 
 def parse_portfolio_summary():
-    """Parse portfolio.md for current state: positions, value, monthly P&L."""
-    if not os.path.exists(PORTFOLIO_FILE):
-        print('  risk_audit: portfolio.md nicht gefunden — alle Veto-Regeln deaktiviert')
+    """Load portfolio state from predictions.db (single source of truth)."""
+    try:
+        from prediction_db import get_db
+        conn = get_db()
+
+        # Open positions
+        rows = conn.execute(
+            "SELECT symbol, direction FROM predictions WHERE status='open'"
+        ).fetchall()
+        positions = [{'symbol': r['symbol'], 'direction': r['direction']} for r in rows]
+
+        # Cash
+        cash_row = conn.execute(
+            "SELECT value FROM portfolio_state WHERE key='cash'"
+        ).fetchone()
+        cash = cash_row['value'] if cash_row else 0
+
+        # Calculate portfolio value (cash + invested)
+        invested_row = conn.execute(
+            "SELECT COALESCE(SUM(shares * cert_entry_price), 0) as total "
+            "FROM predictions WHERE status='open'"
+        ).fetchone()
+        invested = invested_row['total'] if invested_row else 0
+        portfolio_value = cash + invested
+
+        # Monthly P&L from close_events
+        monthly_pnl = conn.execute(
+            "SELECT COALESCE(SUM(pnl_eur), 0) as total FROM close_events "
+            "WHERE closed_at >= date('now', 'start of month')"
+        ).fetchone()
+        monthly_pnl_eur = monthly_pnl['total'] if monthly_pnl else 0
+        monthly_pnl_pct = (monthly_pnl_eur / portfolio_value * 100) if portfolio_value > 0 else 0
+
+        conn.close()
+        return {
+            'positions': positions,
+            'portfolio_value': portfolio_value,
+            'cash': cash,
+            'monthly_pnl_pct': monthly_pnl_pct,
+        }
+    except Exception as e:
+        print(f'  risk_audit: DB error ({e}) — fallback to empty state')
         return {'positions': [], 'portfolio_value': 0, 'cash': 0, 'monthly_pnl_pct': 0}
-
-    with open(PORTFOLIO_FILE) as f:
-        content = f.read()
-
-    positions = []
-    portfolio_value = 0
-    cash = 0
-    monthly_pnl_pct = 0
-
-    # Extract portfolio value from "Aktueller Stand" table
-    in_stand = False
-    for line in content.splitlines():
-        if 'Aktueller Stand' in line:
-            in_stand = True
-        elif line.startswith('## ') and in_stand:
-            break
-        if not in_stand:
-            continue
-        if 'Portfolio-Wert' in line and '~' in line:
-            m = re.search(r'~([\d.,]+)\s*EUR', line)
-            if m:
-                portfolio_value = float(m.group(1).replace('.', '').replace(',', '.'))
-        if 'Cash frei' in line and '~' in line:
-            m = re.search(r'~([\d.,]+)\s*EUR', line)
-            if m:
-                cash = float(m.group(1).replace('.', '').replace(',', '.'))
-        if 'P&L' in line and '%' in line:
-            m = re.search(r'([+-]?\d+(?:[.,]\d+)?)\s*%', line)
-            if m:
-                monthly_pnl_pct = float(m.group(1).replace(',', '.'))
-
-    # Parse active positions (not strikethrough)
-    in_section = False
-    for line in content.splitlines():
-        if 'Offene Positionen' in line:
-            in_section = True
-            continue
-        if in_section and line.startswith('## '):
-            break
-        if not in_section or not line.startswith('|'):
-            continue
-        if '~~' in line[:20]:
-            continue  # strikethrough = closed
-        cols = [c.strip() for c in line.split('|') if c.strip()]
-        if not cols or cols[0] in ('#', 'Symbol', '---'):
-            continue
-        if '---' in cols[0]:
-            continue
-
-        # Skip header
-        offset = 0
-        first = re.sub(r'\*+', '', cols[0]).strip()
-        if re.match(r'^\d+$', first):
-            offset = 1
-
-        sym_col = cols[0 + offset] if len(cols) > 0 + offset else ''
-        dir_col = cols[1 + offset] if len(cols) > 1 + offset else ''
-
-        base_sym = re.match(r'([A-Za-z0-9=.\-^]+)', sym_col)
-        if not base_sym:
-            continue
-        sym_clean = base_sym.group(1)
-        if sym_clean in ('Symbol', '#'):
-            continue
-
-        combined = dir_col.upper() + ' ' + sym_col.upper()
-        if 'LONG' in combined:
-            direction = 'LONG'
-        elif 'SHORT' in combined:
-            direction = 'SHORT'
-        else:
-            direction = '?'
-
-        positions.append({
-            'symbol': sym_clean,
-            'direction': direction,
-            'raw': sym_col,
-        })
-
-    return {
-        'positions': positions,
-        'portfolio_value': portfolio_value,
-        'cash': cash,
-        'monthly_pnl_pct': monthly_pnl_pct,
-    }
 
 
 def risk_audit(symbol, data_dict, portfolio_state=None, sector=None):

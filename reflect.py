@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Silver Hawk Trading - Reflection/Learning Loop.
-Parses closed trades and analyses from portfolio.md, calculates win rates,
+Reads closed trades and analyses from predictions.db, calculates win rates,
 pattern analysis, risk/reward, and generates memory/reflections.md.
 
 Usage:
@@ -10,106 +10,83 @@ Usage:
 
 import argparse
 import os
-import re
+import sqlite3
 from datetime import datetime, timezone
 
-PORTFOLIO_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'portfolio.md')
-REFLECTIONS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'reflections.md')
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_FILE = os.path.join(SCRIPT_DIR, 'memory', 'predictions.db')
+REFLECTIONS_FILE = os.path.join(SCRIPT_DIR, 'memory', 'reflections.md')
 
 
-def parse_closed_trades(content):
-    """Parse closed trades tables from portfolio.md.
+def get_closed_trades():
+    """Read closed trades from predictions.db."""
+    if not os.path.exists(DB_FILE):
+        return []
 
-    Handles both März format (4 cols: Symbol, Kauf, Verkauf, P&L, Notiz)
-    and Februar format (3 cols: Symbol, P&L, Notiz)."""
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+
+    rows = conn.execute("""
+        SELECT p.id, p.symbol, p.direction, p.confidence, p.status,
+               p.created_at, p.closed_at, p.realized_pnl_eur,
+               p.shares, p.cert_buyin, p.invested_eur, p.trade_notes,
+               p.entry_price, p.stop_price, p.target_price, p.ko_level
+        FROM predictions p
+        WHERE p.status = 'closed'
+        ORDER BY p.closed_at
+    """).fetchall()
+
     trades = []
+    for r in rows:
+        pnl = r['realized_pnl_eur'] or 0.0
+        notes = r['trade_notes'] or ''
 
-    # März trades (5 columns: Symbol | Kauf | Verkauf | P&L EUR | Notiz)
-    maerz_match = re.search(
-        r'## Geschlossene Trades \(März\)\s*\n\s*\|.*\|\s*\n\s*\|[-| ]+\|\s*\n((?:\|.*\|\s*\n)*)',
-        content
-    )
-    if maerz_match:
-        for line in maerz_match.group(1).strip().splitlines():
-            cols = [c.strip() for c in line.split('|') if c.strip()]
-            if len(cols) < 4:
-                continue
-            symbol_raw = cols[0]
-            notiz = cols[-1] if len(cols) >= 5 else ''
-            pnl_raw = cols[3] if len(cols) >= 5 else cols[2]
+        # Detect patterns from trade notes
+        patterns = _detect_patterns(notes, pnl)
 
-            trade = _parse_trade_line(symbol_raw, pnl_raw, notiz, 'März')
-            if trade:
-                trades.append(trade)
+        trades.append({
+            'id': r['id'],
+            'symbol': r['symbol'],
+            'direction': r['direction'],
+            'confidence': r['confidence'],
+            'pnl_eur': pnl,
+            'notiz': notes,
+            'patterns': patterns,
+            'created_at': r['created_at'],
+            'closed_at': r['closed_at'],
+        })
 
-    # Februar trades (3 columns: Symbol | P&L EUR | Notiz)
-    feb_match = re.search(
-        r'Geschlossene Trades \(Februar\).*?\|.*?\|\s*\n\s*\|[-| ]+\|\s*\n((?:\|.*\|\s*\n)*)',
-        content, re.DOTALL
-    )
-    if feb_match:
-        for line in feb_match.group(1).strip().splitlines():
-            cols = [c.strip() for c in line.split('|') if c.strip()]
-            if len(cols) < 2:
-                continue
-            symbol_raw = cols[0]
-            pnl_raw = cols[1]
-            notiz = cols[2] if len(cols) >= 3 else ''
-
-            trade = _parse_trade_line(symbol_raw, pnl_raw, notiz, 'Februar')
-            if trade:
-                trades.append(trade)
-
+    conn.close()
     return trades
 
 
-def _parse_trade_line(symbol_raw, pnl_raw, notiz, month):
-    """Parse a single trade line into a structured dict."""
-    # Clean symbol
-    symbol = re.sub(r'\*+', '', symbol_raw).strip()
-    if not symbol or symbol.startswith('GESAMT') or symbol.startswith('Zinsen'):
-        return None
+def get_analyses():
+    """Read all analyses from predictions.db for confidence stats."""
+    if not os.path.exists(DB_FILE):
+        return []
 
-    # Extract base symbol (e.g. "SYM.DE" from "SYM.DE LONG KO 138,40 (50%)")
-    base_match = re.match(r'([A-Za-z0-9=.\-^]+)', symbol)
-    base_symbol = base_match.group(1) if base_match else symbol
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
 
-    # Determine direction
-    direction = 'UNKNOWN'
-    sym_upper = symbol.upper()
-    if 'SHORT' in sym_upper:
-        direction = 'SHORT'
-    elif 'LONG' in sym_upper or 'Aktie' in symbol:
-        direction = 'LONG'
+    rows = conn.execute("""
+        SELECT id, symbol, direction, confidence, created_at, status
+        FROM predictions
+        ORDER BY created_at
+    """).fetchall()
 
-    # Parse P&L
-    pnl_eur = _parse_pnl(pnl_raw)
+    analyses = []
+    for r in rows:
+        analyses.append({
+            'id': r['id'],
+            'symbol': r['symbol'],
+            'direction': r['direction'],
+            'confidence': r['confidence'],
+            'created_at': r['created_at'],
+            'status': r['status'],
+        })
 
-    # Detect patterns from notiz
-    patterns = _detect_patterns(notiz, pnl_eur)
-
-    return {
-        'symbol': base_symbol,
-        'full_name': symbol,
-        'direction': direction,
-        'pnl_eur': pnl_eur,
-        'notiz': notiz,
-        'patterns': patterns,
-        'month': month,
-    }
-
-
-def _parse_pnl(pnl_raw):
-    """Extract numeric P&L from string like '+16,62' or '~-184,58'."""
-    cleaned = re.sub(r'[*~€EUR ]', '', pnl_raw).replace(',', '.').strip()
-    # Handle cases like "+16.62" or "-184.58"
-    match = re.search(r'([+-]?\d+\.?\d*)', cleaned)
-    if match:
-        try:
-            return float(match.group(1))
-        except ValueError:
-            pass
-    return 0.0
+    conn.close()
+    return analyses
 
 
 def _detect_patterns(notiz, pnl_eur):
@@ -137,96 +114,20 @@ def _detect_patterns(notiz, pnl_eur):
     return patterns
 
 
-def calc_duration_stats(trades, analyses=None):
-    """Calculate trade duration statistics from date info in trade notes.
-    Uses robust patterns matching real portfolio.md notation.
-    Falls back to analysis dates for entry when not found in notes.
+def calc_duration_stats(trades):
+    """Calculate trade duration statistics from DB timestamps.
     Returns dict with avg/median durations or None if insufficient data."""
-
-    # Build analysis date lookup: symbol → list of ALL analysis dates (DD, MM)
-    analysis_dates = {}
-    if analyses:
-        for a in analyses:
-            sym = a.get('symbol', '')
-            datum = a.get('datum', '')
-            date_match = re.search(r'(\d{1,2})\.(\d{1,2})', datum)
-            if date_match and sym:
-                analysis_dates.setdefault(sym, []).append(
-                    (int(date_match.group(1)), int(date_match.group(2)))
-                )
-
-    # Robust exit patterns matching real portfolio.md notation
-    EXIT_PATTERNS = [
-        r'[Vv]erkauft?\s+(\d{1,2})\.(\d{1,2})',            # "Verkauft 06.03", "verkauft 05.03"
-        r'[Gg]eschlossen\s+(\d{1,2})\.(\d{1,2})',           # "Geschlossen 12.03"
-        r'ausgelöst\s+(\d{1,2})\.(\d{1,2})',                 # "ausgelöst 10.03", "ausgelöst 11.03"
-        r'ausgeloest\s+(\d{1,2})\.(\d{1,2})',                # ASCII variant
-        r'Stop-Sell\s+(\d{1,2})\.(\d{1,2})',                 # "Stop-Sell 02.03"
-        r'(\d{1,2})\.(\d{1,2})\s+(?:bei|Fr|abends|Break)',  # "06.03 Fr Abend", "05.03 abends"
-    ]
-
-    ENTRY_PATTERNS = [
-        r'[Kk]auf\s+(\d{1,2})\.(\d{1,2})',                  # "Kauf 02.03"
-        r'[Ee]instieg\s+(\d{1,2})\.(\d{1,2})',              # "Einstieg 05.03"
-        r'[Gg]ekauft\s+(\d{1,2})\.(\d{1,2})',               # "Gekauft 18.02"
-        r'[Ee]ntry\s+(\d{1,2})\.(\d{1,2})',                 # "Entry 02.03"
-    ]
 
     durations_win = []
     durations_loss = []
 
     for t in trades:
-        notiz = t.get('notiz', '')
-        full = t.get('full_name', '') + ' ' + notiz
-
-        # Find exit date (first matching pattern wins)
-        exit_day, exit_month = None, None
-        for pat in EXIT_PATTERNS:
-            m = re.search(pat, full)
-            if m:
-                exit_day, exit_month = int(m.group(1)), int(m.group(2))
-                break
-
-        if exit_day is None:
+        if not t.get('created_at') or not t.get('closed_at'):
             continue
-
-        # Find entry date: try notiz patterns first, then analysis table
-        entry_day, entry_month = None, None
-        for pat in ENTRY_PATTERNS:
-            m = re.search(pat, full)
-            if m:
-                entry_day, entry_month = int(m.group(1)), int(m.group(2))
-                break
-
-        # Fallback: use closest analysis date BEFORE exit for this symbol
-        if entry_day is None and t['symbol'] in analysis_dates:
-            year = 2026
-            try:
-                exit_dt = datetime(year, exit_month, exit_day)
-                best = None
-                for ad, am in analysis_dates[t['symbol']]:
-                    a_dt = datetime(year, am, ad)
-                    diff = (exit_dt - a_dt).days
-                    if 0 <= diff <= 30:  # analysis must be before exit, max 30 days
-                        if best is None or diff < best[0]:
-                            best = (diff, ad, am)
-                if best:
-                    entry_day, entry_month = best[1], best[2]
-            except (ValueError, OverflowError):
-                pass
-
-        if entry_day is None:
-            continue
-
         try:
-            year = 2026
-            entry_date = datetime(year, entry_month, entry_day)
-            exit_year = year
-            if exit_month < entry_month:
-                exit_year = year + 1
-            exit_date = datetime(exit_year, exit_month, exit_day)
-
-            days = (exit_date - entry_date).days
+            d1 = datetime.fromisoformat(t['created_at'])
+            d2 = datetime.fromisoformat(t['closed_at'])
+            days = (d2 - d1).days
             if days < 0 or days > 365:
                 continue
 
@@ -251,49 +152,6 @@ def calc_duration_stats(trades, analyses=None):
         'avg_days_losers': round(sum(durations_loss) / len(durations_loss), 1) if durations_loss else None,
         'n_parsed': len(all_durations),
     }
-
-
-def parse_analyses(content):
-    """Parse completed analyses for confidence data."""
-    analyses = []
-
-    # Match analysis tables (März + Februar)
-    for table_match in re.finditer(
-        r'Abgeschlossene Analysen.*?\|.*?\|\s*\n\s*\|[-| ]+\|\s*\n((?:\|.*\|\s*\n)*)',
-        content, re.DOTALL
-    ):
-        for line in table_match.group(1).strip().splitlines():
-            cols = [c.strip() for c in line.split('|') if c.strip()]
-            if len(cols) < 4:
-                continue
-            datum = cols[0]
-            symbol = cols[1]
-            signal = cols[2]
-            konfidenz_raw = cols[3]
-
-            # Parse confidence
-            conf_match = re.search(r'(\d+)%', konfidenz_raw)
-            confidence = int(conf_match.group(1)) if conf_match else None
-
-            # Determine direction from signal
-            direction = 'UNKNOWN'
-            sig_upper = signal.upper()
-            if 'SHORT' in sig_upper:
-                direction = 'SHORT'
-            elif 'LONG' in sig_upper:
-                direction = 'LONG'
-            elif 'WARTEN' in sig_upper or 'HOLD' in sig_upper:
-                direction = 'HOLD'
-
-            analyses.append({
-                'datum': datum,
-                'symbol': symbol,
-                'signal': signal,
-                'direction': direction,
-                'confidence': confidence,
-            })
-
-    return analyses
 
 
 def analyze_trades(trades, analyses):
@@ -325,27 +183,16 @@ def analyze_trades(trades, analyses):
 
     # Win rate by confidence bracket
     conf_stats = {}
-    if analyses:
-        # Map analyses to trades by symbol
-        analysis_conf = {}
-        for a in analyses:
-            if a['confidence'] is not None:
-                analysis_conf[a['symbol']] = a['confidence']
-
-        for bracket_name, low, high in [('50-59', 50, 59), ('60-69', 60, 69), ('70-79', 70, 79), ('80+', 80, 100)]:
-            bracket_trades = []
-            for t in trades:
-                conf = analysis_conf.get(t['symbol'])
-                if conf is not None and low <= conf <= high:
-                    bracket_trades.append(t)
-            if bracket_trades:
-                bracket_wins = [t for t in bracket_trades if t['pnl_eur'] > 0]
-                conf_stats[bracket_name] = {
-                    'total': len(bracket_trades),
-                    'wins': len(bracket_wins),
-                    'win_rate': round(len(bracket_wins) / len(bracket_trades) * 100, 1),
-                    'avg_pnl': round(sum(t['pnl_eur'] for t in bracket_trades) / len(bracket_trades), 2),
-                }
+    for bracket_name, low, high in [('50-59', 50, 59), ('60-69', 60, 69), ('70-79', 70, 79), ('80+', 80, 100)]:
+        bracket_trades = [t for t in trades if t.get('confidence') and low <= t['confidence'] <= high]
+        if bracket_trades:
+            bracket_wins = [t for t in bracket_trades if t['pnl_eur'] > 0]
+            conf_stats[bracket_name] = {
+                'total': len(bracket_trades),
+                'wins': len(bracket_wins),
+                'win_rate': round(len(bracket_wins) / len(bracket_trades) * 100, 1),
+                'avg_pnl': round(sum(t['pnl_eur'] for t in bracket_trades) / len(bracket_trades), 2),
+            }
 
     # Pattern analysis
     pattern_stats = {}
@@ -366,7 +213,7 @@ def analyze_trades(trades, analyses):
     discipline_violations = len([t for t in trades if 'DISCIPLINE_VIOLATION' in t['patterns']])
     below_gate = len([t for t in trades if 'BELOW_GATE' in t['patterns']])
 
-    duration = calc_duration_stats(trades, analyses)
+    duration = calc_duration_stats(trades)
 
     return {
         'total_trades': total,
@@ -396,7 +243,7 @@ def generate_reflections_md(stats, trades):
         '# Silver Hawk Trading - Reflections',
         '',
         f'**Generiert:** {now}',
-        f'**Quelle:** memory/portfolio.md',
+        f'**Quelle:** memory/predictions.db',
         '',
         '---',
         '',
@@ -577,7 +424,7 @@ def format_telegram(stats):
     if stats['below_gate_trades'] > 0:
         msg += f' | ⚠️ {stats["below_gate_trades"]} unter Gate'
 
-    msg += '\n\n<i>Reflection Engine v1</i>'
+    msg += '\n\n<i>Reflection Engine v2 (predictions.db)</i>'
     return msg
 
 
@@ -586,19 +433,16 @@ def main():
     parser.add_argument('--telegram', action='store_true', help='Send summary via Telegram')
     args = parser.parse_args()
 
-    if not os.path.exists(PORTFOLIO_FILE):
-        print(f'Portfolio file not found: {PORTFOLIO_FILE}')
+    if not os.path.exists(DB_FILE):
+        print(f'Database not found: {DB_FILE}')
         return
 
-    with open(PORTFOLIO_FILE) as f:
-        content = f.read()
-
-    print('Parsing closed trades...')
-    trades = parse_closed_trades(content)
+    print('Reading closed trades from predictions.db...')
+    trades = get_closed_trades()
     print(f'  Found {len(trades)} closed trades')
 
-    print('Parsing analyses...')
-    analyses = parse_analyses(content)
+    print('Reading analyses from predictions.db...')
+    analyses = get_analyses()
     print(f'  Found {len(analyses)} analyses')
 
     print('Analyzing trades...')

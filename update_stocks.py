@@ -1,21 +1,15 @@
 #!/usr/bin/env python3
 """Silver Hawk Trading - Stock Data Updater (GitHub Actions).
-Reads symbols from memory/watchlist.json, fetches yfinance data, writes prices back."""
+Reads symbols from predictions.db watchlist, fetches yfinance data, writes prices back to DB."""
 
-import json
 import os
 from datetime import datetime, timezone
 
 
-WATCHLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'watchlist.json')
-
-
 def get_active_symbols():
-    if not os.path.exists(WATCHLIST_FILE):
-        return []
-    with open(WATCHLIST_FILE) as f:
-        stocks = json.load(f)
-    return [s['symbol'] for s in stocks]
+    """Load active symbols from the watchlist table in predictions.db."""
+    from prediction_db import get_watchlist_symbols
+    return [s['symbol'] for s in get_watchlist_symbols()]
 
 
 def fetch_stock_data(symbols):
@@ -71,22 +65,31 @@ def fetch_stock_data(symbols):
     return results
 
 
-def update_watchlist(data):
-    with open(WATCHLIST_FILE) as f:
-        stocks = json.load(f)
+def update_watchlist_db(data):
+    """Write updated stock data back to the watchlist table in predictions.db."""
+    from prediction_db import get_db
 
+    conn = get_db()
     now = datetime.now(timezone.utc).isoformat()
     updated = 0
-    for stock in stocks:
-        sym = stock['symbol']
-        if sym in data and data[sym]:
-            stock.update(data[sym])
-            stock['last_updated'] = now
+    for sym, d in data.items():
+        if not d:
+            continue
+        # Store latest price data as JSON in a 'data' column (added dynamically)
+        try:
+            conn.execute('''
+                UPDATE watchlist SET
+                    price = ?, change_pct = ?, rsi = ?, sma50 = ?, sma200 = ?,
+                    market_cap = ?, analyst_rating = ?, last_updated = ?
+                WHERE symbol = ? AND active = 1
+            ''', (d.get('price'), d.get('change_pct'), d.get('rsi'),
+                  d.get('sma50'), d.get('sma200'), d.get('market_cap'),
+                  d.get('analyst_rating'), now, sym))
             updated += 1
-
-    with open(WATCHLIST_FILE, 'w') as f:
-        json.dump(stocks, f, indent=2)
-
+        except Exception as e:
+            print(f'  {sym}: DB update error - {e}')
+    conn.commit()
+    conn.close()
     return updated
 
 
@@ -101,8 +104,8 @@ def main():
 
     print(f'  Updating {len(symbols)} symbols: {", ".join(symbols)}')
     data = fetch_stock_data(symbols)
-    updated = update_watchlist(data)
-    print(f'  Done! Updated {updated}/{len(symbols)} stocks in watchlist.json')
+    updated = update_watchlist_db(data)
+    print(f'  Done! Updated {updated}/{len(symbols)} stocks in predictions.db')
 
 
 if __name__ == '__main__':

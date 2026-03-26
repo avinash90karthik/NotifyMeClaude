@@ -18,7 +18,7 @@ from risk_audit import risk_audit, parse_portfolio_summary
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 # Watchlist is stored in predictions.db (loaded via prediction_db.get_watchlist_symbols)
-PORTFOLIO_FILE = os.path.join(SCRIPT_DIR, 'memory', 'portfolio.md')
+# Portfolio state lives in predictions.db (single source of truth)
 PATTERNS_FILE = os.path.join(SCRIPT_DIR, 'memory', 'preopen_patterns.json')
 SNAPSHOTS_FILE = os.path.join(SCRIPT_DIR, 'memory', 'preopen_snapshots.json')
 
@@ -76,54 +76,41 @@ def get_watchlist():
 
 
 def get_open_positions():
-    """Parse open positions from memory/portfolio.md."""
-    if not os.path.exists(PORTFOLIO_FILE):
+    """Load open positions from predictions.db (single source of truth)."""
+    try:
+        from prediction_db import get_db
+        conn = get_db()
+        rows = conn.execute(
+            "SELECT symbol, direction, ko_level FROM predictions WHERE status='open'"
+        ).fetchall()
+        conn.close()
+        return [{'symbol': r['symbol'], 'ko_level': r['ko_level'], 'sector': None} for r in rows]
+    except Exception:
         return []
-    with open(PORTFOLIO_FILE) as f:
-        content = f.read()
-    positions = []
-    in_table = False
-    for line in content.splitlines():
-        if 'Offene Positionen' in line:
-            in_table = True
-            continue
-        if in_table and line.startswith('---'):
-            break
-        if not in_table or not line.startswith('|'):
-            continue
-        if 'Symbol' in line or '---' in line:
-            continue
-        cols = [c.strip() for c in line.split('|') if c.strip()]
-        if not cols:
-            continue
-        symbol = re.sub(r'\*+', '', cols[0]).strip()
-        if not symbol or symbol.lower() in ('cash', 'nvda aktie'):
-            continue
-        ko = None
-        if len(cols) > 5:
-            ko_raw = re.sub(r'[\$€\*~]', '', cols[5]).strip().split()[0] if cols[5] else None
-            try:
-                ko = float(ko_raw) if ko_raw else None
-            except (ValueError, TypeError):
-                ko = None
-        positions.append({'symbol': symbol, 'ko_level': ko, 'sector': None})
-    return positions
 
 
 def get_position_directions(positions, price_data=None):
-    """Infer LONG/SHORT direction from KO vs current stock price.
-    entry_price is the Turbo certificate price, NOT the stock price,
-    so we compare KO against the live stock price instead."""
-    dirs = {}
-    for p in positions:
-        sym = p['symbol']
-        ko = p.get('ko_level')
-        current_price = price_data.get(sym, {}).get('price') if price_data else None
-        if ko and current_price:
-            dirs[sym] = 'LONG' if ko < current_price else 'SHORT'
-        else:
-            dirs[sym] = '?'
-    return dirs
+    """Get LONG/SHORT direction from DB positions (or infer from KO vs price)."""
+    try:
+        from prediction_db import get_db
+        conn = get_db()
+        rows = conn.execute(
+            "SELECT symbol, direction FROM predictions WHERE status='open'"
+        ).fetchall()
+        conn.close()
+        return {r['symbol']: r['direction'] for r in rows}
+    except Exception:
+        # Fallback: infer from KO
+        dirs = {}
+        for p in positions:
+            sym = p['symbol']
+            ko = p.get('ko_level')
+            current_price = price_data.get(sym, {}).get('price') if price_data else None
+            if ko and current_price:
+                dirs[sym] = 'LONG' if ko < current_price else 'SHORT'
+            else:
+                dirs[sym] = '?'
+        return dirs
 
 
 def batch_download(symbols):

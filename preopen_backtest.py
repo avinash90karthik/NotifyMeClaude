@@ -25,7 +25,6 @@ from zoneinfo import ZoneInfo
 import numpy as np
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-WATCHLIST_JSON = os.path.join(SCRIPT_DIR, 'memory', 'watchlist.json')
 PATTERNS_FILE = os.path.join(SCRIPT_DIR, 'memory', 'preopen_patterns.json')
 ET = ZoneInfo('America/New_York')
 WARMUP_DAYS = 250
@@ -46,12 +45,9 @@ ALL_DIMS = ('score', 'rsi_zone', 'regime', 'gap', 'macd', 'volume', 'bb', 'futur
 
 
 def get_watchlist_symbols():
-    """Load US symbols from watchlist.json (skip EU stocks)."""
-    if not os.path.exists(WATCHLIST_JSON):
-        return []
-    with open(WATCHLIST_JSON) as f:
-        data = json.load(f)
-    return [s['symbol'] for s in data
+    """Load US symbols from predictions.db watchlist (skip EU stocks)."""
+    from prediction_db import get_watchlist_symbols as db_watchlist
+    return [s['symbol'] for s in db_watchlist()
             if not any(s['symbol'].endswith(sfx) for sfx in EU_SUFFIXES)]
 
 
@@ -547,7 +543,7 @@ def main():
     else:
         symbols = get_watchlist_symbols()
         if not symbols:
-            print('No symbols found. Use --symbols or add to watchlist.json')
+            print('No symbols found. Use --symbols or add to watchlist via admin_stocks.py')
             sys.exit(1)
 
     print(f'Pre-Open Pattern Backtest')
