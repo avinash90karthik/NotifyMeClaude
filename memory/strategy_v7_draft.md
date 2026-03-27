@@ -1,7 +1,7 @@
-# Strategy v7 Draft — Direct Position Hedge
+# Strategy v7 — Direct Position Hedge
 
-> **Status:** DRAFT — erster Live-Test 26.03.2026 (ENR.DE)
-> **Basis:** v5 core + v6 Blind Re-Analysis + Direct Hedge
+> **Status:** AKTIV — Live-Test bestanden (ENR.DE 26-27.03.2026)
+> **Basis:** v5 core + v6 Blind Re-Analysis + Direct Hedge + Pivot
 > **Ziel:** Bei intakter These Verluste reduzieren OHNE Position zu schließen
 
 ---
@@ -24,10 +24,13 @@ v5 Hedge: Index-SHORT (DAX/Nasdaq) als 3. Slot
 ║  DIRECT POSITION HEDGE — v7                                   ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  TRIGGER:                                                    ║
-║  → Zertifikat -20% vom Einstieg (= gleicher Trigger wie v6!) ║
+║  TRIGGER — HARTE REGEL:                                      ║
+║  → Zertifikat -20% vom Einstieg — SOFORT handeln!            ║
+║  → NICHT warten auf -25%, -30% oder schlimmer!               ║
+║  → Bei €6.000 Kapital: -20% vs -29% = €50-80 extra Verlust! ║
+║  → Gleicher Trigger wie v6 Blind Re-Analysis!                ║
 ║                                                               ║
-║  WANN (alle müssen erfüllt sein):                            ║
+║  BEDINGUNGEN (alle müssen erfüllt sein):                     ║
 ║  1. Cert -20% → v6 Blind Re-Analysis durchgeführt            ║
 ║  2. Blind-Ergebnis = GLEICHE Richtung (These intakt!)        ║
 ║  3. Momentum KLAR dagegen (mind. 2 von 3):                   ║
@@ -60,7 +63,7 @@ v5 Hedge: Index-SHORT (DAX/Nasdaq) als 3. Slot
 
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║  HEDGE EXIT — 3 klare Trigger                                ║
+║  HEDGE EXIT — 3 Trigger + Time-Stop                          ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
 ║  1. MOMENTUM DREHT:                                          ║
@@ -77,9 +80,43 @@ v5 Hedge: Index-SHORT (DAX/Nasdaq) als 3. Slot
 ║     → BEIDE Positionen schließen                             ║
 ║     → Netto-Verlust deutlich kleiner als ohne Hedge          ║
 ║                                                               ║
-║  ZEIT-STOP FÜR HEDGE:                                        ║
-║  → Max 5 Tage offen halten                                   ║
-║  → Danach: Lage neu bewerten oder schließen                  ║
+║  TIME-STOP — HARTE REGEL (wie v5 Time-Stops):               ║
+║  → Max 5 Tage Hedge offen halten — KEINE Ausnahmen!         ║
+║  → Tag 5: Lage bewerten → schließen ODER Pivot              ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+---
+
+## Pivot-Regel (NEU — aus Live-Test gelernt)
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  PIVOT — Vom Hedge zum Richtungswechsel                       ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  TRIGGER:                                                    ║
+║  → LONG Cert -40% UND SHORT im Plus                          ║
+║                                                               ║
+║  AKTION:                                                     ║
+║  1. LONG sofort schließen (Verlust akzeptieren)              ║
+║  2. Erlös in SHORT umschichten (Nachkauf)                    ║
+║  3. Ab hier: SHORT = normale Position mit v5-Exit-Regeln     ║
+║     → Recovery-Exit bei +15% (konservativer als +20%)        ║
+║     → 50% raus bei +15%, Rest Trail auf BE                   ║
+║                                                               ║
+║  WICHTIG:                                                    ║
+║  → Das ist KEIN Hedge mehr — es ist ein Richtungswechsel!    ║
+║  → cert_type in DB wechselt von 'hedge' zu 'turbo'          ║
+║  → Zählt ab jetzt als normaler Slot (1/3)                    ║
+║  → Recovery-Exits (+15%) gelten, NICHT Standard (+20%)       ║
+║                                                               ║
+║  WARUM -40% UND NICHT FRÜHER:                                ║
+║  → Bei -20%: Hedge gerade erst eröffnet, zu früh für Pivot  ║
+║  → Bei -30%: Momentum muss sich erst bestätigen              ║
+║  → Bei -40%: LONG ist zu weit weg, Recovery unrealistisch    ║
+║  → SHORT hat Momentum bewiesen → Richtung klar              ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
@@ -92,7 +129,7 @@ v5 Hedge: Index-SHORT (DAX/Nasdaq) als 3. Slot
 |-----------|-------------------|-------------------|
 | Basis-Risiko | HOCH — Index ≠ Aktie | **NULL — gleicher Basiswert** |
 | Berechenbar | Nein — Korrelation schwankt | **Ja — exakt gegenläufig** |
-| Praxis-Test | DAX-Short: -27€ in 1 Tag | ENR-Short: läuft (26.03) |
+| Praxis-Test | DAX-Short: -27€ in 1 Tag | ENR-Short: +€13 recovered |
 | Timing | Index hat eigene Dynamik | **Direkte Absicherung** |
 | Kosten | Spread auf fremdem Instrument | Spread auf bekanntem Instrument |
 
@@ -109,7 +146,7 @@ v5 Hedge: Index-SHORT (DAX/Nasdaq) als 3. Slot
 
 ---
 
-## v7 Entscheidungsbaum (erweitert v6)
+## v7 Entscheidungsbaum (komplett)
 
 ```
 Cert -20% vom Einstieg ← EIN Trigger für ALLES
@@ -131,15 +168,50 @@ Cert -20% vom Einstieg ← EIN Trigger für ALLES
     │       │   → Short-Turbo, gleiches Underlying
     │       │   → Lottery-Size, max = kleinste LONG
     │       │   → KO über Widerstand (>10% über Kurs)
+    │       │   → cert_type = 'hedge' in DB
     │       │
     │       └─ <2 erfüllt → Halten mit Stop (v5 Standard)
+    │
+    ├─ Hedge läuft → Exit-Trigger prüfen (Momentum/Katalysator/Stop/Time)
+    │
+    ├─ LONG -40% UND SHORT im Plus → PIVOT (siehe Pivot-Regel)
+    │   → LONG schließen, Erlös in SHORT
+    │   → cert_type wechselt 'hedge' → 'turbo'
+    │   → Recovery-Exits: +15% für 50%, Rest Trail
     │
     └─ Cert NICHT bei -20% → kein Hedge, v5/v6 Exits normal
 ```
 
 ---
 
-## Erster Live-Test: ENR.DE 26.03.2026
+## DB-Integration
+
+### Neues Feld: `is_hedge`
+
+Hedges werden in `predictions` mit `cert_type = 'hedge'` erfasst.
+
+- **Hedge:** `cert_type = 'hedge'` → zählt NICHT als voller Slot, wird in Win-Rate separat gerechnet
+- **Nach Pivot:** `cert_type` wechselt zu `'turbo'` → zählt als normaler Slot
+- **Portfolio-Anzeige:** Hedges werden mit `[H]` markiert
+- **Track Record:** Hedges separat auswerten (Hedge-P&L vs. Trade-P&L)
+
+### CLI-Befehle
+
+```bash
+# Hedge eröffnen (cert_type='hedge')
+python prediction_db.py record ENR.DE --direction SHORT --confidence 60 ...
+python prediction_db.py open ID --shares 35 --cert-price 2.17 --cert-type hedge
+
+# Pivot (cert_type wechselt)
+python prediction_db.py pivot ID   # setzt cert_type von 'hedge' auf 'turbo'
+
+# Portfolio zeigt Hedges separat
+python prediction_db.py portfolio   # Hedges mit [H] markiert, nicht als Slot gezählt
+```
+
+---
+
+## Erster Live-Test: ENR.DE 26-27.03.2026
 
 | Parameter | Wert |
 |-----------|------|
@@ -153,18 +225,19 @@ Cert -20% vom Einstieg ← EIN Trigger für ALLES
 ### Ergebnis Live-Test (27.03.2026)
 
 **Tag 1 (26.03):** Hedge eröffnet bei Cert -29% (zu spät! Regel sagt -20%)
-**Tag 2 (27.03):** ENR.DE fällt weiter auf €145 (-3,78%)
+**Tag 2 (27.03):** ENR.DE fällt weiter auf €143,75 (-4,61%)
 - LONG bei -49,58% geschlossen → **-€52,68 Verlust**
-- Erlös (€55,56) komplett in SHORT umgeschichtet
+- Erlös (€55,56) komplett in SHORT umgeschichtet (PIVOT)
 - SHORT nachgekauft bei +10% → 57 Stk @ avg €2,32
-- Limit-Sell: 28 Stk @ €2,67 (+15%)
+- 50% Take-Profit: 28 Stk @ €2,67 (+15%) → **+€13,04**
+- 29 Stk Runner mit BE-Stop → Trail auf €2,50
 
-**Pivot-Moment:** Hedge → Full SHORT. Kein Halten beider Seiten mehr.
+**Netto bisher:** -€52,68 + €13,04 = **-€39,64** (Runner könnten noch €5-15 bringen)
 
-### Learnings aus Live-Test
+### Learnings
 
 1. **-20% Trigger einhalten!** Wir haben bei -29% gehedgt statt -20% → €10-15 mehr Verlust als nötig
-2. **Pivot-Regel fehlt in v7:** Wenn LONG -40%+ UND SHORT profitabel → LONG schließen, Erlös in SHORT. Das ist kein Hedge mehr sondern ein Richtungswechsel
+2. **Pivot bei -40%+ funktioniert:** LONG war nicht mehr zu retten, SHORT hatte Momentum → Umschichtung war richtig
 3. **Recovery-Exits konservativer:** +15% statt +20% bei Recovery-Plays. Ziel ist Verlust-Minimierung, nicht Gewinn-Maximierung
 4. **Nachkauf im Gewinner:** Bei +10% auf SHORT nachgekauft (aus LONG-Erlös) = Avg gesenkt, Position gestärkt
 5. **Bei €6.000 Kapital (April):** Gleicher Fehler (-49%) wäre -€500+. Disziplin beim -20% Trigger ist KRITISCH
@@ -173,7 +246,7 @@ Cert -20% vom Einstieg ← EIN Trigger für ALLES
 
 ## Regeln unverändert von v5/v6
 
-- ≥60% Confidence Gate
+- ≥60% Confidence Gate — KEINE Ausnahmen
 - Max 3 offene Positionen (Hedge zählt NICHT als voller Slot)
 - Max 10% Verlust pro Trade
 - Scout/Confirmation Entry (v5)
@@ -184,20 +257,23 @@ Cert -20% vom Einstieg ← EIN Trigger für ALLES
 
 ---
 
-## Offene Fragen
+## Offene Fragen (beantwortet)
 
-1. Zählt der Hedge als eigener Slot? → NEIN, er schützt eine bestehende Position
-2. Max Hedge-Dauer? → Vorschlag 5 Tage, dann Lage neu bewerten
-3. Soll Hedge-Größe fix (Lottery) oder dynamisch (% des Long-Verlusts)?
-4. Hedge bei BEIDEN offenen Positionen gleichzeitig erlaubt?
-5. Backtesting: Hätte Direct Hedge die DAX-Short-Verluste (-27€) verhindert?
+1. ~~Zählt der Hedge als eigener Slot?~~ → **NEIN**, cert_type='hedge' in DB, wird separat gezählt
+2. ~~Max Hedge-Dauer?~~ → **5 Tage — HARTE REGEL** (wie v5 Time-Stops)
+3. ~~Hedge-Größe fix oder dynamisch?~~ → **Lottery, max = kleinste LONG** (bewährt im Live-Test)
+4. Hedge bei BEIDEN offenen Positionen gleichzeitig erlaubt? → Noch offen (braucht Live-Test)
+5. ~~Backtesting~~ → Live-Test hat Index-Hedge-Probleme bestätigt
 
 ---
 
-## Status: DRAFT
+## Status: AKTIV
 
-Nächste Schritte:
-- [ ] ENR.DE Live-Test dokumentieren (Ergebnis)
-- [ ] Vergleich: Direct Hedge P&L vs. "einfach halten" P&L
-- [ ] Backtesting: Vergangene Trades → wo hätte v7 gegriffen?
-- [ ] Regel finalisieren nach 3 Live-Tests
+- [x] ENR.DE Live-Test dokumentiert
+- [x] Pivot-Regel definiert
+- [x] -20% als harter Trigger
+- [x] 5-Tage Time-Stop als harte Regel
+- [ ] DB-Integration: cert_type='hedge' + pivot-Befehl implementieren
+- [ ] Portfolio-Anzeige: Hedges mit [H] markieren
+- [ ] Track Record: Hedges separat auswerten
+- [ ] 2 weitere Live-Tests für Validierung

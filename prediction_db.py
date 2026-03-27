@@ -308,16 +308,20 @@ def show_portfolio(args):
             total_invested += inv_open
             real = p['realized_pnl_eur'] or 0
             real_str = f'{real:+.0f} EUR' if real else ''
+            ctype = p["cert_type"] or "turbo"
+            hedge_marker = ' [H]' if ctype == 'hedge' else ''
             print(f'  {p["id"]:>3} {p["symbol"]:<9} {p["direction"]:<6} {shares_open:>5} '
                   f'€{p["cert_buyin"] or 0:>5.2f} €{inv_open:>8.2f} '
-                  f'{(p["cert_type"] or "turbo"):<8} {p["confidence"]:>3}% {real_str:>10}')
+                  f'{ctype:<8} {p["confidence"]:>3}% {real_str:>10}{hedge_marker}')
     else:
         print('Keine offenen Positionen.')
 
     portfolio_total = cash + total_invested
-    slots = len(positions)
+    slots = sum(1 for p in positions if (p['cert_type'] or 'turbo') != 'hedge')
+    hedges = sum(1 for p in positions if (p['cert_type'] or 'turbo') == 'hedge')
+    hedge_str = f' + {hedges}H' if hedges else ''
     print(f'\n  Invested: {total_invested:,.2f} EUR | Cash: {cash:,.2f} EUR')
-    print(f'  Portfolio: ~{portfolio_total:,.0f} EUR | Slots: {slots}/3')
+    print(f'  Portfolio: ~{portfolio_total:,.0f} EUR | Slots: {slots}/3{hedge_str}')
 
     if closed:
         print(f'\nGESCHLOSSENE TRADES:')
@@ -667,6 +671,26 @@ def export_predictions(args):
     conn.close()
 
 
+# ─── Pivot (v7: hedge → normal position) ──────────────────────────
+
+def pivot_position(args):
+    """v7 Pivot: convert hedge to normal position (direction change confirmed)."""
+    conn = get_db()
+    row = conn.execute('SELECT * FROM predictions WHERE id = ?', (args.id,)).fetchone()
+    if not row:
+        sys.exit(f'❌ #{args.id} not found.')
+    if row['status'] != 'open':
+        sys.exit(f'❌ #{args.id} not open (status: {row["status"]}).')
+    if (row['cert_type'] or 'turbo') != 'hedge':
+        sys.exit(f'⚠️  #{args.id} is not a hedge (cert_type: {row["cert_type"]}). Pivot only for hedges.')
+
+    conn.execute("UPDATE predictions SET cert_type='turbo' WHERE id=?", (args.id,))
+    conn.commit()
+    shares_open = (row['shares'] or 0) - (row['shares_closed'] or 0)
+    print(f'✅ #{args.id} {row["symbol"]} PIVOT: hedge → turbo ({shares_open} Stk, zählt jetzt als Slot)')
+    conn.close()
+
+
 # ─── Watchlist ─────────────────────────────────────────────────────
 
 def watchlist_add(args):
@@ -786,6 +810,10 @@ def main():
     s.add_argument('--closed', dest='status_filter', action='store_const', const='closed')
     s.add_argument('--analysis', dest='status_filter', action='store_const', const='analysis')
 
+    # pivot (v7)
+    s = sub.add_parser('pivot', help='v7: Convert hedge to normal position')
+    s.add_argument('id', type=int)
+
     # export
     sub.add_parser('export', help='Export as CSV')
 
@@ -806,6 +834,7 @@ def main():
     cmds = {
         'record': record_prediction, 'open': open_position,
         'confirm': confirm_position, 'close': close_position,
+        'pivot': pivot_position,
         'portfolio': show_portfolio, 'cash': update_cash,
         'fill': fill_outcomes, 'analyze': analyze_predictions,
         'list': list_predictions, 'export': export_predictions,
