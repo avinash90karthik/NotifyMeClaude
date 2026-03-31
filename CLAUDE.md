@@ -8,124 +8,49 @@ Each user runs their own independent instance: own Telegram bot, own GitHub Acti
 
 ---
 
-## TRADING STRATEGY v5
+## TRADING STRATEGY v7 (ACTIVE)
 
-> Goal: +15% baseline / +30% stretch per month.
-> When baseline is reached → become more conservative, not more aggressive.
-> Full v5 rules: `memory/strategy_v5.md`
+> Goal: +15% baseline / +30% stretch per month. Short-term trading: 1-5 days.
+> Full v7 rules: `memory/strategy_v7_draft.md`
 
-```
-╔═══════════════════════════════════════════════════════════════╗
-║  CORE STRATEGY v5 — ALWAYS FOLLOW!                           ║
-╠═══════════════════════════════════════════════════════════════╣
-║                                                               ║
-║  ENTRY (v5):                                                 ║
-║  1. 60% SCOUT immediately on signal                          ║
-║  2. 40% CONFIRMATION only when: next day green OR +5%        ║
-║  3. No follow-up if Scout >10% up OR >10% down               ║
-║  4. Event trades (Earnings/FOMC): 100% immediately           ║
-║                                                               ║
-║  EXITS:                                                       ║
-║  5. 50% at +20% IMMEDIATELY OUT — no exceptions!             ║
-║  6. Rest: trail stop to BE, then raise incrementally:        ║
-║     +30% → stop +15% / +40% → stop +25% / +50% → stop +35% ║
-║                                                               ║
-║  STOPS (NOT tiered!):                                        ║
-║  7. ONE stop for everything — NO negotiating!                ║
-║  8. Stop ALWAYS set at purchase — no exceptions              ║
-║                                                               ║
-║  RULES:                                                      ║
-║  9. MAX 3 open positions simultaneously                      ║
-║  10. ≥60% confidence gate — NO exceptions, no "lottery"      ║
-║  11. Pullbacks always come — patience pays off               ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
-```
+### Core Rules (from v5, still active)
 
-### Hedge System
+- **Entry:** 60% Scout on signal, 40% Confirmation (next day green OR +5%). No follow-up if Scout >10% up/down
+- **Exit:** 66% at +20% IMMEDIATELY. Rest: trail stop to BE, then raise (+30%→+15% / +40%→+25%)
+- **Stops:** ONE stop, set at purchase — no negotiating
+- **Slots:** MAX 3 open positions (hedge does NOT count as slot)
+- **Gate:** ≥60% confidence — NO exceptions, no "lottery"
+- **Time stops:** 3 days without +5% → halve; 5 days → exit
 
-```
-╔═══════════════════════════════════════════════════════════════╗
-║  SITUATIONAL HEDGE — 3rd slot as protection                   ║
-╠═══════════════════════════════════════════════════════════════╣
-║                                                               ║
-║  WHEN TO HEDGE:                                              ║
-║  • 2 LONG positions open AND                                 ║
-║  • Macro risk HIGH (war, FOMC, CPI, tariffs, crash)          ║
-║  → 3rd slot = index SHORT (DAX or Nasdaq) as hedge           ║
-║                                                               ║
-║  HEDGE RULES:                                                ║
-║  • Size: Lottery 10% — NEVER larger than smallest LONG pos   ║
-║  • Same exit rules: 50% at +20%, rest trail                  ║
-║  • CLOSE hedge when macro risk decreases                     ║
-║  • Choose index by trading hours + ATR (e.g. DAX, Nasdaq)    ║
-║                                                               ║
-║  WHEN NOT TO HEDGE:                                          ║
-║  • Only 1 LONG open → use 3rd slot for next trade            ║
-║  • Macro calm → hedge only costs performance                 ║
-║  • Already 50%+ cash → cash IS the hedge                     ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
-```
+### v7 Direct Position Hedge (replaces v5 index hedge)
+
+At Cert -20%: run Blind Re-Analysis. If thesis intact + momentum against (≥2 of: MACD bearish, SMA50 broken, macro headwind):
+- Open SHORT turbo on SAME underlying (not index — zero basis risk)
+- Size: Lottery, max = smallest LONG position, hedge 50-65% of exposure
+- KO: above next resistance, ≥10% above current price
+- Exit hedge when: momentum turns, catalyst resolves, or long stop hit
+- **Max 5 days** hedge duration (hard rule)
+- **Pivot at -40%:** If LONG cert -40% and SHORT profitable → close LONG, shift to SHORT (recovery exits +15%)
 
 ### Risk Management
 
-```
-╔═══════════════════════════════════════════════════════════════╗
-║  THESE RULES ALWAYS APPLY — NO EXCEPTIONS!                    ║
-╠═══════════════════════════════════════════════════════════════╣
-║                                                               ║
-║  1. Max loss per trade:         10% of portfolio             ║
-║  2. Max simultaneously at risk: 40% of portfolio             ║
-║  3. Max sector concentration:   60% in one sector            ║
-║  4. After 2 consecutive losses: halve position size          ║
-║  5. After -20% drawdown:        24h trading pause            ║
-║  6. ATR >7%: ONLY lottery/mini WITHOUT leverage              ║
-║  7. KO distance: ALWAYS ≥2x ATR (commodities ≥3x ATR)       ║
-║                                                               ║
-║  Credentials NEVER in committed files!                       ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
-```
-
-### ATR Measurement (Event-adjusted)
-
-```
-╔═══════════════════════════════════════════════════════════════╗
-║  ATR CHECK BEFORE EVERY TRADE                                ║
-╠═══════════════════════════════════════════════════════════════╣
-║                                                               ║
-║  Base:     ATR (14) — 14-day average                         ║
-║  Event:    ATR (5) — last 5 days                             ║
-║                                                               ║
-║  IF ATR(5) > ATR(14) × 1.5:                                 ║
-║  → Volatility ELEVATED, go one tier smaller:                 ║
-║    • Standard → Small                                        ║
-║    • Small → Lottery                                         ║
-║    • Lottery → No trade or no leverage                       ║
-║                                                               ║
-║  BEFORE EARNINGS/EVENTS: ALWAYS check ATR(5)!               ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
-```
+- Max loss per trade: 10% of portfolio
+- Max simultaneously at risk: 40% of portfolio
+- After 2 consecutive losses: halve position size
+- After -20% drawdown: 24h trading pause
+- ATR >7%: warrants/options only (no KO certs) — see feedback memory
+- KO distance: ≥2x ATR (commodities ≥3x ATR)
+- ATR event check: if ATR(5) > ATR(14) × 1.5 → one tier smaller
 
 ### Analysis Principles
 
-Concrete trading decisions (entry, exit, stop, KO distance) come from the 4-step analysis — not from fixed rules. The analysis delivers support/resistance, confidence, and position size per trade.
+Concrete trading decisions come from the 4-step analysis. The analysis delivers support/resistance, confidence, and position size per trade.
 
-**Core principles:**
-- **Tiered exits:** 50% out at +20%, rest trailing stop to break-even → runner target +40-60%
-- **Confidence gate:** Only trades with ≥60% confidence from the analysis — NO exceptions
-- **Take profits** when the analysis shows it — don't let winners turn into losers
-- **LONG and SHORT are equal** — the analysis decides direction, not a bias
-- **Situational hedge** — with 2 LONGs + high macro risk → 3rd slot as index SHORT (choose index by trading hours + ATR)
-- **KO calculation: ATR + chart combined** — KO always below strongest support (LONG) or above resistance (SHORT). ATR multiplier by asset class (large cap 2x, small cap 2.5x, commodities 3x)
-- **ATR event check** — ATR(5) vs ATR(14) before every trade. If ATR(5) > ATR(14) × 1.5 → one tier smaller
-- **Time stops** — after 3 days without +5%, halve; after 5 days, exit
-- **Check correlation** — verify sector concentration before every new trade
-- **Protect before earnings** — secure at least 50% before the event or increase ATR multiplier
-- **No fixed currency amounts** — position size in % of portfolio (scales automatically)
-- **Monthly target must not force trades** — +15% baseline is enough, no FOMO on stretch
+- **LONG and SHORT are equal** — scorecard decides direction
+- **KO = max(ATR-based, chart-based)** — ATR multiplier: Large Cap 2x, Small/Mid 2.5x, Commodities 3x
+- **Position sizing in % of portfolio** (10% lottery / 25% small / 35% standard / 20% no leverage)
+- **Protect before earnings** — secure ≥50% or increase ATR multiplier
+- **Correlation check** before every new trade
 
 ### Hard Rules for Analyses
 

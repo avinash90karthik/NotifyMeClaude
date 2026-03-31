@@ -26,7 +26,9 @@ Analyze INDEPENDENTLY from Bull/Bear. Use the chart as your own source.
 | Condition | Adjustment |
 |-----------|------------|
 | TRENDING + signal WITH trend | +5% |
-| TRENDING + signal AGAINST trend | -10% |
+| TRENDING + signal AGAINST trend (no confirming signals) | -10% |
+| TRENDING + AGAINST trend + 1 confirming (RSI div OR MACD cross) | -5% |
+| TRENDING + AGAINST trend + 2+ confirming (div + MACD + SMA50) | -3% |
 | RANGE + signal at S/R level | +3% |
 | CHOPPY | -5% to -10% |
 | Pre-open pattern hit >=60% same direction | +3% |
