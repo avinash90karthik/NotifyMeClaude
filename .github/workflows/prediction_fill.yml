@@ -13,10 +13,7 @@ jobs:
           python-version: '3.11'
       - run: pip install yfinance numpy
       - run: python prediction_db.py fill
-      - run: python prediction_db.py analyze --telegram
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      - run: python prediction_db.py analyze
       - name: Commit predictions DB
         run: |
           git config user.name "github-actions[bot]"
