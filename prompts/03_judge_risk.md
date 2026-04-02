@@ -2,7 +2,7 @@
 
 **Asset:** {{SYMBOL}}
 
-**Input:** Data (Step 1) + Debate (Step 2) + Chart. Consult `memory/reflections.md`.
+**Input:** Data (Step 1) + Debate (Step 2) + Chart. Consult `memory/feedback.md`.
 
 ---
 
@@ -114,6 +114,23 @@ Chart-KO: Below strongest support + 0.5-1% buffer = **$XX.XX**
 | W2 | Correlation with open? | [which] | PASS/WARN |
 | W3 | KO <2x ATR? | Distance=X.Xx | PASS/WARN |
 | W4 | Against SMA200 trend? | SMA200=[up/down] | PASS/WARN |
+| **W5** | **Overnight event <24h?** | **[Event + time]** | **PASS/WARN** |
+
+### W5 Overnight Event Check (MANDATORY)
+
+Search for events in the next 24 hours that could cause gaps:
+- FOMC rate decisions, Fed/ECB speeches
+- CPI, NFP, Jobless Claims releases
+- Presidential addresses, trade policy announcements
+- Geopolitical summits, escalation risks
+- Earnings of the symbol being analyzed
+
+**If event found AND position would be held overnight:**
+- Apply overnight protection rules from `memory/strategy_v7_draft.md` § Overnight-Event-Regel:
+  - Position ≥+10%: Stop on BE (PFLICHT)
+  - Position ≥+15%: 50% partial exit or Stop on +5%
+  - Position <+10%: Default = close, or document risk acceptance
+  - Friday: always BE stop before weekend
 
 **Result:** APPROVED / BLOCKED -- [reason]
 
@@ -151,6 +168,8 @@ Chart-KO: Below strongest support + 0.5-1% buffer = **$XX.XX**
   "target_usd": 0.00,
   "exits": [{"price": 0, "pct": 50}],
   "risk_per_trade_eur": 0,
+  "overnight_event": null,
+  "overnight_protection": null,
   "vetoes": [],
   "warnings": [],
   "approved": true

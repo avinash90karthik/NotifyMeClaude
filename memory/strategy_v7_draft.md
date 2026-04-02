@@ -123,6 +123,51 @@ v5 Hedge: Index-SHORT (DAX/Nasdaq) als 3. Slot
 
 ---
 
+## Overnight-Event-Regel (v8 — April 2026)
+
+> **Auslöser:** +500 EUR Gewinne über 3 Tage, über Nacht durch Trump-Rede auf -300 EUR gedreht.
+> **Kern:** Turbo-Zertifikate + Overnight-Gaps = unkontrollierbares Risiko.
+
+### Regeln
+
+1. **Position ≥ +10% und bekanntes Event heute Nacht:**
+   → Stop auf Break-Even setzen (PFLICHT)
+
+2. **Position ≥ +15% und bekanntes Event heute Nacht:**
+   → 50% Teilverkauf ODER Stop auf +5%
+
+3. **Position < +10% und bekanntes Event heute Nacht:**
+   → Default: schließen (Gewinne < 10% lohnen Risiko nicht)
+   → Alternative: bewusst halten, aber Risiko dokumentieren
+
+4. **Freitag = IMMER auf BE vor Wochenende**
+   → Gilt auch für "Event Eves" (Abend vor bekanntem Event)
+
+### Bekannte Event-Typen
+
+| Event | Typischer Impact | Häufigkeit |
+|-------|-----------------|------------|
+| FOMC Rate Decision | 2-5% Gap | 8x/Jahr |
+| CPI Release | 1-3% Gap | Monatlich |
+| NFP (Non-Farm Payrolls) | 1-2% Gap | Monatlich |
+| Trump/Präsident-Reden | 1-5% Gap (unberechenbar) | Unregelmäßig |
+| Geopolitik (Eskalation) | 2-10% Gap | Unberechenbar |
+| Earnings (eigene Position) | 5-20% Gap | Quartalsweise |
+
+### Integration in Analyse-Pipeline
+
+- **Step 1:** Event-Calendar-Check als erste Aktion (vor Technicals)
+- **Step 3:** W5 im Risk Audit: "Overnight event within 24h?"
+- **Step 4:** Entry-Timing berücksichtigt Event-Nähe
+
+### v8 Exit-Änderung
+
+- **80% bei +20% SOFORT** (ersetzt v7 66%-Regel)
+- **Rest maximal bis +30%** (enger als v7)
+- **Trump-Events = alles raus** (keine Overnight-Positionen)
+
+---
+
 ## Warum Direct Hedge > Index Hedge
 
 | Kriterium | Index-Hedge (v5) | Direct Hedge (v7) |

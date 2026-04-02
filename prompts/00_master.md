@@ -15,7 +15,8 @@ Execute these 4 steps sequentially. Each builds on the previous.
 
 ## Rules (always active)
 
-- Strategy rules: `memory/strategy_v5.md` and `CLAUDE.md`
+- Strategy rules: `memory/strategy_v7_draft.md` and `CLAUDE.md`
+- Feedback & learnings: `memory/feedback.md`
 - Portfolio state: `python prediction_db.py portfolio` (run BEFORE Step 1)
 - yfinance = truth for all price data (never web search for prices)
 - Every trade needs: entry, stop, KO, exits, time-stop
