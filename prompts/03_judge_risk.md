@@ -101,6 +101,34 @@ Chart-KO: Below strongest support + 0.5-1% buffer = **$XX.XX**
 
 ---
 
+## Optimal Entry
+
+**Ziel:** Limit-Order statt Market-Buy. Bei Turbos wirkt jeder Prozent am Entry mit dem vollen Hebel.
+
+Use `intraday_range` from collect_data.py output:
+
+| Metric | Value |
+|--------|-------|
+| Typical dip from open (Median) | X.XX% → Stock @ $XX.XX |
+| Conservative dip (P25, 75% hit rate) | X.XX% → Stock @ $XX.XX |
+| Nearest support | $XX.XX |
+| **Realistic limit** | **$XX.XX** (max of median-dip and nearest support) |
+
+**Cert-Impact:**
+```
+Cert @ Market:  €X.XX  (Stock @ $XX.XX)
+Cert @ Limit:   €X.XX  (Stock @ $XX.XX)
+Ersparnis:      X.X% pro Cert
+```
+
+**Entscheidung:**
+- Ersparnis < 3% → Market Buy OK
+- Ersparnis 3-5% → Limit-Order, 1 Tag gültig
+- Ersparnis > 5% → Limit-Order DRINGEND empfohlen
+- Fallback: "Wenn nicht bis XX:XX gefüllt → [Market/Reassess]"
+
+---
+
 ## Risk Audit (VETO CHECK)
 
 | # | Rule | Value | Status |

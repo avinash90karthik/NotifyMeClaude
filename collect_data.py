@@ -109,6 +109,31 @@ def detect_divergence_detailed(close_vals, rsi_vals, lookback=30):
     return div_type, details
 
 
+def calc_intraday_range(hist, lookback=60):
+    """How far does price dip below open (LONG) or rally above open (SHORT)?
+    Returns P25/Median/P75 percentiles from recent trading days."""
+    if len(hist) < 20:
+        return None
+    recent = hist.tail(lookback)
+    opens = recent['Open'].values.astype(float)
+    highs = recent['High'].values.astype(float)
+    lows = recent['Low'].values.astype(float)
+    valid = opens > 0
+    if valid.sum() < 15:
+        return None
+    dip_pct = ((opens[valid] - lows[valid]) / opens[valid]) * 100
+    rally_pct = ((highs[valid] - opens[valid]) / opens[valid]) * 100
+    return {
+        'dip_median_pct': round(float(np.median(dip_pct)), 2),
+        'dip_p25_pct': round(float(np.percentile(dip_pct, 25)), 2),
+        'dip_p75_pct': round(float(np.percentile(dip_pct, 75)), 2),
+        'rally_median_pct': round(float(np.median(rally_pct)), 2),
+        'rally_p25_pct': round(float(np.percentile(rally_pct, 25)), 2),
+        'rally_p75_pct': round(float(np.percentile(rally_pct, 75)), 2),
+        'sample_days': int(valid.sum()),
+    }
+
+
 def parse_support_resistance(hist, price):
     """Simple S/R from recent swing highs/lows."""
     highs, lows = [], []
@@ -312,6 +337,9 @@ def collect(symbol):
         'supports': supports,
         'resistances': resistances,
 
+        # Intraday range (for optimal entry)
+        'intraday_range': calc_intraday_range(hist),
+
         # Events
         'earnings_date': earnings_date,
     }
@@ -352,6 +380,9 @@ def print_human_readable(d):
     print(f'SHORT:  {d["short_pct_float"]}% float  |  {d["short_ratio_days"]:.1f} days to cover')
     print(f'ANALYST: {d["recommendation"].upper()}  Target: ${d["analyst_target_low"]}-${d["analyst_target_mean"]}-${d["analyst_target_high"]}')
     print(f'S/R:    S={d["supports"]}  R={d["resistances"]}')
+    ir = d.get('intraday_range')
+    if ir:
+        print(f'ENTRY:  Dip from open: median {ir["dip_median_pct"]:.2f}% (p25={ir["dip_p25_pct"]:.2f}%, p75={ir["dip_p75_pct"]:.2f}%)  |  {ir["sample_days"]}d sample')
     if d['earnings_date']:
         print(f'EARNINGS: {d["earnings_date"]}')
 
