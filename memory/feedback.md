@@ -5,6 +5,23 @@
 
 ---
 
+## #5 — Datengetriebener Entry, KEIN Market Buy (07.04.2026)
+
+**Auslöser:** ENR.DE Turbo bei 1,632€ per Market gekauft, innerhalb von 2h auf 1,38€ gefallen (-15,4%). Daten zeigten: Median-Dip 2,04%, 58% der Tagestiefs kommen nachmittags, Limit bei 1,30€ wäre realistisch gewesen. Ersparnis bei Limit: ~20%.
+
+**Problem:** Analyse sagte "Market Buy OK" weil Ersparnis < 3% — aber das war falsch berechnet (nur vs. aktuellem Kurs, nicht vs. realistischem Intraday-Dip). Bei 10x Hebel = 2% besser am Underlying = 20% besser am Cert.
+
+**Regel:**
+1. IMMER datengetriebenen Buy-Bereich berechnen (Median-Dip, ATR, Tagestief-Timing)
+2. IMMER Limit-Order als Default — Market Buy nur als letzter Fallback
+3. Entry-Plan mit 3 Stufen: Limit → Anheben → Fallback mit Zeitfenster
+4. Cert-Preise bei verschiedenen Underlying-Levels ausrechnen und in Summary zeigen
+5. "Market Buy OK" ist VERBOTEN als Empfehlung ohne datengetriebene Begründung
+
+**Merke:** Bei Turbos ist der Entry genauso wichtig wie die Analyse. Jeder Cent zählt mit Hebel.
+
+---
+
 ## #4 — v8 Exit-Regel (April 2026)
 
 **Änderung:** 80% bei +20% (statt v7 66%). Rest maximal bis +30%.

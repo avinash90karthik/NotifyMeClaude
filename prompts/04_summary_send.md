@@ -26,7 +26,7 @@ python prediction_db.py record {{SYMBOL}} \
 python prediction_db.py open ID --shares XX --cert-price XX.XX [--cert-type turbo|warrant|stock]
 ```
 
-## 2. Trading Card (Telegram format)
+## 2. Trading Card (Telegram/iMessage format)
 
 ```
 {{SYMBOL}} ANALYSIS
@@ -34,29 +34,35 @@ python prediction_db.py open ID --shares XX --cert-price XX.XX [--cert-type turb
 Signal: [LONG/SHORT/HOLD] | Confidence: XX%
 Price: $XX.XX (EUR XX.XX) | Regime: [REGIME]
 
-KO: $XX.XX (XX.X% distance, [ATR/CHART])
-Stop: $XX.XX | Leverage: ~Xx
+Cert: [ISIN] | KO: XX.XX | Hebel: ~Xx
+Stop: XX.XX (Underlying)
 
-Entry Timing: [PRE-MARKET/FIRST-HOUR DIP/AT OPEN]
-  Pre-Mkt: XX% | Open: XX% | FH-Dip: XX%
+Position: XX% Portfolio = XXX EUR (Scout XX% / Confirm XX%)
+Stück @ Limit: XXX Stk @ €X.XX
 
-Exits: +20% -> 50% out | +30% -> trail +15% | +40% -> trail +25%
-Time-Stop: 3d <5% -> halve | 5d -> exit
+═══ ENTRY-PLAN (DATENGETRIEBEN) ═══
+1. LIMIT: Cert €X.XX (Stock @ XX.XX) — bis XX:XX
+   → Median-Dip X.X%, Tagestief X% nachmittags
+2. ANHEBEN: Cert €X.XX (Stock @ XX.XX) — ab XX:XX
+3. FALLBACK: Market NUR nach Neubewertung
+═══════════════════════════════════
 
-S: $XX / $XX / $XX | R: $XX / $XX / $XX
+Exits v8: +20% → 80% raus | +30% → Rest Trail
+Time-Stop: 3d <5% → ½ | 5d → Exit
 
-Risk: Max XXX EUR (XX% portfolio)
-Sector: XX% [Sector] [OK/WARN]
-Correlation: [OK/WARNING]
+S: XX / XX / XX | R: XX / XX / XX
+
+Events: [nächstes Event + Klarheit/Unsicherheit]
+Risk: Max XXX EUR | Sector: XX% [OK/WARN]
 ```
 
 ## 3. Detailed Analysis (500-800 words, {{LANGUAGE}})
 
 Structure: Introduction, Technical Situation (include RSI divergence), Fundamentals, News/Catalysts, Risks, Conclusion with action recommendation.
 
-## 4. Entry Timing Recommendation
+## 4. Entry Timing Recommendation (DATENGETRIEBEN — aus Step 1 + Step 3 ableiten!)
 
-Check the current time (Berlin timezone) and recommend when to execute the trade:
+Check the current time:
 
 ```python
 python3 -c "
@@ -71,14 +77,67 @@ print(f'EU Market: {\"OPEN\" if 8 <= hour < 17 else \"CLOSED\"}')
 "
 ```
 
-**Decision matrix (for confidence >= 60%):**
+### Entry-Entscheidungskette (ALLE Schritte durchlaufen!)
 
-| Current Time (Berlin) | US Stock | EU Stock | Recommendation |
-|----------------------|----------|----------|----------------|
-| 08:00 - 15:29 | Wait for US Open (15:30) — wider spreads pre-market | Trade now (EU market open) | US: set limit order for 15:30+ / EU: execute now |
-| 15:30 - 16:30 | First-Hour Dip opportunity — use pre-open data | EU still open, but watch US spillover | Wait for first-hour dip if pre-open says so |
-| 16:30 - 22:00 | Full liquidity, tight spreads | EU closed, TR still trades | Best execution window for US stocks |
-| After 22:00 | Market closed, wide spreads | Closed | DO NOT trade — set limit order for tomorrow |
+**Schritt A: Daten aus Step 1 + Step 3 zusammenführen**
+
+| Input | Quelle | Wert |
+|-------|--------|------|
+| Best Entry Modus | Step 1 `entry_timing.best` | PRE_MARKET / AT_OPEN / FIRST_HOUR_DIP |
+| Limit-Preis (Cert) | Step 3 Optimal Entry | €X.XX |
+| Limit-Preis (Underlying) | Step 3 Optimal Entry | XX.XX |
+| Aktueller Preis | Live | XX.XX |
+| Tagestief-Timing | Step 3 (X% nachmittags) | vor/nach 12:00 |
+| Overnight Event <24h? | Step 3 W5 | JA/NEIN + wann |
+| Confidence | Step 3 | XX% |
+
+**Schritt B: Don't-Chase-Filter**
+
+| Aktueller Preis vs. Limit | Entscheidung |
+|---------------------------|-------------|
+| Preis ≤ Limit | Execute jetzt mit Limit-Order |
+| Preis 0-2% über Limit | Limit-Order setzen, gültig bis Fallback-Zeit |
+| Preis >2% über Limit | **WAIT — Don't chase!** Warte auf Dip |
+
+**Schritt C: Event-Filter**
+
+| Bedingung | Entscheidung |
+|-----------|-------------|
+| Overnight Event in <6h | **KEIN neuer Entry** — warte bis nach Event |
+| Event bringt Klarheit (Step 1) + beide Outcomes bullish | Entry OK, aber mit Stop-Management |
+| Event bringt Unsicherheit | WARTEN bis nach Event |
+
+**Schritt D: Confidence-Filter**
+
+| Confidence | Entry-Regel |
+|------------|------------|
+| 60-65% | Limit-Order **PFLICHT** — kein Market Buy |
+| 65-70% | Limit bevorzugt, Market nur wenn Dip schon stattgefunden hat |
+| 70%+ | Market akzeptabel NUR wenn Preis ≤ P25-Dip-Level |
+
+**Schritt E: Liquiditäts-Filter (nur als letzter Check)**
+
+| Zeit (Berlin) | US Stock | EU Stock |
+|--------------|----------|----------|
+| Vor 15:30 | Limit für 15:35+ | Markt offen, Limit OK |
+| 15:30-16:30 | First-Hour-Dip abwarten wenn Step 1 das sagt | US-Spillover beachten |
+| 16:30-22:00 | Beste Liquidität | TR handelt noch |
+| Nach 22:00 | **KEIN Trade** — Limit für morgen | **KEIN Trade** |
+
+**Schritt F: Finale Empfehlung**
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  ENTRY-EMPFEHLUNG: [LIMIT / WAIT / MARKET]                  ║
+║  Cert: [ISIN] @ €X.XX (Limit) oder WAIT bis XX:XX          ║
+║  Stück: XXX (Scout XX% = XXX EUR)                           ║
+║  Fallback: Limit anheben auf €X.XX ab XX:XX                 ║
+║  Don't-Chase: Preis aktuell X.X% über Limit → [OK/WAIT]    ║
+║  Event-Check: [Event] in Xh → [OK/WAIT]                    ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Output:** "Execute [LIMIT @ €X.XX / WAIT bis XX:XX / MARKET nur wenn...]" mit Begründung aus den Daten.
 
 **Output:** "Execute [NOW / AT US OPEN / FIRST-HOUR DIP / TOMORROW]" with reasoning.
 

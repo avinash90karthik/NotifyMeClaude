@@ -101,31 +101,90 @@ Chart-KO: Below strongest support + 0.5-1% buffer = **$XX.XX**
 
 ---
 
-## Optimal Entry
+## Optimal Entry (DATENGETRIEBEN — kein Market Buy ohne Begründung!)
 
-**Ziel:** Limit-Order statt Market-Buy. Bei Turbos wirkt jeder Prozent am Entry mit dem vollen Hebel.
+**Regel:** Bei Turbos wirkt jeder Prozent am Entry mit dem vollen Hebel. Ein 2% besserer Einstieg = 20% mehr Gewinn bei 10x Hebel. IMMER Limit-Order bevorzugen.
 
-Use `intraday_range` from collect_data.py output:
+### Schritt 1: Intraday-Dip-Statistik
+
+Use `intraday_range` from collect_data.py AND run this analysis:
+
+```python
+python3 -c "
+import yfinance as yf
+t = yf.Ticker('{{SYMBOL}}')
+
+# Intraday dip stats
+h = t.history(period='3mo')
+h['dip_pct'] = (h['Open'] - h['Low']) / h['Open'] * 100
+
+dips = h['dip_pct'].dropna().tail(60)
+print(f'Median Dip vom Open: {dips.median():.2f}%')
+print(f'P25 (75% Chance):    {dips.quantile(0.25):.2f}%')
+print(f'Tage mit Dip > 1%:   {(dips > 1).sum()}/60 ({(dips > 1).mean()*100:.0f}%)')
+print(f'Tage mit Dip > 2%:   {(dips > 2).sum()}/60 ({(dips > 2).mean()*100:.0f}%)')
+
+# Wann fällt das Tagestief?
+h1 = t.history(period='1mo', interval='1h')
+if len(h1) > 0:
+    h1['hour'] = h1.index.hour
+    from collections import Counter
+    daily_groups = h1.groupby(h1.index.date)
+    low_hours = []
+    for date, group in daily_groups:
+        if len(group) > 3:
+            low_hours.append(group['Low'].idxmin().hour)
+    total = len(low_hours)
+    morning = sum(1 for h in low_hours if h < 12)
+    afternoon = sum(1 for h in low_hours if h >= 12)
+    print(f'Tagestief vor 12:00: {morning}/{total} ({morning/total*100:.0f}%)')
+    print(f'Tagestief nach 12:00: {afternoon}/{total} ({afternoon/total*100:.0f}%)')
+    counts = Counter(low_hours)
+    peak_hour = max(counts, key=counts.get)
+    print(f'Häufigste Tief-Stunde: {peak_hour}:00 ({counts[peak_hour]}x)')
+"
+```
+
+### Schritt 2: Realistischen Buy-Bereich berechnen
 
 | Metric | Value |
 |--------|-------|
-| Typical dip from open (Median) | X.XX% → Stock @ $XX.XX |
-| Conservative dip (P25, 75% hit rate) | X.XX% → Stock @ $XX.XX |
-| Nearest support | $XX.XX |
-| **Realistic limit** | **$XX.XX** (max of median-dip and nearest support) |
+| Open heute | XX.XX |
+| Bisheriges Tief heute | XX.XX (X.X% Dip, X% der ATR ausgeschöpft) |
+| Median-Dip (50% Chance) | XX.XX |
+| P25-Dip (75% Chance) | XX.XX |
+| 0,5x ATR vom Open | XX.XX |
+| Nächster Support | XX.XX |
+| Tagestief-Timing | X% vor 12:00 / X% nach 12:00 |
 
-**Cert-Impact:**
+**Realistischer Buy-Bereich:** MIN(Median-Dip, 0.5x ATR) bis P25-Dip
+
+### Schritt 3: Cert-Preise berechnen
+
 ```
-Cert @ Market:  €X.XX  (Stock @ $XX.XX)
-Cert @ Limit:   €X.XX  (Stock @ $XX.XX)
-Ersparnis:      X.X% pro Cert
+Cert @ Market (Stock XX.XX):  €X.XX
+Cert @ Buy-Bereich oben:      €X.XX  (Ersparnis X.X%)
+Cert @ Buy-Bereich unten:     €X.XX  (Ersparnis X.X%)
 ```
 
-**Entscheidung:**
-- Ersparnis < 3% → Market Buy OK
-- Ersparnis 3-5% → Limit-Order, 1 Tag gültig
-- Ersparnis > 5% → Limit-Order DRINGEND empfohlen
-- Fallback: "Wenn nicht bis XX:XX gefüllt → [Market/Reassess]"
+### Schritt 4: Handlungsanweisung (MUSS in Summary stehen!)
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  ENTRY-PLAN                                                   ║
+╠═══════════════════════════════════════════════════════════════╣
+║  1. Limit-Order: Cert @ €X.XX (= Stock @ XX.XX)             ║
+║     → Gültig bis XX:XX Uhr                                   ║
+║  2. Wenn nicht gefüllt bis XX:XX:                            ║
+║     → Limit anheben auf €X.XX (= P25-Level)                 ║
+║  3. Absoluter Fallback (XX:XX):                              ║
+║     → Market Buy NUR wenn Daten noch stimmen                 ║
+║  4. KEIN Market Buy vor Schritt 1-2!                         ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**NIEMALS "Market Buy OK" ohne datengetriebene Begründung.**
+**Bei Turbos ist jeder Cent am Entry bares Geld.**
 
 ---
 
