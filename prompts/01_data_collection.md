@@ -153,13 +153,56 @@ Fill this table from the output:
 
 **Key insight:** [What does the pattern data tell us about likely direction?]
 
-## 1.9 Event Calendar
+## 1.9 Event Calendar & Impact Analysis
+
+**Via web search: Find ALL events in the next 1-7 days.**
 
 | Date | Event | Impact | Relevance |
 |------|-------|--------|-----------|
 | [dates] | [events] | [impact level] | [direct/macro/sector] |
 
 If earnings < 5 trading days: flag for KO adjustment in Step 3.
+
+### Event Impact Assessment (MANDATORY for each major event)
+
+For each event with impact HOCH or SEHR HOCH, answer:
+
+**1. Klarheit oder Unsicherheit?**
+Does this event RESOLVE uncertainty (= Klarheit → Katalysator) or CREATE MORE uncertainty (= neue Unsicherheit → Risk-Off)?
+
+| Event | Outcome A | Outcome B | Klarheit? |
+|-------|-----------|-----------|-----------|
+| [event] | [scenario A + market impact] | [scenario B + market impact] | JA/NEIN |
+
+**2. Was sagen die Daten?**
+How has {{SYMBOL}} reacted to similar events historically? Run:
+
+```python
+python3 -c "
+import yfinance as yf
+t = yf.Ticker('{{SYMBOL}}')
+h = t.history(period='6mo')
+h['ret'] = h['Close'].pct_change() * 100
+# Show behavior around event dates and big move days
+big = h[h['ret'].abs() > 3]
+print('=== BIG MOVES (>3%) ===')
+for i in range(len(big)):
+    idx = big.index[i]
+    pos = h.index.get_loc(idx)
+    r = big['ret'].iloc[i]
+    d = idx.strftime('%d.%m')
+    nxt = h['ret'].iloc[pos+1] if pos+1 < len(h) else float('nan')
+    print(f'  {d}: {r:+.2f}% → next day: {nxt:+.2f}%')
+bounce = sum(1 for i in range(len(big)) if h.index.get_loc(big.index[i])+1 < len(h) and h['ret'].iloc[h.index.get_loc(big.index[i])+1] > 0)
+print(f'Bounce rate after big drops: {bounce}/{len(big)}')
+"
+```
+
+**3. Entscheidung für den Trade:**
+- Event bringt Klarheit + Daten stützen Richtung → **Trade VOR Event** (profitiere vom Katalysator)
+- Event bringt Klarheit aber Richtung unklar → **Trade mit Stop-Management** (Overnight-Regel)
+- Event bringt MEHR Unsicherheit → **WARTEN bis nach Event**
+- Beide Outcomes bullish für Symbol → **Event ist kein Risiko, sondern Chance**
 
 ---
 
@@ -192,7 +235,16 @@ Produce the structured JSON block (collect_data.py output + your additions):
     "next_5d_green_pct": 0,
     "pattern_insight": ""
   },
-  "events": []
+  "events": [],
+  "event_impact": {
+    "main_event": "",
+    "klarheit_or_unsicherheit": "KLARHEIT|UNSICHERHEIT",
+    "outcome_a": "",
+    "outcome_b": "",
+    "both_outcomes_bullish": false,
+    "data_supports": "",
+    "trade_decision": "TRADE_VOR_EVENT|TRADE_MIT_STOP|WARTEN"
+  }
 }
 ```
 

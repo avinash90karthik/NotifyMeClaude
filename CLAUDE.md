@@ -14,6 +14,7 @@ Trading notification system built around a multi-agent analysis framework. Portf
 ### Quick Reference
 
 - **Entry:** 60% Scout / 40% Confirmation. No follow-up if Scout >10% up/down
+- **Position Sizing:** 60-65% conf → 15% portfolio | 65-70% → 20% | 70%+ → 25%
 - **Exit (v8):** 80% at +20% IMMEDIATELY. Rest max +30%. Trump-Events = alles raus
 - **Stops:** ONE stop, set at purchase — no negotiating
 - **Slots:** MAX 3 open positions (hedge does NOT count as slot)

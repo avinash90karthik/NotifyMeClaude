@@ -164,11 +164,27 @@ Search for events in the next 24 hours that could cause gaps:
 
 ---
 
+## Position Sizing (Confidence-basiert)
+
+| Confidence | Total (% Portfolio) | Scout (60%) | Confirmation (40%) |
+|------------|---------------------|-------------|-------------------|
+| 60-65% | Small **15%** | 9% | 6% |
+| 65-70% | Standard **20%** | 12% | 8% |
+| 70%+ | Standard **25%** | 15% | 10% |
+
+**Calculate:**
+- Portfolio value from `prediction_db.py portfolio`
+- Scout = Portfolio × Scout% → divide by cert ask price → number of certs
+- Confirmation = Portfolio × Confirm% → only after signal confirmation
+
 ## Risk-Per-Trade
 
 | Metric | Value |
 |--------|-------|
 | Portfolio value | XXX EUR |
+| Position size (XX%) | XXX EUR |
+| Scout (60%) | XXX EUR / XX certs |
+| Confirmation (40%) | XXX EUR / XX certs |
 | Max loss per trade (10%) | XXX EUR |
 | Currently at risk | XXX EUR |
 | Remaining risk budget | XXX EUR |

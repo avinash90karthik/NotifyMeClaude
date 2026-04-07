@@ -31,3 +31,11 @@ memory/watchlist.json
 memory/predictions.db
 memory/predictions_export.csv
 memory/portfolio.md
+memory/monitor_state.json
+memory/anne_responder_state.json
+memory/anne_responder_active
+memory/anne_context.md
+
+# Personal scripts (not for repo)
+anne_responder.py
+local_monitor.py

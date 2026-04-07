@@ -295,10 +295,23 @@ python prediction_db.py portfolio   # Hedges mit [H] markiert, nicht als Slot ge
 - Max 3 offene Positionen (Hedge zählt NICHT als voller Slot)
 - Max 10% Verlust pro Trade
 - Scout/Confirmation Entry (v5)
-- 66% Exit bei +20% (v6)
+- 80% Exit bei +20% SOFORT, Rest max +30% (v8)
 - Blind Re-Analysis bei -20% (v6)
 - KO-Distanz ≥2x ATR
 - Time-Stops: 3 Tage ohne +5% → halbieren, 5 Tage → Exit
+
+### Position Sizing (Confidence-basiert)
+
+| Konfidenz | Gesamt (% Portfolio) | Scout (60%) | Confirmation (40%) |
+|-----------|---------------------|-------------|-------------------|
+| 60-65% | Small **15%** | 9% | 6% |
+| 65-70% | Standard **20%** | 12% | 8% |
+| 70%+ | Standard **25%** | 15% | 10% |
+
+**Beispiel bei 6.000€ Portfolio, 70% Confidence:**
+- Gesamt: 25% = 1.500€
+- Scout: 15% = 900€
+- Confirmation: 10% = 600€
 
 ---
 
