@@ -159,13 +159,20 @@ if len(h1) > 0:
 
 **Realistischer Buy-Bereich:** MIN(Median-Dip, 0.5x ATR) bis P25-Dip
 
-### Schritt 3: Cert-Preise berechnen
+### Schritt 3: Cert auswählen & Preise berechnen
+
+> **Hinweis:** Claude kann kein Cert automatisch suchen. Schlage ein passendes Produkt vor
+> (Turbo Long/Short oder Warrant, Strike ~KO-Level, Hebel 4-8x, Trade Republic verfügbar)
+> und nenne ISIN + berechneten theoretischen Preis. Der Nutzer bestätigt dann den realen
+> Marktpreis — erst danach wird der finale Trade-Plan mit echtem Cert-Preis ausgegeben.
 
 ```
-Cert @ Market (Stock XX.XX):  €X.XX
+Cert @ Market (Stock XX.XX):  €X.XX  ← theoretisch berechnet
 Cert @ Buy-Bereich oben:      €X.XX  (Ersparnis X.X%)
 Cert @ Buy-Bereich unten:     €X.XX  (Ersparnis X.X%)
 ```
+
+**→ Nutzer bestätigt realen Cert-Preis → dann Step 4 finalisieren**
 
 ### Schritt 4: Handlungsanweisung (MUSS in Summary stehen!)
 
