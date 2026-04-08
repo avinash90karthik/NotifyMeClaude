@@ -24,7 +24,7 @@ def parse_portfolio_summary():
 
         # Calculate portfolio value (cash + invested)
         invested_row = conn.execute(
-            "SELECT COALESCE(SUM(shares * cert_entry_price), 0) as total "
+            "SELECT COALESCE(SUM(invested_eur), 0) as total "
             "FROM predictions WHERE status='open'"
         ).fetchone()
         invested = invested_row['total'] if invested_row else 0

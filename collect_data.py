@@ -15,6 +15,7 @@ import sys
 from datetime import datetime, timezone
 
 import numpy as np
+import pandas as pd
 import yfinance as yf
 
 from indicators import calc_adx, calc_bollinger, detect_regime
@@ -73,7 +74,7 @@ def calc_macd(close):
     return macd, signal, macd - signal
 
 
-def detect_divergence_detailed(close_vals, rsi_vals, lookback=30):
+def detect_divergence_detailed(close_vals, rsi_vals, lookback=30, currency_symbol='$'):
     """Detect bullish/bearish RSI divergence with detail strings.
 
     Returns (type, details_list) — richer than indicators.detect_rsi_divergence."""
@@ -81,6 +82,7 @@ def detect_divergence_detailed(close_vals, rsi_vals, lookback=30):
         return None, []
     c = close_vals[-lookback:]
     r = rsi_vals[-lookback:]
+    cs = currency_symbol
 
     lows, highs = [], []
     for i in range(2, len(c) - 2):
@@ -98,13 +100,13 @@ def detect_divergence_detailed(close_vals, rsi_vals, lookback=30):
         p, cu = lows[-2], lows[-1]
         if cu[1] < p[1] and cu[2] > p[2]:
             div_type = 'bullish'
-            details.append(f'Low1 ${p[1]:.2f} RSI={p[2]:.1f} -> Low2 ${cu[1]:.2f} RSI={cu[2]:.1f}')
+            details.append(f'Low1 {cs}{p[1]:.2f} RSI={p[2]:.1f} -> Low2 {cs}{cu[1]:.2f} RSI={cu[2]:.1f}')
 
     if len(highs) >= 2:
         p, cu = highs[-2], highs[-1]
         if cu[1] > p[1] and cu[2] < p[2]:
             div_type = div_type or 'bearish'
-            details.append(f'High1 ${p[1]:.2f} RSI={p[2]:.1f} -> High2 ${cu[1]:.2f} RSI={cu[2]:.1f}')
+            details.append(f'High1 {cs}{p[1]:.2f} RSI={p[2]:.1f} -> High2 {cs}{cu[1]:.2f} RSI={cu[2]:.1f}')
 
     return div_type, details
 
@@ -154,7 +156,7 @@ def collect(symbol):
     """Collect all data for a symbol. Returns structured dict."""
     ticker = yf.Ticker(symbol)
     info = ticker.info
-    hist = ticker.history(period='3mo')
+    hist = ticker.history(period='1y')
 
     if hist.empty:
         return {'error': f'No data for {symbol}'}
@@ -165,16 +167,41 @@ def collect(symbol):
     if price <= 0:
         return {'error': f'Invalid price for {symbol}'}
 
-    # EUR/USD
+    # Currency detection (NEVER hardcoded rates — CLAUDE.md rule #6)
+    raw_currency = (info.get('currency') or 'USD')
+    native_currency = raw_currency.upper()
+
+    # GBp (pence) → normalize to GBP (pounds)
+    is_pence = raw_currency in ('GBp', 'GBX', 'GBP')  # yfinance uses GBp for pence
+    if is_pence and raw_currency != 'GBP':
+        native_currency = 'GBP'
+        price = price / 100  # pence → pounds
+        # Convert hist OHLCV from pence to pounds too
+        for col in ['Open', 'High', 'Low', 'Close']:
+            if col in hist.columns:
+                hist[col] = hist[col] / 100
+
+    # Fetch live FX rates as needed
     try:
-        eurusd = yf.Ticker('EURUSD=X').info.get('regularMarketPrice', 1.05)
+        eurusd = yf.Ticker('EURUSD=X').info.get('regularMarketPrice')
+        if not eurusd or eurusd <= 0:
+            return {'error': 'EUR/USD rate unavailable — refusing to use hardcoded fallback'}
     except Exception:
-        eurusd = 1.05
+        return {'error': 'EUR/USD rate fetch failed — refusing to use hardcoded fallback'}
+
+    gbpusd = None
+    if native_currency == 'GBP':
+        try:
+            gbpusd = yf.Ticker('GBPUSD=X').info.get('regularMarketPrice')
+            if not gbpusd or gbpusd <= 0:
+                return {'error': 'GBP/USD rate unavailable — refusing to use hardcoded fallback'}
+        except Exception:
+            return {'error': 'GBP/USD rate fetch failed — refusing to use hardcoded fallback'}
 
     # Technicals source: ETF proxy for futures
     proxy = FUTURES_ETF_PROXY.get(symbol)
     if proxy:
-        proxy_hist = yf.Ticker(proxy).history(period='3mo')
+        proxy_hist = yf.Ticker(proxy).history(period='1y')
         close_ta = wavelet_denoise(proxy_hist['Close']) if HAS_WAVELET else proxy_hist['Close']
         high_ta = proxy_hist['High']
         low_ta = proxy_hist['Low']
@@ -190,12 +217,13 @@ def collect(symbol):
     rsi = round(float(rsi_series.iloc[-1]), 1)
     rsi_prev = round(float(rsi_series.iloc[-2]), 1)
     rsi_delta_1d = round(rsi - rsi_prev, 1)
-    rsi_delta_5d = round(rsi - float(rsi_series.iloc[-6]), 1) if len(rsi_series) > 6 else 0
+    rsi_delta_5d = round(rsi - float(rsi_series.iloc[-6]), 1) if len(rsi_series) >= 6 else 0
     rsi_slope = rsi_series.diff().rolling(3).mean()
     rsi_slope_val = round(float(rsi_slope.iloc[-1]), 2)
 
     # RSI Divergence (detailed version for analysis prompts)
-    div_type, div_details = detect_divergence_detailed(close_ta.values, rsi_series.values)
+    cur_sym = '€' if native_currency == 'EUR' else '£' if native_currency == 'GBP' else '$'
+    div_type, div_details = detect_divergence_detailed(close_ta.values, rsi_series.values, currency_symbol=cur_sym)
 
     # MACD
     macd_line, signal_line, histogram = calc_macd(close_ta)
@@ -205,15 +233,22 @@ def collect(symbol):
                   'BEARISH_CROSS' if macd_hist_prev > 0 and macd_hist < 0 else \
                   'BULLISH' if macd_hist > 0 else 'BEARISH'
 
-    # ATR
-    atr14 = (hist['High'] - hist['Low']).rolling(14).mean().iloc[-1]
-    atr5 = (hist['High'] - hist['Low']).rolling(5).mean().iloc[-1]
+    # ATR (True Range, not just High-Low — accounts for overnight gaps)
+    tr = pd.concat([
+        hist['High'] - hist['Low'],
+        (hist['High'] - hist['Close'].shift()).abs(),
+        (hist['Low'] - hist['Close'].shift()).abs()
+    ], axis=1).max(axis=1)
+    atr14 = tr.rolling(14).mean().iloc[-1]
+    atr5 = tr.rolling(5).mean().iloc[-1]
     atr_pct = round(float(atr14) / price * 100, 2)
     atr_ratio = round(float(atr5 / atr14), 2) if atr14 > 0 else 1.0
 
-    # SMAs
-    sma50 = info.get('fiftyDayAverage', 0)
-    sma200 = info.get('twoHundredDayAverage', 0)
+    # SMAs (from hist, not proxy — SMA must match the actual traded price)
+    sma50_series = hist['Close'].rolling(50).mean()
+    sma200_series = hist['Close'].rolling(200).mean()
+    sma50 = round(float(sma50_series.iloc[-1]), 2) if not np.isnan(sma50_series.iloc[-1]) else None
+    sma200 = round(float(sma200_series.iloc[-1]), 2) if len(hist) >= 200 and not np.isnan(sma200_series.iloc[-1]) else None
     dist_sma50 = round((price / sma50 - 1) * 100, 1) if sma50 and sma50 > 0 else None
     dist_sma200 = round((price / sma200 - 1) * 100, 1) if sma200 and sma200 > 0 else None
 
@@ -271,9 +306,15 @@ def collect(symbol):
         'exchange': exchange,
         'market_open': market_open,
 
-        # Price
-        'price_usd': round(price, 2),
-        'price_eur': round(price / eurusd, 2),
+        # Price (currency-aware)
+        'native_currency': native_currency,
+        'price_native': round(price, 2),
+        'price_usd': round(price * eurusd, 2) if native_currency == 'EUR'
+                      else round(price * gbpusd, 2) if native_currency == 'GBP'
+                      else round(price, 2),
+        'price_eur': round(price, 2) if native_currency == 'EUR'
+                     else round(price * gbpusd / eurusd, 2) if native_currency == 'GBP'
+                     else round(price / eurusd, 2),
         'eurusd': round(eurusd, 4),
         'day_high': info.get('dayHigh', 0),
         'day_low': info.get('dayLow', 0),
@@ -298,7 +339,8 @@ def collect(symbol):
         'macd_signal': macd_signal,
 
         # Volatility
-        'atr14_usd': round(float(atr14), 2),
+        'atr14': round(float(atr14), 2),
+        'atr14_currency': native_currency,
         'atr_pct': atr_pct,
         'atr5_atr14_ratio': atr_ratio,
         'atr_elevated': atr_ratio > 1.5,
@@ -323,10 +365,11 @@ def collect(symbol):
         # Fundamentals
         'market_cap': info.get('marketCap', 0),
         'short_pct_float': round(info.get('shortPercentOfFloat', 0) * 100, 1) if info.get('shortPercentOfFloat') else 0,
-        'short_ratio_days': info.get('shortRatio', 0),
+        'short_ratio_days': info.get('shortRatio') or 0,
         'analyst_target_mean': info.get('targetMeanPrice', 0),
         'analyst_target_high': info.get('targetHighPrice', 0),
         'analyst_target_low': info.get('targetLowPrice', 0),
+        'analyst_target_currency': native_currency,
         'recommendation': info.get('recommendationKey', 'N/A'),
 
         # Volume
@@ -360,8 +403,12 @@ def print_human_readable(d):
     print(f'Market ({d["exchange"]}): {mkt}')
     print()
 
-    print(f'PRICE:  ${d["price_usd"]}  (EUR {d["price_eur"]})  |  Change: {d["change_pct"]:+.2f}%')
-    print(f'Range:  ${d["day_low"]} - ${d["day_high"]}  |  52W: ${d["week52_low"]} - ${d["week52_high"]}')
+    cur = d.get('native_currency', 'USD')
+    sym_cur = '€' if cur == 'EUR' else '£' if cur == 'GBP' else '$'
+    # Show native price first, then converted
+    native_p = d['price_native']
+    print(f'PRICE:  {sym_cur}{native_p}  (€{d["price_eur"]} EUR / ${d["price_usd"]} USD)  |  Change: {d["change_pct"]:+.2f}%')
+    print(f'Range:  {sym_cur}{d["day_low"]} - {sym_cur}{d["day_high"]}  |  52W: {sym_cur}{d["week52_low"]} - {sym_cur}{d["week52_high"]}')
     print()
 
     rsi_arrow = '^' if d['rsi_delta_1d'] > 0 else 'v'
@@ -370,7 +417,7 @@ def print_human_readable(d):
         print(f'        DIVERGENCE: {d["rsi_divergence"].upper()}  {d["rsi_divergence_details"]}')
 
     print(f'MACD:   {d["macd_signal"]}  Hist={d["macd_hist"]:+.4f} (prev={d["macd_hist_prev"]:+.4f})')
-    print(f'ATR:    ${d["atr14_usd"]} ({d["atr_pct"]}%)  ATR5/14={d["atr5_atr14_ratio"]}x {"ELEVATED!" if d["atr_elevated"] else ""}')
+    print(f'ATR:    {sym_cur}{d["atr14"]} ({d["atr_pct"]}%)  ATR5/14={d["atr5_atr14_ratio"]}x {"ELEVATED!" if d["atr_elevated"] else ""}')
     print(f'ADX:    {d["adx"]}  +DI={d["plus_di"]}  -DI={d["minus_di"]}  -> REGIME: {d["regime"]}')
     sma50_str = f'{d["sma50"]} ({d["dist_sma50_pct"]:+.1f}%)' if d['sma50'] and d['dist_sma50_pct'] is not None else 'N/A'
     sma200_str = f'{d["sma200"]} ({d["dist_sma200_pct"]:+.1f}%)' if d['sma200'] and d['dist_sma200_pct'] is not None else 'N/A'
@@ -378,7 +425,7 @@ def print_human_readable(d):
     print()
 
     print(f'SHORT:  {d["short_pct_float"]}% float  |  {d["short_ratio_days"]:.1f} days to cover')
-    print(f'ANALYST: {d["recommendation"].upper()}  Target: ${d["analyst_target_low"]}-${d["analyst_target_mean"]}-${d["analyst_target_high"]}')
+    print(f'ANALYST: {d["recommendation"].upper()}  Target: {sym_cur}{d["analyst_target_low"]}-{sym_cur}{d["analyst_target_mean"]}-{sym_cur}{d["analyst_target_high"]}')
     print(f'S/R:    S={d["supports"]}  R={d["resistances"]}')
     ir = d.get('intraday_range')
     if ir:

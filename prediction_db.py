@@ -399,6 +399,10 @@ def fill_outcomes(args):
             print(f'  #{pid} {sym}: insufficient data')
             continue
 
+        if len(df) - 1 < 5:
+            print(f'  #{pid} {sym}: only {len(df)-1} days, waiting...')
+            continue
+
         closes = df['Close'].values
         highs = df['High'].values
         lows = df['Low'].values
@@ -444,10 +448,6 @@ def fill_outcomes(args):
                 if move >= needed:
                     p20_hit, p20_day = 1, i
                     break
-
-        if len(df) - 1 < 5:
-            print(f'  #{pid} {sym}: only {len(df)-1} days, waiting...')
-            continue
 
         conn.execute('''UPDATE predictions SET
             price_1d=?, price_3d=?, price_5d=?, price_10d=?, price_20d=?,
@@ -602,10 +602,13 @@ def list_predictions(args):
     """List predictions with optional status filter."""
     conn = get_db()
 
-    where = ''
     if hasattr(args, 'status_filter') and args.status_filter:
-        where = f" WHERE status = '{args.status_filter}'"
-    rows = conn.execute(f'SELECT * FROM predictions{where} ORDER BY created_at DESC').fetchall()
+        rows = conn.execute(
+            'SELECT * FROM predictions WHERE status=? ORDER BY created_at DESC',
+            (args.status_filter,)
+        ).fetchall()
+    else:
+        rows = conn.execute('SELECT * FROM predictions ORDER BY created_at DESC').fetchall()
 
     if not rows:
         print('No predictions found.')

@@ -17,12 +17,14 @@ def _load_env():
 
 _load_env()
 
-TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
-CHAT_ID = os.environ['TELEGRAM_CHAT_ID']
+TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID', '')
 API = f'https://api.telegram.org/bot{TOKEN}'
 
 def send_message(text, parse_mode='HTML'):
     """Send a text message."""
+    if not TOKEN or not CHAT_ID:
+        raise RuntimeError('TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not configured in .env')
     data = urllib.parse.urlencode({
         'chat_id': CHAT_ID,
         'parse_mode': parse_mode,
@@ -34,6 +36,8 @@ def send_message(text, parse_mode='HTML'):
 
 def send_photo(photo_path, caption=''):
     """Send a photo with optional caption."""
+    if not TOKEN or not CHAT_ID:
+        raise RuntimeError('TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not configured in .env')
     boundary = '----FormBoundary7MA4YWxkTrZu0gW'
 
     with open(photo_path, 'rb') as f:

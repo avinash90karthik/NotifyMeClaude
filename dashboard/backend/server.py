@@ -107,7 +107,7 @@ def portfolio():
             'closed_trades': closed_trades,
             'total_invested': total_invested,
             'portfolio_value': cash + total_invested,
-            'slots_used': len(positions),
+            'slots_used': sum(1 for p in positions if (p.get('cert_type') or 'turbo') != 'hedge'),
             'slots_max': 3,
         })
     finally:
@@ -171,6 +171,7 @@ def analysis_full(pred_id):
 @cached(ttl_seconds=900)
 def collect_symbol(symbol):
     """Live technical data via collect_data.py (15min cache)."""
+    symbol = symbol.upper()
     try:
         from collect_data import collect
         data = collect(symbol)
@@ -183,11 +184,15 @@ def collect_symbol(symbol):
 @cached(ttl_seconds=120)
 def ohlcv(symbol):
     """OHLCV data + indicators for charting (15min cache)."""
+    symbol = symbol.upper()
     try:
         import yfinance as yf
         import numpy as np
 
+        VALID_PERIODS = {'1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max'}
         period = request.args.get('period', '6mo')
+        if period not in VALID_PERIODS:
+            period = '6mo'
         df = yf.download(symbol, period=period, interval='1d', progress=False)
         if hasattr(df.columns, 'levels') and len(df.columns.levels) > 1:
             df.columns = df.columns.droplevel(1)
@@ -381,6 +386,7 @@ def scan():
 @app.route('/api/hedge-setup/<symbol>')
 def hedge_setup(symbol):
     """Hedge setup: current position + RSI zone + combo signals + recommended KO."""
+    symbol = symbol.upper()
     try:
         from collect_data import collect
 
@@ -412,8 +418,8 @@ def hedge_setup(symbol):
             rsi_zone = 'oversold'
 
         # Recommended short KO
-        atr = d.get('atr14_usd', 0)
-        price = d.get('price_usd', 0)
+        atr = d.get('atr14', 0) or d.get('atr14_usd', 0)  # atr14 is in native currency
+        price = d.get('price_native', 0) or d.get('price_usd', 0)
         market_cap = d.get('market_cap', 0)
 
         if market_cap > 50e9:
