@@ -15,11 +15,11 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
-          pip install pytest yfinance numpy pandas pywt python-dotenv
+          pip install pytest yfinance numpy pandas PyWavelets python-dotenv
 
       - name: Run tests
         run: python -m pytest tests/ -v
