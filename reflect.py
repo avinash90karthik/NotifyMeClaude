@@ -5,7 +5,7 @@ pattern analysis, risk/reward, and generates memory/reflections.md.
 
 Usage:
     python reflect.py                # Generate reflections.md
-    python reflect.py --telegram     # Also send summary via Telegram
+    python reflect.py
 """
 
 import argparse
@@ -396,41 +396,8 @@ def generate_reflections_md(stats, trades):
     return '\n'.join(lines)
 
 
-def format_telegram(stats):
-    """Format a compact Telegram summary."""
-    msg = '<b>REFLECTION REPORT</b>\n'
-    msg += f'{datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")}\n\n'
-
-    msg += f'Trades: {stats["total_trades"]} | Win-Rate: {stats["win_rate"]}%\n'
-    msg += f'P&L: {stats["total_pnl"]:+.2f} EUR\n'
-    msg += f'R/R: {stats["rr_ratio"]:.2f} | Avg Win: {stats["avg_win"]:+.0f} | Avg Loss: {stats["avg_loss"]:+.0f}\n\n'
-
-    for direction in ('LONG', 'SHORT'):
-        ds = stats['direction_stats'].get(direction)
-        if ds:
-            emoji = '🟢' if direction == 'LONG' else '🔴'
-            msg += f'{emoji} {direction}: {ds["win_rate"]}% ({ds["wins"]}/{ds["total"]}) {ds["total_pnl"]:+.0f}€\n'
-
-    dur = stats.get('duration')
-    if dur:
-        msg += f'\n⏱ Avg Duration: {dur["avg_days"]} Tage'
-        if dur['avg_days_winners'] is not None:
-            msg += f' (Gewinner: {dur["avg_days_winners"]}, Verlierer: {dur.get("avg_days_losers", "?")})'
-        msg += '\n'
-
-    msg += f'\nv3: {stats["v3_partial_exits"]} Teilverkäufe'
-    if stats['discipline_violations'] > 0:
-        msg += f' | ⚠️ {stats["discipline_violations"]} Verstöße'
-    if stats['below_gate_trades'] > 0:
-        msg += f' | ⚠️ {stats["below_gate_trades"]} unter Gate'
-
-    msg += '\n\n<i>Reflection Engine v2 (predictions.db)</i>'
-    return msg
-
-
 def main():
     parser = argparse.ArgumentParser(description='Silver Hawk Reflection Loop')
-    parser.add_argument('--telegram', action='store_true', help='Send summary via Telegram')
     args = parser.parse_args()
 
     if not os.path.exists(DB_FILE):
@@ -464,12 +431,6 @@ def main():
     with open(REFLECTIONS_FILE, 'w') as f:
         f.write(reflections_md)
     print(f'\nWritten: {REFLECTIONS_FILE}')
-
-    if args.telegram:
-        from send_telegram import send_message
-        msg = format_telegram(stats)
-        send_message(msg)
-        print('Telegram sent.')
 
 
 if __name__ == '__main__':

@@ -1,8 +1,8 @@
 # Silver Hawk Trading - Onboarding Guide
 
-Du brauchst: einen Mac/PC, 30 Minuten, und eine Claude Pro Subscription ($20/Monat).
+Du brauchst: einen Mac/PC, 15 Minuten, und eine Claude Pro Subscription ($20/Monat).
 
-Alles ist komplett privat - dein eigener Bot, deine eigenen Alerts.
+Alles ist komplett lokal — der State lebt in deiner eigenen SQLite-Datei.
 
 ---
 
@@ -17,23 +17,7 @@ Falls npm nicht installiert ist: https://nodejs.org herunterladen und installier
 
 ---
 
-## Schritt 2: Telegram Bot erstellen
-
-1. Telegram oeffnen
-2. Nach **@BotFather** suchen und oeffnen
-3. `/newbot` eingeben
-4. Namen vergeben (z.B. "Mein Trading Bot")
-5. Username vergeben (muss auf `_bot` enden, z.B. `mein_trading_bot`)
-6. **Bot Token kopieren** - das brauchst du gleich!
-
-Deine Chat-ID herausfinden:
-1. Schicke deinem neuen Bot eine Nachricht (irgendwas)
-2. Oeffne im Browser: `https://api.telegram.org/bot<DEIN_TOKEN>/getUpdates`
-3. Suche nach `"chat":{"id":` - die Zahl dahinter ist deine **Chat ID**
-
----
-
-## Schritt 3: Repo forken und einrichten
+## Schritt 2: Repo forken und einrichten
 
 1. Gehe zum GitHub Repo (Link vom Admin)
 2. Klicke **Fork** (oben rechts)
@@ -43,20 +27,15 @@ Deine Chat-ID herausfinden:
 git clone https://github.com/DEIN_USERNAME/NotifyMeClaude.git
 cd NotifyMeClaude
 
-# .env aus Template erstellen
+# .env aus Template erstellen (nur optionale Pfade)
 cp .env.template .env
 ```
 
-Jetzt `.env` bearbeiten und ALLE Felder ausfuellen:
-```
-TELEGRAM_BOT_TOKEN=dein_bot_token
-TELEGRAM_CHAT_ID=deine_chat_id
-TELEGRAM_BOT_USERNAME=dein_bot_username
-```
+Die `.env` ist optional — fuelle nur Pfade ein, wenn du eine dedizierte Python-venv oder ein externes Chart-Script nutzt.
 
 ---
 
-## Schritt 4: Python einrichten + Watchlist befuellen
+## Schritt 3: Python einrichten + Watchlist befuellen
 
 ```bash
 # Dependencies installieren
@@ -68,58 +47,25 @@ python3 admin_stocks.py seed
 
 ---
 
-## Schritt 5: Testen
+## Schritt 4: Testen
 
 ```bash
-# Test 1: Telegram Bot
-python3 send_telegram.py "Hallo von Silver Hawk!"
-# -> Du solltest eine Nachricht in Telegram bekommen
-
-# Test 2: Watchlist anzeigen
+# Test 1: Watchlist anzeigen
 python3 browse_stocks.py
 # -> Zeigt die Watchlist (noch ohne Preise)
 
-# Test 3: Preise aktualisieren
+# Test 2: Preise aktualisieren
 python3 update_stocks.py
 # -> Holt aktuelle Preise, RSI, SMAs
 
-# Test 4: Watchlist nochmal anzeigen
+# Test 3: Watchlist nochmal anzeigen
 python3 browse_stocks.py
 # -> Jetzt mit Preisen, RSI, Ratings!
+
+# Test 4: Schneller technischer Snapshot
+python3 collect_data.py AAPL
+# -> Komplette Daten fuer Apple
 ```
-
----
-
-## Schritt 6: GitHub Actions einrichten (empfohlen!)
-
-Damit laufen Preis-Updates automatisch - auch wenn dein Rechner aus ist.
-
-1. Gehe zu deinem Fork auf GitHub
-2. **Settings > Secrets and variables > Actions**
-3. Fuege diese 2 Secrets hinzu:
-
-| Secret | Wert |
-|--------|------|
-| `TELEGRAM_BOT_TOKEN` | Dein Bot Token aus Schritt 2 |
-| `TELEGRAM_CHAT_ID` | Deine Chat ID aus Schritt 2 |
-
-4. Gehe zu **Actions** Tab
-5. Klicke **"I understand my workflows, go ahead and enable them"**
-6. Fertig! Der **Stock Updater** (`update_stocks.yml`) aktualisiert Preise alle 30 Min automatisch.
-
-### Optional: Preis-Alerts einrichten
-
-Fuer automatische Preis-Alerts (Telegram-Benachrichtigungen bei grossen Moves):
-
-```bash
-# Template kopieren und mit deinen Stocks befuellen
-cp tracker_check_template.py tracker_check.py
-```
-
-Bearbeite `tracker_check.py` und fuege deine Symbole + Alert-Levels hinzu. Dann aktiviert `tracker.yml` automatische Alerts:
-- Stuendliche Zusammenfassungen (leise)
-- Sofort-Alerts bei grossen Moves (>1.5% in 5 Min)
-- Alerts wenn wichtige Preis-Levels erreicht werden
 
 ---
 
@@ -135,7 +81,7 @@ Das startet eine 4-Schritt-Analyse:
 1. Daten sammeln (yfinance + News)
 2. Bull vs Bear Debatte
 3. Urteil + Risikoanalyse
-4. Trading Card an deinen Telegram Bot
+4. Trading Card im Terminal + `memory/predictions.db` wird aktualisiert
 
 Schau mit `python3 browse_stocks.py` was auf der Watchlist steht, oder analysiere jedes beliebige Symbol.
 
@@ -171,13 +117,33 @@ python3 admin_stocks.py list
 
 ---
 
+## Portfolio-Tracking
+
+Dein Portfolio-State lebt in `memory/predictions.db` (SQLite).
+
+```bash
+# Aktuellen Stand anzeigen
+python3 prediction_db.py portfolio
+
+# Cash-Balance setzen
+python3 prediction_db.py cash 10000
+
+# Nach Trade-Eroeffnung
+python3 prediction_db.py open ID --shares 50 --cert-price 2.50
+
+# Position schliessen
+python3 prediction_db.py close ID --exit-price 3.10 --reason target
+```
+
+---
+
 ## FAQ
 
 **Kostet das was?**
-Claude Pro: $20/Monat. Telegram und GitHub Actions: kostenlos.
+Claude Pro: $20/Monat. Alles andere ist kostenlos (yfinance, lokale SQLite).
 
 **Kann jemand meine Daten sehen?**
-Nein. Du hast deinen eigenen Bot und deine eigenen Alerts. Alles komplett privat.
+Nein. Alles ist lokal — deine eigene SQLite-Datei, keine Cloud, kein Tracking.
 
 **Muss ich Coding koennen?**
 Nein! Du brauchst nur Terminal oeffnen und die obigen Befehle ausfuehren.

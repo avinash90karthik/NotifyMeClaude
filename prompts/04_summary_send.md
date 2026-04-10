@@ -26,7 +26,7 @@ python prediction_db.py record {{SYMBOL}} \
 python prediction_db.py open ID --shares XX --cert-price XX.XX [--cert-type turbo|warrant|stock]
 ```
 
-## 2. Trading Card (Telegram/iMessage format)
+## 2. Trading Card (terminal format)
 
 ```
 {{SYMBOL}} ANALYSIS
@@ -156,21 +156,7 @@ print(f'EU Market: {\"OPEN\" if 8 <= hour < 17 else \"CLOSED\"}')
 | 9 | Sector <60%? | | |
 | 10 | Analysis recorded in DB? (always!) | | |
 
-## 6. Send via Telegram
-
-```bash
-source .env
-python send_telegram.py "$(cat <<'EOF'
-[Trading Card from above]
-EOF
-)"
-
-# Chart photo (if available)
-CHART="${CHART_OUTPUT_DIR:-charts}/{{SYMBOL}}_chart.png"
-[ -f "$CHART" ] && python -c "from send_telegram import send_photo; send_photo('$CHART', '{{SYMBOL}}')"
-```
-
-## 7. Wait for User Confirmation
+## 6. Wait for User Confirmation
 
 - Analysis is recorded as `analysis` status
 - When user confirms trade → run `open` command

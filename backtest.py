@@ -7,7 +7,6 @@ Usage:
     python backtest.py SYMBOL                   # Single symbol
     python backtest.py SYMBOL1 SYMBOL2 SYMBOL3  # Multiple symbols
     python backtest.py --watchlist               # All from watchlist
-    python backtest.py SYMBOL --telegram         # With Telegram delivery
 """
 
 import argparse
@@ -316,43 +315,10 @@ def format_results(result):
     return '\n'.join(lines)
 
 
-def format_telegram(results):
-    """Format multiple results for Telegram."""
-    msg = f'<b>BACKTEST REPORT</b>\n'
-    msg += f'{datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")}\n\n'
-
-    for r in results:
-        if not r:
-            continue
-        sym = r['symbol']
-        msg += f'<b>{sym}</b> ({r["total_days"]}d)\n'
-        msg += f'  L:{r["long_signals"]} ({r["long_pct"]}%) | S:{r["short_signals"]} ({r["short_pct"]}%)\n'
-
-        for key in ('LONG_5d', 'SHORT_5d'):
-            hr = r['hit_rates'].get(key)
-            if hr:
-                direction = key.split('_')[0]
-                emoji = '🟢' if hr['hit_rate'] >= 55 else '🔴' if hr['hit_rate'] < 45 else '🟡'
-                msg += f'  {emoji} {direction} 5d: {hr["hit_rate"]}% ({hr["avg_return"]:+.2f}%)\n'
-
-        if r['regime_hit_rates']:
-            best = max(r['regime_hit_rates'].items(), key=lambda x: x[1]['hit_rate'])
-            worst = min(r['regime_hit_rates'].items(), key=lambda x: x[1]['hit_rate'])
-            msg += f'  Best regime: {best[0]} {best[1]["hit_rate"]}%\n'
-            if worst[0] != best[0]:
-                msg += f'  Worst: {worst[0]} {worst[1]["hit_rate"]}%\n'
-
-        msg += '\n'
-
-    msg += f'<i>Score Threshold: {SCORE_THRESHOLD} | Backtest Engine v1</i>'
-    return msg
-
-
 def main():
     parser = argparse.ArgumentParser(description='Silver Hawk Backtest Engine')
     parser.add_argument('symbols', nargs='*', help='Symbols to backtest')
     parser.add_argument('--watchlist', action='store_true', help='Backtest all watchlist symbols')
-    parser.add_argument('--telegram', action='store_true', help='Send results via Telegram')
     parser.add_argument('--period', default='2y', help='Data period (default: 2y)')
     parser.add_argument('--feature-importance', action='store_true', help='Analyze feature importance')
     args = parser.parse_args()
@@ -409,11 +375,6 @@ def main():
                     print(f'  {fr["component"]:8s} corr={fr["correlation"]:+.4f} '
                           f'spread={fr["spread"]:+.3f}% {fr["signal"]}')
                 generate_weight_report(sym, fi)
-
-    if args.telegram:
-        from send_telegram import send_message
-        msg = format_telegram(results)
-        send_message(msg)
 
 
 if __name__ == '__main__':

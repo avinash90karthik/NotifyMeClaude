@@ -11,7 +11,7 @@ Execute these 4 steps sequentially. Each builds on the previous.
 | 1 | `prompts/01_data_collection.md` | Run `python collect_data.py {{SYMBOL}}`, chart, news, macro |
 | 2 | `prompts/02_investment_debate.md` | Bull vs Bear debate (2 rounds + synthesis), SHORT scorecard |
 | 3 | `prompts/03_judge_risk.md` | Signal + confidence, KO calculation, risk audit, trade plan |
-| 4 | `prompts/04_summary_send.md` | Trading card, Telegram delivery, prediction DB record |
+| 4 | `prompts/04_summary_send.md` | Trading card, prediction DB record |
 
 ## Rules (always active)
 

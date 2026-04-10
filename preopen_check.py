@@ -6,7 +6,6 @@ Uses pattern DB from preopen_backtest.py + live technicals.
 
 Usage:
     python preopen_check.py SYMBOL1 SYMBOL2
-    python preopen_check.py SYMBOL --telegram
 """
 
 import argparse
@@ -354,7 +353,7 @@ def check_symbol(sym, patterns_db, entry_timing=False, force_timing=False):
 
 
 def format_verdict(r):
-    """Format a single symbol verdict for console/Telegram."""
+    """Format a single symbol verdict for console output."""
     if r.get('error'):
         return f'{r["symbol"]}: {r["error"]}'
 
@@ -425,7 +424,6 @@ def format_verdict(r):
 def main():
     parser = argparse.ArgumentParser(description='Silver Hawk Pre-Open Verdict')
     parser.add_argument('symbols', nargs='+', help='Symbols to check')
-    parser.add_argument('--telegram', action='store_true', help='Send via Telegram')
     parser.add_argument('--entry-timing', action='store_true', help='Run entry-timing analysis')
     parser.add_argument('--force-timing', action='store_true', help='Bypass entry-timing cache')
     args = parser.parse_args()
@@ -450,19 +448,11 @@ def main():
         results.append(r)
 
     print(f'\n{"=" * 50}')
-    msg_parts = [f'<b>PRE-OPEN CHECK</b> | {now_et.strftime("%H:%M %Z %d.%m.%Y")}\n']
 
     for r in results:
         txt = format_verdict(r)
         print(txt.replace('<b>', '').replace('</b>', ''))
-        msg_parts.append(txt)
         print()
-
-    if args.telegram:
-        from send_telegram import send_message
-        msg = '\n\n'.join(msg_parts)
-        result = send_message(msg)
-        print(f'Telegram sent: {result.get("ok", False)}')
 
 
 if __name__ == '__main__':

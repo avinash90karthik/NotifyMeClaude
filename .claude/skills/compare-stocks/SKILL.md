@@ -135,26 +135,9 @@ Rate each ticker for turbo trading (0-10):
 
 ---
 
-## STEP 5: Send via Telegram
-
-```bash
-source .env
-python send_telegram.py "$(cat <<'EOF'
-📊 TICKER COMPARISON
-
-[Ranking table]
-
-→ Recommendation: fully analyze SYMBOL
-EOF
-)"
-```
-
----
-
 ## ENFORCEMENT
 
 - ✅ All data from yfinance (no estimates)
 - ✅ EUR/USD fetched live
 - ✅ Sector check against existing portfolio
 - ✅ Clear ranking with reasoning
-- ✅ Telegram delivery
