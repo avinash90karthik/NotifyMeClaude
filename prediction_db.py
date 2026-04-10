@@ -29,7 +29,7 @@ Workflow:
     python prediction_db.py fill
 
     # 8. Analyze prediction quality (traded vs skipped)
-    python prediction_db.py analyze [--telegram]
+    python prediction_db.py analyze
 
     # Other: list [--open|--closed], export
 """
@@ -578,21 +578,6 @@ def analyze_predictions(args):
     output = '\n'.join(lines)
     print(output)
 
-    if args.telegram:
-        try:
-            from send_telegram import send_message
-            msg = f'<b>PREDICTION ANALYSIS</b>\n{datetime.now().strftime("%d.%m.%Y")}\n\n'
-            msg += f'Filled: {len(filled)} | Pending: {unfilled}\n'
-            msg += f'Stop: {stop_hits/len(filled)*100:.0f}% | Target: {tgt_hits/len(filled)*100:.0f}% '
-            msg += f'| +20%: {p20_hits/len(filled)*100:.0f}%\n'
-            msg += f'MFE: {avg_mfe:+.1f}% | MAE: {avg_mae:+.1f}%'
-            if realized:
-                msg += f'\n\nRealized: {total_pnl:+.2f} EUR ({len(realized)} trades)'
-            send_message(msg)
-            print('Telegram sent.')
-        except Exception as e:
-            print(f'Telegram error: {e}')
-
     conn.close()
 
 
@@ -804,8 +789,7 @@ def main():
     sub.add_parser('fill', help='Fill market outcomes (run daily)')
 
     # analyze
-    s = sub.add_parser('analyze', help='Analyze prediction quality')
-    s.add_argument('--telegram', action='store_true')
+    sub.add_parser('analyze', help='Analyze prediction quality')
 
     # list
     s = sub.add_parser('list', help='List predictions')

@@ -10,7 +10,6 @@ Produces pattern statistics: "Score 75+ in TRENDING + MACD bullish -> 72% hit ra
 Usage:
     python preopen_backtest.py                              # Full watchlist
     python preopen_backtest.py --symbols SYMBOL1 SYMBOL2    # Specific symbols
-    python preopen_backtest.py --telegram                   # With Telegram report
     python preopen_backtest.py --min-samples 30             # Higher sample threshold
 """
 
@@ -454,86 +453,9 @@ def run_backtest(symbols, min_samples=20):
     return output
 
 
-def format_telegram(output):
-    """Format pattern results for Telegram."""
-    if not output:
-        return 'Keine Ergebnisse.'
-
-    n_records = output['total_records']
-    n_symbols = len(output['symbols'])
-
-    msg = f'<b>PRE-OPEN PATTERNS</b> ({n_symbols} Symbole, {n_records:,} Tage)\n'
-    msg += f'{datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")}\n\n'
-
-    # Top 5 LONG patterns (sorted by hit_4h)
-    long_pats = output['primary_patterns'].get('LONG', {})
-    long_sorted = sorted(
-        long_pats.values(),
-        key=lambda x: x.get('hit_4h') or x.get('hit_close') or 0,
-        reverse=True,
-    )
-
-    msg += '<b>TOP 5 LONG</b>\n'
-    for i, p in enumerate(long_sorted[:5], 1):
-        hr = p.get('hit_4h') or p.get('hit_close') or 0
-        avg = p.get('avg_4h') or p.get('avg_close') or 0
-        label = p['values'].replace('|', ' + ')
-        gf = f' | GapFill {p["gap_fill"]:.0f}%' if p.get('gap_fill') else ''
-        msg += f'{i}. {label}\n'
-        msg += f'   {hr:.0f}% (n={p["n"]}) | Avg {avg:+.2f}%/4h{gf}\n'
-    if not long_sorted:
-        msg += '  Keine Patterns mit genug Samples\n'
-
-    # Top 5 SHORT patterns
-    short_pats = output['primary_patterns'].get('SHORT', {})
-    short_sorted = sorted(
-        short_pats.values(),
-        key=lambda x: x.get('hit_4h') or x.get('hit_close') or 0,
-        reverse=True,
-    )
-
-    msg += '\n<b>TOP 5 SHORT</b>\n'
-    for i, p in enumerate(short_sorted[:5], 1):
-        hr = p.get('hit_4h') or p.get('hit_close') or 0
-        avg = p.get('avg_4h') or p.get('avg_close') or 0
-        label = p['values'].replace('|', ' + ')
-        msg += f'{i}. {label}\n'
-        msg += f'   {hr:.0f}% (n={p["n"]}) | Avg {avg:+.2f}%/4h\n'
-    if not short_sorted:
-        msg += '  Keine Patterns mit genug Samples\n'
-
-    # Traps
-    traps = output.get('traps', [])
-    if traps:
-        traps_sorted = sorted(traps, key=lambda t: t['hit_rate'])
-        msg += '\n<b>FALLEN</b>\n'
-        for t in traps_sorted[:5]:
-            label = t['values'].replace('|', ' + ')
-            msg += f'  {t["direction"]} {label}\n'
-            msg += f'  {t["hit_rate"]:.0f}% (n={t["n"]}) — Vorsicht!\n'
-
-    # Feature-level summary
-    long_feat = output.get('feature_level', {}).get('LONG', {})
-    msg += '\n<b>FEATURES (LONG)</b>\n'
-
-    for key in ('score:75+', 'score:60-74', 'score:40-59', 'score:<40'):
-        f = long_feat.get(key)
-        if f:
-            msg += f'  {key.split(":")[1]}: {f["hit_rate"]}% (n={f["n"]})\n'
-
-    for key in ('regime:TRENDING', 'regime:RANGE', 'regime:CHOPPY'):
-        f = long_feat.get(key)
-        if f:
-            msg += f'  {key.split(":")[1]}: {f["hit_rate"]}% (n={f["n"]})\n'
-
-    msg += f'\n<i>Min Samples: {output["min_samples"]} | Pre-Open Engine v1</i>'
-    return msg
-
-
 def main():
     parser = argparse.ArgumentParser(description='Silver Hawk Pre-Open Pattern Backtest')
     parser.add_argument('--symbols', nargs='+', help='Specific symbols to backtest')
-    parser.add_argument('--telegram', action='store_true', help='Send results via Telegram')
     parser.add_argument('--min-samples', type=int, default=MIN_SAMPLES_DEFAULT,
                         help=f'Min samples per pattern (default: {MIN_SAMPLES_DEFAULT})')
     args = parser.parse_args()
@@ -573,12 +495,6 @@ def main():
         print(f'\nTraps: {len(traps)}')
         for t in sorted(traps, key=lambda x: x['hit_rate'])[:3]:
             print(f'  {t["direction"]} {t["values"]}: {t["hit_rate"]:.1f}% (n={t["n"]})')
-
-    if args.telegram:
-        from send_telegram import send_message
-        msg = format_telegram(output)
-        result = send_message(msg)
-        print(f'Telegram sent: {result.get("ok", False)}')
 
 
 if __name__ == '__main__':

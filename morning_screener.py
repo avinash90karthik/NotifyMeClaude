@@ -671,7 +671,7 @@ def save_preopen_snapshot(data, top_long, top_short, patterns_db):
 
 
 def fmt_candidate(i, score, sym, sector, d, signals, direction, pos_dirs, name='', patterns_db=None):
-    """Format a single candidate line for Telegram."""
+    """Format a single candidate line for terminal output."""
     emoji = '🟢' if direction == 'LONG' else '🔴'
     name_str = f' {name}' if name else ''
     line = f'{emoji} {i}. <b>{sym}</b>{name_str} ({sector}) {score}/100'
@@ -734,7 +734,7 @@ def fmt_candidate(i, score, sym, sector, d, signals, direction, pos_dirs, name='
 
 
 def build_message(all_data, positions, sector_map, scan_time, total_scanned, pos_dirs, name_map=None, patterns_db=None):
-    """Build the Telegram screener message."""
+    """Build the screener output message."""
     name_map = name_map or {}
     passed = {sym: d for sym, d in all_data.items() if passes_hard_gates(sym, d)}
 
@@ -851,37 +851,6 @@ def build_message(all_data, positions, sector_map, scan_time, total_scanned, pos
     return msg
 
 
-def send_telegram(text):
-    """Send message via Telegram. Splits if over 4096 chars."""
-    token = os.environ['TELEGRAM_BOT_TOKEN']
-    chat_id = os.environ['TELEGRAM_CHAT_ID']
-    api = f'https://api.telegram.org/bot{token}/sendMessage'
-
-    chunks = []
-    if len(text) <= 4096:
-        chunks = [text]
-    else:
-        current = ''
-        for line in text.split('\n'):
-            if len(current) + len(line) + 1 > 4000:
-                chunks.append(current)
-                current = line
-            else:
-                current = current + '\n' + line if current else line
-        if current:
-            chunks.append(current)
-
-    result = None
-    for chunk in chunks:
-        body = urllib.parse.urlencode({
-            'chat_id': chat_id, 'parse_mode': 'HTML', 'text': chunk,
-        }).encode()
-        req = urllib.request.Request(api, data=body)
-        resp = urllib.request.urlopen(req)
-        result = json.loads(resp.read())
-    return result
-
-
 def main():
     now = datetime.now(timezone.utc)
     scan_time = now.strftime('%d.%m.%Y %H:%M UTC')
@@ -953,10 +922,9 @@ def main():
         print(f'  Pattern DB loaded: {patterns_db.get("total_records", 0)} records')
 
     msg = build_message(data, positions, sector_map, scan_time, total_scanned, pos_dirs, name_map, patterns_db)
-    print(f'\n{msg}\n')
-
-    result = send_telegram(msg)
-    print(f'  Telegram sent: {result.get("ok", False)}')
+    # Strip HTML tags for terminal readability
+    clean = msg.replace('<b>', '').replace('</b>', '').replace('<i>', '').replace('</i>', '')
+    print(f'\n{clean}\n')
 
     # Save pre-open snapshot for post-open accuracy tracking
     try:
