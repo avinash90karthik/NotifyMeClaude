@@ -40,6 +40,9 @@ For v7 hedge rules, pivot rules, position sizing → `memory/strategy_v7_draft.m
 10. **Event check** — check for overnight/upcoming macro events BEFORE recommending holds
 11. **No mini-analyses** — every analysis runs all 4 steps. Shortened flows are forbidden.
 12. **No default direction** — no LONG/SHORT/NO-TRADE bias. Data speaks. Spiegel-Test before finalizing.
+13. **Earnings pattern check** — run `python3 earnings_pattern.py SYMBOL` in Step 1. Script auto-skips if earnings >30 days out; runs full historical window analysis if near. Warning + confidence penalty mandatory if current phase historically weak.
+14. **Price-action reality check** — MACD/RSI turn signals are NOT bullish triggers on their own. Verify with actual green-day count over last 10 trading days (must be ≥5/10) and relative strength vs S&P on most recent day. Flat price with positive MACD = stabilization, not bounce.
+15. **Reddit argument quality** — read the minority's top 3 arguments, not just the majority count. If bears (at a LONG setup) have harder facts than bulls (opinions/targets), that's a contra-signal regardless of 70/30 split.
 
 ### Current State
 

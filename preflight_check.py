@@ -133,6 +133,32 @@ def fetch_yfinance_news(symbol, lookback_days=7):
     return out, None
 
 
+def fetch_earnings_context(symbol):
+    """Check if earnings are near. If yes, flag for full pattern analysis."""
+    try:
+        t = yf.Ticker(symbol)
+        ed = t.get_earnings_dates(limit=20)
+        if ed is None or len(ed) == 0:
+            return None, None
+
+        import pandas as pd
+        now = pd.Timestamp.now(tz="America/New_York")
+        future = ed[ed.index > now]
+        if len(future) == 0:
+            return None, None
+
+        next_ed = future.index.min()
+        days = (next_ed - now).days
+        return {
+            "next_date": next_ed.strftime("%Y-%m-%d"),
+            "days_to_earnings": days,
+            "near": days <= 30,
+            "very_near": days <= 10,
+        }, None
+    except Exception as e:
+        return None, f"Earnings fetch failed: {e}"
+
+
 def fetch_price_snapshot(symbol):
     """Minimal price snapshot — just enough so Claude knows the ticker is real."""
     try:
@@ -182,7 +208,7 @@ def build_search_queries(symbol, date_ctx):
     }
 
 
-def print_banner(symbol, date_ctx, price_snap, price_err, news, news_err, queries):
+def print_banner(symbol, date_ctx, price_snap, price_err, news, news_err, queries, earnings_ctx=None):
     bar = "=" * 72
     print(bar)
     print(f"  PRE-FLIGHT CHECK — {symbol}")
@@ -213,6 +239,26 @@ def print_banner(symbol, date_ctx, price_snap, price_err, news, news_err, querie
         print(f"  Price: {price_snap['price']} {price_snap['currency']}  "
               f"Change: {price_snap['change_pct']:+.2f}%  "
               f"(prev close: {price_snap['prev_close']})")
+    print()
+
+    print(bar)
+    print(f"  EARNINGS STATUS — {symbol}")
+    print(bar)
+    if earnings_ctx is None:
+        print(f"  No earnings data (index / commodity / futures)")
+    else:
+        print(f"  Next Earnings: {earnings_ctx['next_date']}")
+        print(f"  Days to Earnings: {earnings_ctx['days_to_earnings']}")
+        if earnings_ctx['very_near']:
+            print(f"  ⚠  EARNINGS SEHR NAH (≤10 Tage) — Pattern-Analyse PFLICHT")
+            print(f"     → python3 earnings_pattern.py {symbol}")
+            print(f"     → Time-Stop: 5 Tage vor Earnings (v5/v8 Regel)")
+        elif earnings_ctx['near']:
+            print(f"  ⚠  EARNINGS NAH (≤30 Tage) — Pattern-Analyse PFLICHT")
+            print(f"     → python3 earnings_pattern.py {symbol}")
+            print(f"     → Trade-Haltezeit limitiert bis max {max(1, earnings_ctx['days_to_earnings'] - 5)} Tage")
+        else:
+            print(f"  Earnings nicht nah (>30 Tage) — Standard Day-Pattern reicht")
     print()
 
     print(bar)
@@ -290,6 +336,7 @@ def main():
     date_ctx = get_date_context()
     price_snap, price_err = fetch_price_snapshot(symbol)
     news, news_err = fetch_yfinance_news(symbol, args.lookback_days)
+    earnings_ctx, earnings_err = fetch_earnings_context(symbol)
     queries = build_search_queries(symbol, date_ctx)
 
     if args.json:
@@ -300,10 +347,12 @@ def main():
             "price_error": price_err,
             "news": news,
             "news_error": news_err,
+            "earnings": earnings_ctx,
+            "earnings_error": earnings_err,
             "mandatory_searches": queries,
         }, indent=2, default=str))
     else:
-        print_banner(symbol, date_ctx, price_snap, price_err, news, news_err, queries)
+        print_banner(symbol, date_ctx, price_snap, price_err, news, news_err, queries, earnings_ctx)
 
     # Abort if ticker is unreachable — no point running analysis on nothing
     if price_err:

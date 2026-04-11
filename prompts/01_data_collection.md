@@ -127,6 +127,46 @@ Analyze the chart and fill this table:
 | Key Support | From chart + collect_data.py |
 | Key Resistance | From chart + collect_data.py |
 
+### ⚠️ Price-Action Reality Check (MANDATORY)
+
+**Bevor MACD/RSI-Turn-Signale als "bullisch" klassifiziert werden, prüfe gegen die ECHTE Kursbewegung:**
+
+```python
+python3 -c "
+import yfinance as yf
+t = yf.Ticker('{{SYMBOL}}')
+h = t.history(period='2mo')
+h['ret'] = h['Close'].pct_change() * 100
+first = h['Close'].iloc[-20]; last = h['Close'].iloc[-1]
+first10 = h['Close'].iloc[-10]; first5 = h['Close'].iloc[-5]
+print(f'20-Tage Trend: {(last/first-1)*100:+.2f}%')
+print(f'10-Tage Trend: {(last/first10-1)*100:+.2f}%')
+print(f'5-Tage Trend:  {(last/first5-1)*100:+.2f}%')
+greens20 = sum(1 for i in range(-20,0) if h['ret'].iloc[i] > 0)
+greens10 = sum(1 for i in range(-10,0) if h['ret'].iloc[i] > 0)
+greens5 = sum(1 for i in range(-5,0) if h['ret'].iloc[i] > 0)
+print(f'Letzte 20d: {greens20} grün, {20-greens20} rot')
+print(f'Letzte 10d: {greens10} grün, {10-greens10} rot')
+print(f'Letzte 5d:  {greens5} grün, {5-greens5} rot')
+"
+```
+
+**Reality-Check-Regel:**
+- **MACD kann positiv drehen, ohne dass der Preis steigt** (durch abnehmende Abwärtsdynamik bei Range-Bound-Move). Das ist KEIN "klares Turn-Signal" — das ist **Stabilisierung auf niedrigem Level**.
+- **Wenn 5-Tage-Trend flat oder negativ ist UND MACD positiv dreht** → "PREP phase", nicht "LONG triggered". Warte auf Bestätigung durch mindestens 2 grüne Tage in Folge.
+- **Wenn Symbol relative Schwäche gegen S&P zeigt** (Index up, Symbol down) an einem Tag → **explizit als Warning vermerken**, nicht überlesen.
+- **Grüne-Tage-Zähler** der letzten 10 Tage muss mindestens 5/10 sein, damit ein LONG-Signal "bestätigt" ist. Unter 4/10 grün = kein echter Turn.
+
+**Output als Tabelle:**
+
+| Window | Trend % | Grüne Tage | Reality-Check |
+|--------|---------|------------|---------------|
+| 20d | +X.X% | X/20 | Trend intakt? |
+| 10d | +X.X% | X/10 | Bounce-Phase? |
+| 5d | +X.X% | X/5 | Letzte Action |
+
+**Wenn MACD/RSI-Turn-Signal im Widerspruch zu Price-Action-Reality steht: Signal als SCHWÄCHER werten und in Confidence-Berechnung -5% bis -10% einrechnen.**
+
 ## 1.5 News & Catalysts
 
 **Inputs (alle drei Quellen pflicht):**
@@ -159,6 +199,18 @@ Bei deutschen Werten (.DE, .F) zusätzlich `r/mauerstrassenwetten`. Bei Penny/Sm
 - Massive Put-YOLOs bei Oversold → Kontra-Indikator (bullish)
 - Plötzlich viral bei unbekanntem Ticker → Pump-Risiko
 - Stille bei fundamentalen News → Institutionelle dominieren, Retail noch nicht drin
+
+**🔍 QUALITÄTS-CHECK — Argumente lesen, nicht nur zählen:**
+
+Demokratie ≠ Analyse. 70% bullish bei einem -30% Stock ist **immer** der Fall (dip-buying Psychologie). Wichtiger als das Count ist die **Qualität der Bear-Argumente** (bei LONG-Setup) bzw. **Bull-Argumente** (bei SHORT-Setup) der Minderheit.
+
+Explizit für JEDE Analyse dokumentieren:
+1. **Top 3 Bear-Argumente aus Reddit** (hart, faktisch, nicht Meinung) — auch wenn Reddit 80% bullish ist
+2. **Top 3 Bull-Argumente aus Reddit** — auch wenn Reddit bearish ist
+3. **Bewertung:** Sind die Minderheits-Argumente HARTER (Fakten, Filings, Insider-Daten) oder WEICHER (Meinung, Narrative, Hoffnung) als die Mehrheit?
+4. **Wenn die Minderheit härtere Argumente hat → das ist ein Kontra-Signal, unabhängig vom Count**
+
+Beispiel (MSFT April 2026): Reddit 77/100 bullish, aber Bear-Argumente = CapEx $110B run-rate, FCF collapsed auf $5.9B, Insider-Selling 31 netto-negativ, Copilot nur 3% Penetration. **Das sind harte Fakten.** Bull-Argumente = "Analyst Target $587" (Meinung), "$625B RPO" (Zahl, aber 45% davon ist OpenAI-Klumpenrisiko). **Die Bears haben hier die härteren Argumente**, obwohl sie in der Minderheit sind.
 
 Für jede News-Zeile inkl. Reddit:
 
@@ -256,6 +308,43 @@ Fill this table from the output:
 | After X red days streak (n=X) | +X.X% (X% green) | | |
 
 **Key insight:** [What does the pattern data tell us about likely direction?]
+
+## 1.8b Earnings Window Pattern (MANDATORY — Auto-Conditional)
+
+**Pflicht-Lauf bei JEDER Analyse.** Das Script entscheidet selbst, ob eine volle Pattern-Analyse nötig ist:
+
+```bash
+python3 earnings_pattern.py {{SYMBOL}}
+```
+
+**Script-Logik:**
+- **Earnings <= 30 Tage:** Volle Pattern-Analyse (letzte 10 Earnings, T-5d bis T+5d Stats, Interpretation, Warning)
+- **Earnings > 30 Tage:** Skip mit Hinweis (Standard Day-Pattern aus § 1.8 reicht)
+- **Keine Earnings (Commodity/Index):** Sauber übersprungen
+
+**Wenn volle Analyse lief, dokumentiere in der Analyse:**
+
+| Phase | Avg % | Green Rate | n |
+|-------|-------|------------|---|
+| T-5d | +X.X% | XX% | X |
+| T-3d | +X.X% | XX% | X |
+| T-1d | +X.X% | XX% | X |
+| T+1d | +X.X% | XX% | X |
+| T+3d | +X.X% | XX% | X |
+| T+5d | +X.X% | XX% | X |
+
+**Kritische Fragen nach dem Lauf:**
+
+1. **Aktuelle Phase:** Wo liegt unser Trade im Earnings-Fenster? (Das Script gibt die Phase aus)
+2. **Edge-Richtung:** Script sagt "EDGE: Pre-Earnings-Drift" / "EDGE: Post-Earnings" / "EDGE: KEIN klares Muster"
+3. **Aktuelle Phase-Warning:** Wenn Script "WARNING: Aktuelle Phase historisch SCHWACH" ausgibt → **-5% Confidence-Abzug im Judge**
+
+**HARTE REGEL:**
+- **Wenn Script WARNING gibt und Trade-Richtung gegen die historische Tendenz läuft → Confidence-Abzug -5% MINIMUM, pflichtmässig**
+- **Wenn Script "KEIN klares Muster" sagt → kein Abzug, aber auch kein Earnings-Bonus**
+- **Wenn Script "EDGE: Pre-Earnings-Drift" gibt und LONG geplant + aktuelle Phase passt → +3% Confidence**
+
+**WICHTIG:** Earnings-Pattern OVERRIDE't den Standard-Day-Pattern-Edge. Bei naher Earnings zählt das Earnings-Fenster-Muster stärker als das generische RSI<35-Pattern.
 
 ## 1.9 Event Calendar & Impact Analysis
 
