@@ -4,6 +4,78 @@
 
 ---
 
+## ⚠️ PRE-FLIGHT CHECKLIST — WIEDERKEHRENDE BLINDSTELLEN
+
+> **Diese Liste abarbeiten BEVOR irgendeine Datenerhebung beginnt.**
+> Jeder Punkt muss explizit beantwortet werden — NICHT überspringen, NICHT "mache ich gleich".
+> Grund: Dieselben Fehler wiederholen sich. User hat mehrfach korrigieren müssen.
+
+### Checkliste (ALLE Punkte pflicht)
+
+**[ ] 0. CLAUDE.md RECALL**
+- CLAUDE.md kurz durchgehen — aktuellste Quick-Reference-Regeln (Gate, Exits, KO, Position Sizing, Hard Rules)
+- Falls Regel geändert wurde seit letzter Analyse: neue Version verwenden, nicht alte
+
+**[ ] 1. DATUM & WOCHENTAG**
+- Python-Script aus § 1.0 ausführen — echtes Datum, Wochentag, CET+NY Zeit
+- Falls Web-Suche später "Friday" oder "yesterday" findet: **gegen echtes Datum abgleichen**
+- Falls Wochenende: US-Markt geschlossen, alle "heute" Events sind vom Freitag
+
+**[ ] 2. TRUMP-POSTS**
+- Web-Suche: `Trump Truth Social {{SYMBOL}}` (letzte 7 Tage)
+- Web-Suche: `Trump {{SYMBOL}} tweet` (letzte 7 Tage)
+- Besonders wenn Symbol in: Defense / AI / Energy / China-related / Pharma / Tariff-sensitive
+- **Trump-Post gefunden? → Strategy-Regel "Trump-Events = keine Overnight-Positionen" aktivieren**
+- Trump-Posts sind EVENT-KLASSE **UNBERECHENBAR** (1-5% Gap, Richtung unvorhersagbar)
+
+**[ ] 3. REDDIT / RETAIL-FLOW**
+- Pflicht-Subs durchsucht? (siehe § 1.5) — WSB, WSB-Ger, stocks, investing
+- Retail-Sentiment-Flag gesetzt? (EUPHORIC/BULLISH/NEUTRAL/BEARISH/PANIC/QUIET)
+- Kontra-Signal geprüft? (Retail euphoric bei ATH = bearish, Retail panic bei Oversold = bullish)
+
+**[ ] 4. NEUTRALITÄT (keine Default-Richtung)**
+- Keine Annahme in irgendeine Richtung — weder LONG, SHORT, noch NO-TRADE ist Default
+- Daten sprechen, nicht Erwartungen (weder User noch eigene)
+- "Zu spät einsteigen" / "R/R nicht perfekt" sind KEINE Gate-Gründe — nur Confidence <60% + Veto-Liste V1-V5
+- Spiegel-Test: Würde ich bei **spiegelbildlichen Daten** dieselben Argumente gelten lassen? Wenn nein → Bias, nochmal prüfen
+
+### Output der Checkliste
+
+Produziere eine kurze Bestätigungszeile vor § 1.1:
+
+```
+PRE-FLIGHT: [Datum XX.XX.XXXX Wochentag] | Trump-Search: [JA/NEIN + Ergebnis] | Reddit-Subs: [durchsucht] | Bias-Check: [LONG/SHORT/NEUTRAL confirmed]
+```
+
+Erst DANN weiter mit § 1.0.
+
+---
+
+## 1.0 Datum & Wochentag (MANDATORY FIRST STEP)
+
+```bash
+python3 -c "
+from datetime import datetime, timedelta
+import pytz
+berlin = pytz.timezone('Europe/Berlin')
+ny = pytz.timezone('America/New_York')
+now_b = datetime.now(berlin)
+now_ny = datetime.now(ny)
+weekdays = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag']
+print(f'Heute (CET):  {now_b.strftime(\"%Y-%m-%d %H:%M\")} — {weekdays[now_b.weekday()]}')
+print(f'Heute (NY):   {now_ny.strftime(\"%Y-%m-%d %H:%M\")} — {weekdays[now_ny.weekday()]}')
+print(f'Gestern CET:  {(now_b - timedelta(days=1)).strftime(\"%Y-%m-%d\")}')
+print(f'Wochenende?   {\"JA\" if now_b.weekday() >= 5 else \"NEIN\"}')
+print(f'US Markt:     {\"OPEN\" if 15 <= now_b.hour < 22 and now_b.weekday() < 5 else \"CLOSED\"}')
+"
+```
+
+**HARTE REGEL:** Bevor ein Event als "heute" oder "morgen" klassifiziert wird, IMMER gegen dieses Output prüfen. Wenn heute Samstag ist und ein CPI "am Freitag" stattfand → Event ist **gestern gewesen**, nicht "kommend". Wenn heute Montag 06:00 CET ist → letzter US-Handelstag war Freitag, nicht "heute".
+
+**Fehlerquelle:** Web-Such-Ergebnisse zeigen oft "CPI Friday" ohne Jahr/Woche-Kontext — immer mit dem lokalen Datum abgleichen, NIE blind übernehmen.
+
+---
+
 ## 1.1 Portfolio Check
 
 ```bash
@@ -60,13 +132,42 @@ Analyze the chart and fill this table:
 
 **Web search for 5+ real news items.** Sources: Reuters, Bloomberg, Seeking Alpha, sector-specific.
 
-For each news item:
+**MANDATORY — Retail-Sentiment via Reddit** (zusätzlich zu klassischen News):
 
-| # | Date | Headline | Impact | Source |
-|---|------|----------|--------|--------|
-| 1 | DD.MM | [headline] | Positive/Negative/Neutral | [source] |
+Immer mindestens eine Web-Suche gegen Reddit ausführen, um Retail-Positionierung + Memeflow zu erfassen:
+
+```
+site:reddit.com/r/wallstreetbets {{SYMBOL}}
+site:reddit.com/r/wallstreetbetsGer {{SYMBOL}}
+site:reddit.com/r/stocks {{SYMBOL}}
+site:reddit.com/r/investing {{SYMBOL}}
+```
+
+Bei deutschen Werten (.DE, .F) zusätzlich `r/mauerstrassenwetten`. Bei Penny/Small-Caps zusätzlich `r/pennystocks`. Bei Crypto-related `r/CryptoCurrency`.
+
+**Was suchen:**
+- Sentiment-Ton (Euphorie / Panik / Kapitulation / Fade / stille Akkumulation)
+- Call/Put-Flow-Posts (YOLO-Positionen, Gamma-Squeeze-Threads)
+- Frische DD-Threads (letzte 7 Tage)
+- Trending-Indikatoren (in Top-Posts? Daily Discussion erwähnt?)
+
+**Rote Flaggen:**
+- Euphorie bei ATH → Kontra-Indikator (bearish)
+- Massive Put-YOLOs bei Oversold → Kontra-Indikator (bullish)
+- Plötzlich viral bei unbekanntem Ticker → Pump-Risiko
+- Stille bei fundamentalen News → Institutionelle dominieren, Retail noch nicht drin
+
+Für jede News-Zeile inkl. Reddit:
+
+| # | Date | Headline / Thread | Impact | Source |
+|---|------|-------------------|--------|--------|
+| 1 | DD.MM | [headline oder r/sub: titel] | Positive/Negative/Neutral | [source/sub] |
 
 **News Sentiment Index (NSI):** Rate each on 7 axes (-2 to +2): Relevance, Sentiment, Price Impact, Trend, Earnings, Investor Confidence, Risk Profile. Calculate average.
+
+**Retail-Sentiment-Flag** (separat zu NSI, als Kontext):
+- `EUPHORIC` / `BULLISH` / `NEUTRAL` / `BEARISH` / `PANIC` / `QUIET`
+- Bei EUPHORIC+ATH oder PANIC+Oversold → Kontra-Signal vermerken
 
 NSI > +1.0 = strongly bullish | -0.3 to +0.3 = neutral | < -1.0 = strongly bearish
 
@@ -218,6 +319,8 @@ Produce the structured JSON block (collect_data.py output + your additions):
   "chart_analysis": { "trend": "", "pattern": "", "key_observation": "" },
   "nsi": 0.00,
   "nsi_classification": "",
+  "retail_sentiment": "EUPHORIC|BULLISH|NEUTRAL|BEARISH|PANIC|QUIET",
+  "retail_contra_signal": "",
   "preopen_verdict": "",
   "preopen_long_hit_pct": 0,
   "preopen_short_hit_pct": 0,

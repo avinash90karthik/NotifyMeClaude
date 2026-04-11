@@ -15,12 +15,22 @@ Execute these 4 steps sequentially. Each builds on the previous.
 
 ## Rules (always active)
 
-- Strategy rules: `memory/strategy_v7_draft.md` and `CLAUDE.md`
+- **Primary ruleset: `CLAUDE.md`** — aktuellste Quick-Reference (Gate, Exits, KO, Position Sizing, Hard Rules). Bei jedem Analyse-Start kurz gegen CLAUDE.md abgleichen, falls sich Regeln geändert haben.
+- Strategy details: `memory/strategy_v7_draft.md` (v7 hedge, pivot, overnight rules)
 - Feedback & learnings: `memory/feedback.md`
 - Portfolio state: `python prediction_db.py portfolio` (run BEFORE Step 1)
 - yfinance = truth for all price data (never web search for prices)
 - Every trade needs: entry, stop, KO, exits, time-stop
 - No step may be skipped
+
+## ⚠️ PRE-FLIGHT CHECKLIST (wiederkehrende Blindstellen — NICHT überspringen)
+
+Diese vier Fehler sind mehrfach aufgetreten. Vor JEDER Analyse abarbeiten (Detail in `01_data_collection.md` Pre-Flight-Block):
+
+1. **DATUM-CHECK:** Python-Script für echtes Datum + Wochentag + CET/NY-Zeit. "Friday" aus Web-Suche IMMER gegen lokales Datum abgleichen. Bei Wochenende: alle "heute" Events = gestern.
+2. **TRUMP-POSTS:** Explizite Web-Suche `Trump Truth Social {{SYMBOL}}` letzte 7 Tage. Besonders bei Defense/AI/Energy/China/Pharma/Tariff. Trump-Post = Strategy-Regel "keine Overnight-Positionen" aktiv.
+3. **REDDIT-FLOW:** r/wallstreetbets, r/wallstreetbetsGer, r/stocks, r/investing (+ asset-spezifisch) — Retail-Sentiment-Flag setzen.
+4. **NEUTRALITÄT:** Keine Default-Richtung (weder LONG, SHORT noch NO-TRADE). Signal folgt den Daten, nicht Erwartungen. "Spätes Einsteigen" / "R/R nicht perfekt" sind KEINE Gate-Gründe — nur Confidence <60% + Veto-Liste V1-V5. Spiegel-Test: Würde ich bei spiegelbildlichen Daten dieselben Argumente gelten lassen?
 
 ## Quality Gate
 
