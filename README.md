@@ -29,7 +29,7 @@ pip3 install yfinance numpy
 
 # Run your first analysis
 claude
-> /analyse-stock SYMBOL
+> Analysiere SYMBOL
 ```
 
 Full setup guide: **[ONBOARDING.md](ONBOARDING.md)** (EN) | **[ONBOARDING_DE.md](ONBOARDING_DE.md)** (DE)
@@ -45,7 +45,7 @@ Portfolio state lives in `memory/predictions.db` (SQLite — auto-created on fir
 
 ```
 You (Claude Code)
-├── /analyse-stock SYMBOL         → 4-step analysis → terminal trading card
+├── "Analysiere SYMBOL"           → pre-flight + 4-step analysis → terminal trading card
 ├── python3 prediction_db.py portfolio   → View positions, cash, slots
 └── python3 collect_data.py SYMBOL       → Quick technical snapshot
 
@@ -58,12 +58,11 @@ Local State
 
 ## Analysis Pipeline
 
-```
-/analyse-stock SYMBOL
-```
+Tell Claude Code: **"Analysiere SYMBOL"** (or "Analyze SYMBOL"). The pipeline starts with a pre-flight check (`preflight_check.py`) and runs all four steps below — no shortcuts, no mini-versions.
 
 | Step | What Happens |
 |------|-------------|
+| 0. Pre-Flight | `preflight_check.py` — real date/weekday/market-status, yfinance news (7d), mandatory Trump/Reddit/day-news/event searches, echo-back checklist. |
 | 1. Data Collection | yfinance prices, RSI, MACD, SMAs, ATR, short interest, news, correlation check, event calendar. Futures (SI=F, GC=F) use ETF proxy for RSI to avoid rollover distortion. |
 | 2. Investment Debate | Bull vs Bear - 2 full rounds + LONG vs SHORT scorecard (6 criteria, /60) |
 | 3. Judge & Risk | Verdict + confidence %, 3-step KO (ATR + chart + take further), position sizing in % of portfolio, time-stops |

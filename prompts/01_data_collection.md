@@ -6,9 +6,18 @@
 
 ## ⚠️ PRE-FLIGHT CHECKLIST — WIEDERKEHRENDE BLINDSTELLEN
 
-> **Diese Liste abarbeiten BEVOR irgendeine Datenerhebung beginnt.**
+> **STEP 0 — HARD-SCRIPT ERSETZT DIESE LISTE.**
+> Führe **`python3 preflight_check.py {{SYMBOL}}`** als ALLERERSTEN Befehl aus.
+> Das Script druckt: Datum, Wochentag, CET/NY-Zeit, Wochenend-Flag, US/EU-Markt-Status,
+> Price Snapshot, yfinance News (letzte 7 Tage), MANDATORY Search Queries (Trump/Reddit/Day-News/Events).
+>
+> Die Checkliste unten MUSS danach verbatim in deinem Output erscheinen — mit Antworten.
 > Jeder Punkt muss explizit beantwortet werden — NICHT überspringen, NICHT "mache ich gleich".
 > Grund: Dieselben Fehler wiederholen sich. User hat mehrfach korrigieren müssen.
+
+```bash
+python3 preflight_check.py {{SYMBOL}}
+```
 
 ### Checkliste (ALLE Punkte pflicht)
 
@@ -53,26 +62,16 @@ Erst DANN weiter mit § 1.0.
 
 ## 1.0 Datum & Wochentag (MANDATORY FIRST STEP)
 
+Das wird jetzt von `preflight_check.py {{SYMBOL}}` erledigt (siehe Pre-Flight oben).
+Falls der Pre-Flight nicht lief (z.B. manueller Lauf ohne Skill), hier der Fallback:
+
 ```bash
-python3 -c "
-from datetime import datetime, timedelta
-import pytz
-berlin = pytz.timezone('Europe/Berlin')
-ny = pytz.timezone('America/New_York')
-now_b = datetime.now(berlin)
-now_ny = datetime.now(ny)
-weekdays = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag']
-print(f'Heute (CET):  {now_b.strftime(\"%Y-%m-%d %H:%M\")} — {weekdays[now_b.weekday()]}')
-print(f'Heute (NY):   {now_ny.strftime(\"%Y-%m-%d %H:%M\")} — {weekdays[now_ny.weekday()]}')
-print(f'Gestern CET:  {(now_b - timedelta(days=1)).strftime(\"%Y-%m-%d\")}')
-print(f'Wochenende?   {\"JA\" if now_b.weekday() >= 5 else \"NEIN\"}')
-print(f'US Markt:     {\"OPEN\" if 15 <= now_b.hour < 22 and now_b.weekday() < 5 else \"CLOSED\"}')
-"
+python3 preflight_check.py {{SYMBOL}}
 ```
 
-**HARTE REGEL:** Bevor ein Event als "heute" oder "morgen" klassifiziert wird, IMMER gegen dieses Output prüfen. Wenn heute Samstag ist und ein CPI "am Freitag" stattfand → Event ist **gestern gewesen**, nicht "kommend". Wenn heute Montag 06:00 CET ist → letzter US-Handelstag war Freitag, nicht "heute".
+**HARTE REGEL:** Bevor ein Event als "heute" oder "morgen" klassifiziert wird, IMMER gegen den Pre-Flight-Output prüfen. Wenn heute Samstag ist und ein CPI "am Freitag" stattfand → Event ist **gestern gewesen**, nicht "kommend". Wenn heute Montag 06:00 CET ist → letzter US-Handelstag war Freitag, nicht "heute".
 
-**Fehlerquelle:** Web-Such-Ergebnisse zeigen oft "CPI Friday" ohne Jahr/Woche-Kontext — immer mit dem lokalen Datum abgleichen, NIE blind übernehmen.
+**Fehlerquelle:** Web-Such-Ergebnisse zeigen oft "CPI Friday" ohne Jahr/Woche-Kontext — immer mit dem Pre-Flight-Datum abgleichen, NIE blind übernehmen.
 
 ---
 
@@ -130,7 +129,11 @@ Analyze the chart and fill this table:
 
 ## 1.5 News & Catalysts
 
-**Web search for 5+ real news items.** Sources: Reuters, Bloomberg, Seeking Alpha, sector-specific.
+**Inputs (alle drei Quellen pflicht):**
+
+1. **yfinance news** — bereits aus `preflight_check.py` gezogen, siehe Pre-Flight-Output. Alle Items der letzten 7 Tage in die Tabelle unten übernehmen.
+2. **Web search for 5+ real news items** — Reuters, Bloomberg, Seeking Alpha, sector-specific. Must complement (not replace) yfinance feed.
+3. **Trump Truth Social / Tweet search** — MANDATORY für JEDEN Ticker, nicht nur "sensitive" Sektoren. Query-Strings stehen im Pre-Flight-Banner. Ein Trump-Post = Strategy-Regel "Trump-Events = keine Overnight-Positionen" aktiv.
 
 **MANDATORY — Retail-Sentiment via Reddit** (zusätzlich zu klassischen News):
 

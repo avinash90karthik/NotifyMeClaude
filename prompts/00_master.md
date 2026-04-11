@@ -2,16 +2,23 @@
 
 **Asset:** {{SYMBOL}} | **Language:** {{LANGUAGE}} (Default: English)
 
+> **Entry point:** natural-language request ("Analysiere PLTR", "Analyze ENR.DE").
+> There is no slash-command skill — enforcement lives in `preflight_check.py` (hard script output)
+> and the CLAUDE.md hard rules. Mini-analyses are forbidden: all steps below are mandatory.
+
 ## Pipeline
 
-Execute these 4 steps sequentially. Each builds on the previous.
+Execute these steps sequentially. Each builds on the previous. **No step may be skipped, no "mini version" allowed.**
 
 | Step | File | Purpose |
 |------|------|---------|
+| 0 | `preflight_check.py` | Date/weekday/market-status + yfinance news + mandatory search queries (Trump/Reddit/day-news) |
 | 1 | `prompts/01_data_collection.md` | Run `python collect_data.py {{SYMBOL}}`, chart, news, macro |
 | 2 | `prompts/02_investment_debate.md` | Bull vs Bear debate (2 rounds + synthesis), SHORT scorecard |
 | 3 | `prompts/03_judge_risk.md` | Signal + confidence, KO calculation, risk audit, trade plan |
 | 4 | `prompts/04_summary_send.md` | Trading card, prediction DB record |
+
+**Step 0 command:** `python3 preflight_check.py {{SYMBOL}}` — must run FIRST, output must appear in the analysis, checklist must be echoed back with answers.
 
 ## Rules (always active)
 

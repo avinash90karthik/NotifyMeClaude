@@ -48,7 +48,7 @@ function WelcomePanel() {
           <span style={{ color: '#f59e0b', fontWeight: 700 }}>1.</span>{' '}
           Run an analysis:{' '}
           <code style={{ background: '#1e293b', padding: '2px 8px', borderRadius: 4, fontSize: 11, color: '#22c55e' }}>
-            /analyse-stock SYMBOL
+            Analysiere SYMBOL
           </code>
         </div>
         <div>

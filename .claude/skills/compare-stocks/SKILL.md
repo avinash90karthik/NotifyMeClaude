@@ -129,7 +129,7 @@ Rate each ticker for turbo trading (0-10):
 ║  🥉 #3: SYMBOL (Score X.X) - [1 sentence why]       ║
 ║                                                      ║
 ║  → Recommendation: fully analyze SYMBOL              ║
-║    (/analyse-stock SYMBOL)                           ║
+║    ("Analysiere SYMBOL" — full 4-step pipeline)      ║
 ╚══════════════════════════════════════════════════════╝
 ```
 

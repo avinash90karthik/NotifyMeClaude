@@ -5,6 +5,30 @@
 
 ---
 
+## #6 — PLTR-Analyse: vier Fehler in einer Session (11.04.2026)
+
+**Auslöser:** User wollte eine unbiased Analyse zu PLTR (lehnte selbst SHORT, sagte es aber nicht). Die Session lief in vier separate Blindstellen:
+
+1. **Mini-Analyse statt full** — anstelle der vollen 4-Step-Pipeline kam eine abgekürzte Version. Grund: `.claude/skills/analyse-stock/SKILL.md` existierte nicht, obwohl CLAUDE.md darauf verwies. Claude improvisierte einen Kurzlauf.
+2. **Falsches Datum** — Output sagte "no trade possible, Friday is CPI" an einem **Samstag**. CPI war am Vortag bereits gelaufen. Die Web-Suche zeigte "CPI Friday" ohne Jahr/Woche-Kontext und Claude übernahm es blind, ohne gegen das lokale Datum abzugleichen.
+3. **Trump Truth Social Post übersehen** — Trump hatte PLTR als "guten Kauf" bezeichnet (marktbewegendes Event, Gap-Risiko). Die Analyse enthielt den Post nicht, obwohl die Checkliste in `prompts/01_data_collection.md` einen Trump-Check vorsieht.
+4. **Reddit-Flow übersehen** — keine WSB/WSB-Ger/stocks/investing-Suche, obwohl in der Checkliste gefordert.
+
+**Root Cause:** Alle vier Fehler haben die gleiche Ursache — die Pre-Flight-Checkliste war **weiche Guidance** (Prompt-Text), nicht **harter Script-Output**. Leicht überspringbar. Eine Skill-Datei hätte daran nichts geändert (Skills sind nur Prompt-Expansion, keine Denkkraft).
+
+**Regel (technisch erzwungen):**
+
+1. **`preflight_check.py` ist jetzt Pflicht-Step 0.** Druckt Datum, Wochentag, Markt-Status, yfinance News (7 Tage), MANDATORY Search Queries für Trump/Reddit/Day-News/Events. Output muss in der Analyse erscheinen, Checkliste muss verbatim mit Antworten echoed werden. Bei Price-Fetch-Fehler Exit 2 → Analyse bricht ab, kein Fallback auf Mini-Version.
+2. **CLAUDE.md Hard-Rule #1:** Pre-Flight vor allem anderen. Hard-Rule #11: "No mini-analyses". Hard-Rule #12: "No default direction".
+3. **yfinance `.news`** wird im Pre-Flight gezogen — Day-News-Blindstelle geschlossen ohne zusätzliche API. ABER: yfinance aggregiert Reuters/Bloomberg/Yahoo mit Delay, enthält KEINE direkten Truth-Social-/X-/Reddit-Posts. Deshalb sind Web-Searches weiterhin mandatory.
+4. **Trump-Search + Reddit-Search sind MANDATORY** für jeden Ticker — nicht nur "sensitive" Sektoren. Die exakten Query-Strings stehen im Pre-Flight-Banner, kein Paraphrasieren erlaubt.
+5. **Neutralität ist Pflicht-Checkbox im Pre-Flight.** Spiegel-Test vor finalem Signal.
+6. **Kein Slash-Command-Skill.** Ausprobiert und verworfen: eine Skill hätte nur die Prompts dupliziert, ohne echte Enforcement. Natural-Language-Intent + CLAUDE.md + Preflight-Script reichen.
+
+**Merke:** Guidance in Prompts wird übersprungen. Scripts, die unübersehbar auf den Screen drucken, werden nicht übersprungen. Wenn eine Regel mehrfach gerissen wird → in Code gießen, nicht in Text. Eine weitere Abstraktions-Schicht (Skill über Prompts über Regeln) wäre nur mehr Text gewesen.
+
+---
+
 ## #5 — Datengetriebener Entry, KEIN Market Buy (07.04.2026)
 
 **Auslöser:** ENR.DE Turbo bei 1,632€ per Market gekauft, innerhalb von 2h auf 1,38€ gefallen (-15,4%). Daten zeigten: Median-Dip 2,04%, 58% der Tagestiefs kommen nachmittags, Limit bei 1,30€ wäre realistisch gewesen. Ersparnis bei Limit: ~20%.

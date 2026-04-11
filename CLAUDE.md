@@ -28,15 +28,18 @@ For v7 hedge rules, pivot rules, position sizing → `memory/strategy_v7_draft.m
 
 ### Hard Rules for Analyses
 
-1. **portfolio first** — run `python prediction_db.py portfolio` BEFORE step 1 begins
-2. **yfinance = truth** — no price, ATR, RSI without yfinance source
-3. **Stop-loss mandatory** — every trade needs a stop (mental or broker)
-4. **Never invent KO** — KO comes from ATR + chart, never estimated
-5. **SHORT = LONG** — scorecard must be filled out, SHORT setup when score >= LONG
-6. **No hardcoded exchange rates** — EUR/USD always live from yfinance
-7. **Position % instead of currency** — recommendations always in % of portfolio
-8. **Correlation check** — sector concentration against 60% limit
-9. **Event check** — check for overnight/upcoming macro events BEFORE recommending holds
+1. **pre-flight first** — run `python3 preflight_check.py SYMBOL` BEFORE anything else. Its date/market output is ground truth. Its mandatory searches (Trump/Reddit/day-news) are not optional.
+2. **portfolio first** — run `python prediction_db.py portfolio` before step 1 begins
+3. **yfinance = truth** — no price, ATR, RSI without yfinance source
+4. **Stop-loss mandatory** — every trade needs a stop (mental or broker)
+5. **Never invent KO** — KO comes from ATR + chart, never estimated
+6. **SHORT = LONG** — scorecard must be filled out, SHORT setup when score >= LONG
+7. **No hardcoded exchange rates** — EUR/USD always live from yfinance
+8. **Position % instead of currency** — recommendations always in % of portfolio
+9. **Correlation check** — sector concentration against 60% limit
+10. **Event check** — check for overnight/upcoming macro events BEFORE recommending holds
+11. **No mini-analyses** — every analysis runs all 4 steps. Shortened flows are forbidden.
+12. **No default direction** — no LONG/SHORT/NO-TRADE bias. Data speaks. Spiegel-Test before finalizing.
 
 ### Current State
 
@@ -48,9 +51,23 @@ ALL analyses are recorded (traded or not) for backtesting.
 
 ## Multi-Agent Analysis
 
-**Skill:** `/analyse-stock SYMBOL` — runs the full 4-step pipeline automatically.
+**Invocation:** When user asks to analyze a stock (e.g. "Analysiere PLTR", "Analyze ENR.DE", "PLTR anschauen"):
 
-**Manual:** `Analyze <SYMBOL> @prompts/00_master.md`
+1. **Run `python3 preflight_check.py SYMBOL` FIRST** — no exceptions. Its output is ground truth.
+2. **Echo back the Pre-Flight checklist** (verbatim, with your answers filled in) before Step 1.
+3. **Execute all 4 steps** from `prompts/00_master.md` → `prompts/01_…md` → `prompts/04_…md`. Each step must end with its `[STEP N COMPLETE]` marker.
+4. **No mini-analyses.** Shortened flows are forbidden. If you cannot run a step (e.g. yfinance unreachable), STOP and tell the user — do not substitute a shorter flow.
+
+There is **no `/analyse-stock` slash command** — the full flow is triggered by natural-language intent plus the hard rules below. The pre-flight script (not a skill file) is what physically enforces the blindspot checks.
+
+### Pre-Flight Script (mandatory first step)
+
+**`preflight_check.py`** — hard-coded ground truth, runs before any analysis.
+- `python3 preflight_check.py SYMBOL` — prints real date/weekday/CET-NY time + weekend flag + US/EU market status + price snapshot + yfinance news (last 7 days) + mandatory search queries (Trump Truth Social, Reddit WSB/WSB-Ger/stocks/investing, day news, event calendar) + echo-back checklist
+- `python3 preflight_check.py SYMBOL --json` — machine-readable
+- **The script's date/market output is THE ground truth.** Never override with web-search guesses.
+- **Every search query it prints is MANDATORY.** Trump + Reddit are not optional color, they are pipeline inputs.
+- Exits with code 2 if price fetch fails — analysis MUST abort, not fall back to a "mini" version.
 
 ### Data Collection Script
 
@@ -75,14 +92,15 @@ ALL analyses are recorded (traded or not) for backtesting.
 - `export` — Export as CSV
 - DB file: `memory/predictions.db` (gitignored)
 
-### 4-Step Pipeline
+### Pipeline (5 steps including pre-flight)
 
 | Step | File | Purpose |
 |------|------|---------|
-| 1 | `01_data_collection.md` | Run `collect_data.py`, chart, news, macro, correlation check |
-| 2 | `02_investment_debate.md` | Bull vs Bear debate (2 rounds + synthesis), SHORT scorecard |
-| 3 | `03_judge_risk.md` | Signal + confidence, KO calculation, risk audit, trade plan |
-| 4 | `04_summary_send.md` | Trading card, prediction DB record, portfolio update |
+| 0 | `preflight_check.py` | Date/weekday/market status + yfinance news + mandatory search queries (Trump/Reddit/day-news/events) |
+| 1 | `prompts/01_data_collection.md` | Run `collect_data.py`, chart, news, macro, correlation check |
+| 2 | `prompts/02_investment_debate.md` | Bull vs Bear debate (2 rounds + synthesis), SHORT scorecard |
+| 3 | `prompts/03_judge_risk.md` | Signal + confidence, KO calculation, risk audit, trade plan |
+| 4 | `prompts/04_summary_send.md` | Trading card, prediction DB record, portfolio update |
 
 ### Chart Generation
 

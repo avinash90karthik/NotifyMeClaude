@@ -40,8 +40,8 @@ def format_table(stocks):
     print()
     print(f'  {len(stocks)} stocks total')
     print()
-    print('  To analyze a stock:')
-    print('    /analyse-stock SYMBOL')
+    print('  To analyze a stock (in Claude Code):')
+    print('    "Analysiere SYMBOL"  (or "Analyze SYMBOL")')
     print()
 
 
