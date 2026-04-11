@@ -20,6 +20,7 @@ Analyze INDEPENDENTLY from Bull/Bear. Use the chart as your own source.
 | Regime | [from Step 1] | |
 | Short interest | [squeeze potential?] | |
 | Pre-open pattern | [confirms/contradicts?] | |
+| Retail sentiment (Reddit) | [EUPHORIC/PANIC/etc. + Kontra-Signal?] | |
 
 ### Confidence Adjustments
 
@@ -34,6 +35,9 @@ Analyze INDEPENDENTLY from Bull/Bear. Use the chart as your own source.
 | Pre-open pattern hit >=60% same direction | +3% |
 | Pre-open pattern hit <50% | -5% |
 | Reflection: win rate for bracket <30% | -5% |
+| Retail EUPHORIC bei ATH + LONG-Signal | -5% (Kontra) |
+| Retail PANIC bei Oversold + LONG-Signal | +3% (Kontra) |
+| Retail EUPHORIC bei ATH + SHORT-Signal | +3% (Kontra) |
 
 ### Decision
 
@@ -45,6 +49,27 @@ Analyze INDEPENDENTLY from Bull/Bear. Use the chart as your own source.
 
 **TRADE SIGNAL = short-term verdict (this drives turbo entry/exit)**
 **Reasoning:** [2-3 sentences including chart + divergence]
+
+### ⚠️ NEUTRALITÄTS-CHECK (mandatory vor finalem Signal)
+
+Das Signal folgt den DATEN — nicht einer Default-Richtung, nicht meiner Erwartung, nicht der User-Erwartung.
+
+**Spiegel-Test gegen eigene Verzerrungen:**
+- Würde ich bei **spiegelbildlichen Daten** (RSI 90 statt 10, +17% statt -17%, bullische statt bearische News) **dieselben** Argumente gelten lassen? Wenn ich z.B. "zu spät einsteigen" als LONG-Veto nutzen würde, muss ich es auch als SHORT-Veto anwenden. Asymmetrische Argumente = Bias.
+- Würde ich genauso argumentieren, wenn der User explizit das **Gegenteil** erwartet hätte? Wenn mein Verdict sich nur wegen User-Erwartung ändern würde → Bias.
+
+**Gate vs. Rationalisierung — klar trennen:**
+- Gate = **Confidence <60%** (einzige harte NO-TRADE-Regel)
+- Gate = **Veto-Liste V1-V5** (ATR, Regime+Score, Slots, Sektor, Drawdown)
+- KEIN Gate: "R/R nicht perfekt", "spätes Einsteigen", "Counter-Trend ungemütlich", "Event in X Tagen"
+  → Das sind Trade-Plan-Justierungen (kleinere Size, engere Targets, kürzere Haltedauer), keine Signal-Vetos.
+
+**Verdict-Regel:**
+- Daten sprechen → Signal folgt den Daten, egal ob LONG/SHORT/NO-TRADE
+- Scorecard ist ein **Input**, nicht ein Default. Wenn Scorecard SHORT 36 sagt aber Judge-Faktoren LONG 60% zeigen → LONG, mit Begründung warum Scorecard überstimmt wurde
+- NO-TRADE ist nur bei echter Gate-Verletzung (Confidence <60%, V-Veto aktiv). Nicht "aus Vorsicht", nicht "zu unsicher"
+
+Wenn nach diesem Check Zweifel bestehen: **Dokumentiere den Zweifel, aber entscheide trotzdem**. Unentschiedenheit ist auch eine Form von Bias (Vorsichts-Bias).
 
 ---
 
