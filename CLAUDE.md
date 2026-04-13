@@ -9,7 +9,6 @@ Trading notification system built around a multi-agent analysis framework. Portf
 ## TRADING STRATEGY v7/v8 (ACTIVE)
 
 > **Full rules:** `memory/strategy_v7_draft.md` (v7 core + hedge + pivot)
-> **Learnings & feedback:** `memory/feedback.md`
 
 ### Quick Reference
 
@@ -43,6 +42,8 @@ For v7 hedge rules, pivot rules, position sizing → `memory/strategy_v7_draft.m
 13. **Earnings pattern check** — run `python3 earnings_pattern.py SYMBOL` in Step 1. Script auto-skips if earnings >30 days out; runs full historical window analysis if near. Warning + confidence penalty mandatory if current phase historically weak.
 14. **Price-action reality check** — MACD/RSI turn signals are NOT bullish triggers on their own. Verify with actual green-day count over last 10 trading days (must be ≥5/10) and relative strength vs S&P on most recent day. Flat price with positive MACD = stabilization, not bounce.
 15. **Reddit argument quality** — read the minority's top 3 arguments, not just the majority count. If bears (at a LONG setup) have harder facts than bulls (opinions/targets), that's a contra-signal regardless of 70/30 split.
+16. **Indicator context check** — before calling any indicator value "bullish" or "bearish" (RSI level, BB position, distance-to-high, MACD state), run the historical distribution script in `prompts/01_data_collection.md` § 1.4 "Indicator Context Check". The script reports `[SOLID/WEAK/THIN]` sample sizes and Fwd-5d Green-Rate per band. Confidence adjustments come from Green-Rate, not from textbook "overbought = fall" reflexes. Range-stock heuristics are systematically wrong for trend stocks — always prove the direction from this stock's own history, not generic rules.
+17. **Horizon 1-5 days only** — user trades turbo-certs in a 1-5 day window. No multi-week setups. "No edge today" is a VALID answer; "come back in 3 weeks" / "wait for T-7 pre-earnings" is FORBIDDEN as a trade recommendation. Earnings-pattern and similar multi-week patterns are RISK warnings, never trade triggers. If today has no 1-5d edge → signal = NO-TRADE, not "defer to later date".
 
 ### Current State
 

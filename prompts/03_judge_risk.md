@@ -2,7 +2,7 @@
 
 **Asset:** {{SYMBOL}}
 
-**Input:** Data (Step 1) + Debate (Step 2) + Chart. Consult `memory/feedback.md`.
+**Input:** Data (Step 1) + Debate (Step 2) + Chart.
 
 ---
 
@@ -16,16 +16,22 @@ Analyze INDEPENDENTLY from Bull/Bear. Use the chart as your own source.
 | Bear strength (/10) | [top 2 arguments] | |
 | Chart signal | [what YOU see] | |
 | RSI divergence | [bullish/bearish/none + strength] | |
+| **Indicator Context (Step 1 § 1.4)** | **[Archetyp + Summe der Adjustments + kurze Begründung]** | |
 | NSI (from Step 1) | [value + classification] | |
 | Regime | [from Step 1] | |
 | Short interest | [squeeze potential?] | |
 | Pre-open pattern | [confirms/contradicts?] | |
 | Retail sentiment (Reddit) | [EUPHORIC/PANIC/etc. + Kontra-Signal?] | |
 
+**Pflicht:** Der Judge muss die Indicator-Context-Tabelle aus Step 1 wörtlich zitieren (RSI-Band n, Green-Rate, BB-Band n, Green-Rate, Distance-High Break-Rate) bevor Confidence-Adjustments berechnet werden. Wenn Step 1 das Script nicht gelaufen ist oder die Tabelle fehlt, **STOPP und zurück zu Step 1** — nicht improvisieren.
+
 ### Confidence Adjustments
+
+**⚠️ Indicator-Adjustments kommen aus Step 1 § 1.4 "Indicator Context Check"** — nicht aus Bauchgefühl. Der Judge übernimmt die Tabelle 1:1 aus Step 1 und addiert sie zu den Regime-/Pattern-Adjustments unten. **Niemals** einen Indikator-Abzug schreiben wie "RSI 72 → überkauft → -5%", ohne dass die historische Green-Rate in Step 1 das bestätigt. Wenn die Green-Rate im aktuellen Band >55% ist, hat "überkauft" **kein Recht auf einen Abzug**, egal wie sehr das Bauchgefühl dagegen schreit.
 
 | Condition | Adjustment |
 |-----------|------------|
+| **Indicator-Context-Summe aus Step 1** | **±X% (übernehmen)** |
 | TRENDING + signal WITH trend | +5% |
 | TRENDING + signal AGAINST trend (no confirming signals) | -10% |
 | TRENDING + AGAINST trend + 1 confirming (RSI div OR MACD cross) | -5% |
@@ -35,9 +41,13 @@ Analyze INDEPENDENTLY from Bull/Bear. Use the chart as your own source.
 | Pre-open pattern hit >=60% same direction | +3% |
 | Pre-open pattern hit <50% | -5% |
 | Reflection: win rate for bracket <30% | -5% |
-| Retail EUPHORIC bei ATH + LONG-Signal | -5% (Kontra) |
+| Retail EUPHORIC bei ATH + LONG-Signal | -5% (Kontra, Positioning) |
 | Retail PANIC bei Oversold + LONG-Signal | +3% (Kontra) |
 | Retail EUPHORIC bei ATH + SHORT-Signal | +3% (Kontra) |
+
+**Doppelzählung vermeiden:**
+- "Retail EUPHORIC" ist Positioning-basiert, "überkauft" ist Technik — getrennt halten, **aber nicht beide gleichzeitig** anwenden wenn sie dieselbe Logik abbilden. Bei einem Trend-Stock mit hoher Green-Rate bei RSI>70 gilt nur der Positioning-Abzug, der Technik-Abzug fällt weg (Step 1 sagt "neutral" oder "+").
+- Wenn Step 1 sagt "BB>100% = +3% LONG" und du zusätzlich "Trend-Stock → LONG with trend = +5%" rechnest, achte darauf dass die beiden nicht doppelt den gleichen Effekt einpreisen. Die Trend-Adjustments oben gelten für **Regime-Analyse** (ADX, Score), nicht für "Trend-Stock"-Archetyp.
 
 ### Decision
 
@@ -47,7 +57,14 @@ Analyze INDEPENDENTLY from Bull/Bear. Use the chart as your own source.
 | Medium-term (2-8w) | LONG/SHORT/HOLD | XX% |
 | Long-term (3m+) | LONG/SHORT/HOLD | XX% |
 
-**TRADE SIGNAL = short-term verdict (this drives turbo entry/exit)**
+**TRADE SIGNAL = short-term (1-5d) verdict ONLY. This drives turbo entry/exit.**
+
+**⛔ HORIZON-REGEL (hart):**
+- Der einzige relevante Zeitraum ist **1-5 Tage**. Alles darüber ist Kontext, nie Trade-Empfehlung.
+- Wenn 1-5d kein Edge zeigt → **Signal = NO-TRADE**.
+- VERBOTEN als Empfehlung: "Setup aktiv ab Datum X", "wiederkommen in Y Wochen", "warten bis T-7 pre-earnings". Solche Patterns sind RISIKO-Warnungen oder Watchlist-Trigger, niemals Trade-Trigger.
+- Medium/Long-term Zeilen oben sind reiner Kontext — sie überschreiben niemals das 1-5d-Signal.
+
 **Reasoning:** [2-3 sentences including chart + divergence]
 
 ### ⚠️ NEUTRALITÄTS-CHECK (mandatory vor finalem Signal)

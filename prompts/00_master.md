@@ -24,7 +24,6 @@ Execute these steps sequentially. Each builds on the previous. **No step may be 
 
 - **Primary ruleset: `CLAUDE.md`** — aktuellste Quick-Reference (Gate, Exits, KO, Position Sizing, Hard Rules). Bei jedem Analyse-Start kurz gegen CLAUDE.md abgleichen, falls sich Regeln geändert haben.
 - Strategy details: `memory/strategy_v7_draft.md` (v7 hedge, pivot, overnight rules)
-- Feedback & learnings: `memory/feedback.md`
 - Portfolio state: `python prediction_db.py portfolio` (run BEFORE Step 1)
 - yfinance = truth for all price data (never web search for prices)
 - Every trade needs: entry, stop, KO, exits, time-stop

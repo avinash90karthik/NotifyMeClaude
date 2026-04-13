@@ -167,6 +167,230 @@ print(f'Letzte 5d:  {greens5} grün, {5-greens5} rot')
 
 **Wenn MACD/RSI-Turn-Signal im Widerspruch zu Price-Action-Reality steht: Signal als SCHWÄCHER werten und in Confidence-Berechnung -5% bis -10% einrechnen.**
 
+### ⚠️ Indicator Context Check (MANDATORY — Historie schlägt Bauchgefühl)
+
+> **Auslöser:** ENR.DE @ €167.22 am 11.04.2026 — Judge setzte Confidence auf 50% weil "BB>100% = überkauft" und "RSI steigend = bald überkauft". Historische Prüfung zeigte: ENR hat in 67% der Fälle bei BB>100% eine grüne Folge-Woche, und in 67% der Fälle bei RSI>70 ebenfalls. Der gesamte "überkauft"-Abzug war **empirisch falsch** für diesen Stock. Die Regel: **Bevor ein Indikator-Wert als "bullisch/bärisch" interpretiert wird, prüfe wie sich DIESER Stock historisch in DIESEM Band verhalten hat.**
+
+**Kern-Prinzip:** RSI 70 ist bei einem Utility etwas anderes als bei einem Growth-Stock mit +200% YoY. "Überkauft" ist eine **Range-Stock-Heuristik** und kann bei Trend-Stocks systematisch falsch-negativ sein. Die einzige valide Antwort ist: **prüf die Verteilung**.
+
+**Pflicht-Prüfung** — ein einziger Python-Block, der für vier Indikatoren historische Fwd-5d-Verteilungen zieht:
+
+**Wichtig:** Setze `EXPECTED_PRICE` auf den aktuellen Close aus `collect_data.py` und `EXPECTED_DATE` auf den letzten Handelstag. Das Script STOPPT wenn History-Daten >2 Handelstage alt sind oder der Preis >0.5% abweicht — das verhindert einen stillen yfinance-Cache-Hickup, der die Analyse mit veralteten Werten füttern würde.
+
+```python
+python3 << 'PYEOF'
+import yfinance as yf
+import numpy as np
+import sys
+from datetime import date
+
+# GROUND TRUTH aus Step 1.2 (collect_data.py) — bevor du das Script ausführst, hier einfüllen
+EXPECTED_PRICE = 0.00  # <-- aus collect_data.py JSON "price_native"
+EXPECTED_DATE  = "YYYY-MM-DD"  # <-- letzter Handelstag aus preflight_check.py
+
+t = yf.Ticker('{{SYMBOL}}')
+h = t.history(period='3y')
+
+# Sanity check: History muss zum aktuellen Close passen
+last_date = h.index[-1].date()
+last_close = float(h['Close'].iloc[-1])
+expected_d = date.fromisoformat(EXPECTED_DATE) if EXPECTED_DATE != "YYYY-MM-DD" else None
+
+if expected_d:
+    day_gap = abs((last_date - expected_d).days)
+    if day_gap > 4:  # >2 Handelstage inkl. Wochenende
+        print(f"❌ ABORT: History endet {last_date}, erwartet {EXPECTED_DATE} (Diff {day_gap}d)")
+        print(f"   yfinance-Cache oder -Delay. STOPP — Analyse nicht auf stale data fortsetzen.")
+        sys.exit(2)
+
+if EXPECTED_PRICE > 0:
+    pct_diff = abs(last_close / EXPECTED_PRICE - 1) * 100
+    if pct_diff > 0.5:
+        print(f"❌ ABORT: History-Close {last_close:.2f} vs erwartet {EXPECTED_PRICE:.2f} ({pct_diff:.2f}% Diff)")
+        print(f"   Datenquelle inkonsistent. STOPP.")
+        sys.exit(2)
+
+print(f"✓ Sanity OK: letztes History-Datum {last_date}, Close €{last_close:.2f}")
+print()
+
+# Wilder RSI (konsistent mit indicators.py — nicht .rolling() verwenden!)
+delta = h['Close'].diff()
+gain = delta.where(delta > 0, 0).ewm(alpha=1/14, min_periods=14).mean()
+loss = (-delta.where(delta < 0, 0)).ewm(alpha=1/14, min_periods=14).mean()
+h['RSI'] = 100 - (100 / (1 + gain/loss))
+
+# Bollinger Position (0 = lower band, 100 = upper band, >100 = breach)
+h['SMA20'] = h['Close'].rolling(20).mean()
+h['STD20'] = h['Close'].rolling(20).std()
+h['BB_POS'] = (h['Close'] - (h['SMA20'] - 2*h['STD20'])) / (4*h['STD20']) * 100
+
+# Distance to 3M rolling high
+h['high_3m'] = h['Close'].rolling(60).max()
+h['dist_high'] = (h['Close'] / h['high_3m'] - 1) * 100
+
+# Forward returns (für historische Statistik)
+for d in [1, 3, 5, 10]:
+    h[f'fwd_{d}d'] = h['Close'].pct_change(d).shift(-d) * 100
+
+# WICHTIG: "now" ist der AKTUELLE Zustand (letzte Zeile VOR dropna),
+# nicht der letzte Zeile nach dropna. Sonst zeigt "now" auf 10 Tage vor heute,
+# weil fwd_10d für die letzten 10 Handelstage NaN ist.
+now = h.iloc[-1].copy()
+h_hist = h.dropna(subset=['RSI','BB_POS','dist_high','fwd_5d','fwd_10d'])
+print(f"AKTUELL (letzter Handelstag {h.index[-1].date()}): RSI {now['RSI']:.1f} | BB-Pos {now['BB_POS']:.1f}% | DistHigh {now['dist_high']:+.2f}%")
+print(f"Historie für Band-Statistik: {len(h_hist)} Tage ({h_hist.index[0].date()} bis {h_hist.index[-1].date()})")
+print()
+
+def report(name, subset, total):
+    n = len(subset)
+    if n == 0:
+        print(f"  {name}: n=0 — keine Historie")
+        return
+    tag = "SOLID" if n >= 30 else ("WEAK" if n >= 15 else "THIN")
+    fwd5 = subset['fwd_5d'].dropna()
+    if len(fwd5) == 0:
+        print(f"  {name}: n={n} [{tag}] — keine fwd-Daten")
+        return
+    green_rate = (fwd5 > 0).mean() * 100
+    avg = fwd5.mean()
+    med = fwd5.median()
+    print(f"  {name}: n={n} [{tag}] ({n/total*100:.0f}% der Zeit) | fwd 5d avg {avg:+.2f}% | median {med:+.2f}% | green {green_rate:.0f}%")
+
+# Band-Statistiken IMMER aus h_hist (die hat valide fwd-Returns).
+# "now" kommt aus h (letzte verfügbare Zeile, auch wenn fwd_10d dort NaN ist).
+total = len(h_hist)
+
+# 1. RSI-Band um aktuellen Wert (±5)
+print("== 1. RSI-BAND (aktueller Wert ±5) ==")
+rsi_now = now['RSI']
+band = h_hist[(h_hist['RSI'] >= rsi_now - 5) & (h_hist['RSI'] <= rsi_now + 5)]
+report(f"RSI {rsi_now-5:.0f}-{rsi_now+5:.0f}", band, total)
+if rsi_now >= 60:
+    report("RSI >70 (klassisch überkauft)", h_hist[h_hist['RSI'] > 70], total)
+if rsi_now <= 40:
+    report("RSI <30 (klassisch überverkauft)", h_hist[h_hist['RSI'] < 30], total)
+print()
+
+# 2. Bollinger-Position-Bucket
+print("== 2. BOLLINGER POSITION ==")
+bb_now = now['BB_POS']
+if bb_now > 100:
+    report("BB >100% (oberer Band durchbrochen)", h_hist[h_hist['BB_POS'] > 100], total)
+elif bb_now > 70:
+    report("BB 70-100% (oberes Drittel)", h_hist[(h_hist['BB_POS'] > 70) & (h_hist['BB_POS'] <= 100)], total)
+elif bb_now < 0:
+    report("BB <0% (unterer Band durchbrochen)", h_hist[h_hist['BB_POS'] < 0], total)
+elif bb_now < 30:
+    report("BB 0-30% (unteres Drittel)", h_hist[(h_hist['BB_POS'] >= 0) & (h_hist['BB_POS'] < 30)], total)
+else:
+    report("BB 30-70% (Mitte)", h_hist[(h_hist['BB_POS'] >= 30) & (h_hist['BB_POS'] <= 70)], total)
+print()
+
+# 3. Distanz zu 3M-High (Resistance-Nähe)
+print("== 3. DISTANZ ZU 3M-HIGH ==")
+d_now = now['dist_high']
+if d_now > -3:
+    near = h_hist[h_hist['dist_high'] > -3]
+    report("Innerhalb 3% vom 3M-High", near, total)
+    broken = 0
+    n_checked = 0
+    for i in range(len(h_hist) - 10):
+        if h_hist['dist_high'].iloc[i] > -3:
+            n_checked += 1
+            if (h_hist['Close'].iloc[i+1:i+11] > h_hist['high_3m'].iloc[i]).any():
+                broken += 1
+    if n_checked > 0:
+        br = broken / n_checked * 100
+        tag = "SOLID" if n_checked >= 30 else ("WEAK" if n_checked >= 15 else "THIN")
+        print(f"  Break-Rate 3M-High in 10d: {br:.0f}% (n={n_checked}) [{tag}]")
+elif d_now < -15:
+    far = h_hist[h_hist['dist_high'] < -15]
+    report("Mehr als -15% vom 3M-High (tiefer Drawdown)", far, total)
+else:
+    mid = h_hist[(h_hist['dist_high'] >= -15) & (h_hist['dist_high'] <= -3)]
+    report(f"Zwischen -15% und -3% vom 3M-High", mid, total)
+print()
+
+# 4. Kombi-Check
+print("== 4. KOMBI ==")
+if rsi_now >= 60 and bb_now > 100:
+    report("RSI >=60 UND BB >100%", h_hist[(h_hist['RSI'] >= 60) & (h_hist['BB_POS'] > 100)], total)
+elif rsi_now <= 40 and bb_now < 30:
+    report("RSI <=40 UND BB <30%", h_hist[(h_hist['RSI'] <= 40) & (h_hist['BB_POS'] < 30)], total)
+else:
+    print("  (keine Extrem-Kombi aktiv — Kombi-Check übersprungen)")
+print()
+
+# 5. Archetyp-Klassifikation (aus h, nicht h_hist — wir wollen den heutigen Zustand)
+print("== 5. ARCHETYP ==")
+sma200 = h['Close'].rolling(200).mean().iloc[-1]
+dist_sma200 = (now['Close'] / sma200 - 1) * 100
+max_dd_1y = 0
+h1y = h.tail(252)
+for i in range(len(h1y)):
+    peak = h1y['Close'].iloc[:i+1].max()
+    dd = (h1y['Close'].iloc[i] / peak - 1) * 100
+    if dd < max_dd_1y:
+        max_dd_1y = dd
+gain_1y = (h.iloc[-1]['Close'] / h.iloc[-252]['Close'] - 1) * 100 if len(h) >= 252 else None
+print(f"  Dist SMA200: {dist_sma200:+.1f}% | 1Y-Gain: {gain_1y:+.1f}% | Max-DD 1Y: {max_dd_1y:.1f}%")
+is_trend = (dist_sma200 > 20 and gain_1y and gain_1y > 100 and max_dd_1y > -25)
+print(f"  Klassifikation: {'TREND-STOCK (Range-Heuristiken sind hier historisch falsch-negativ)' if is_trend else 'Range-/Normal-Stock (Range-Heuristiken anwendbar)'}")
+PYEOF
+```
+
+**Interpretation der Ausgabe (PFLICHT — diese Schritte durchgehen, nicht überfliegen):**
+
+**Schritt 1: Sample-Size-Qualität**
+- `[SOLID]` (n ≥ 30): Belastbar, direkt als Confidence-Input verwenden
+- `[WEAK]` (n = 15-29): Richtung nennen, aber schwächer gewichten (halber Adjust)
+- `[THIN]` (n < 15): Nur als "Hinweis" erwähnen, **kein Confidence-Adjust ableiten**
+- LLM-Urteil darf Sample-Grenzen leicht verschieben (z.B. n=13 bei sehr klarer Richtung 85/15% ist interpretierbar — benutze Kontext)
+
+**Schritt 2: Richtung aus Green-Rate ableiten (symmetrisch für beide Seiten)**
+
+| Green-Rate fwd 5d | Signal-Richtung | Confidence-Adjustment (bei SOLID) |
+|-------------------|-----------------|-----------------------------------|
+| **> 65%** | Stark bullisch | LONG +3%, SHORT -3% |
+| **55-65%** | Mild bullisch | LONG +1%, SHORT -1% |
+| **45-55%** | **Neutral (Coin-Flip)** | **0% — dieser Indikator liefert hier kein Signal** |
+| **35-45%** | Mild bärisch | LONG -1%, SHORT +1% |
+| **< 35%** | Stark bärisch | LONG -3%, SHORT +3% |
+
+Bei `[WEAK]` Samples: **halben Adjust verwenden** (3% → 1.5%, 1% → 0.5%).
+
+**Schritt 3: Das "Überkauft-Reflex"-Verbot**
+
+Du darfst **NICHT** schreiben:
+- ❌ "RSI 72 ist überkauft → -5% Confidence"
+- ❌ "BB-Position >100% → Fade wahrscheinlich → -5%"
+- ❌ "Preis 2% unter ATH → kaum Luft → -5%"
+
+Ohne vorher das Script oben gelaufen zu sein und die Green-Rate **konkret zitiert** zu haben. Range-Reflexe ohne historische Belegung sind ab jetzt **Bias**, nicht Analyse.
+
+**Was du stattdessen schreibst:**
+> "RSI 62.3 [aktueller Wert] — in den letzten 3 Jahren war ENR in diesem Band (57-67) an 90/733 Tagen [12%], fwd 5d avg +0.64%, Green-Rate 59% → mild bullisch (+1%)."
+>
+> "BB-Position 103% — n=60 [SOLID], fwd 5d avg +3.50%, Green-Rate 73% → stark bullisch (+3%). Range-Reflex 'überkauft = fällt' ist für diesen Stock empirisch falsch."
+
+**Schritt 4: Archetyp-Klassifikation dokumentieren**
+
+Das Script druckt am Ende "TREND-STOCK" oder "Range-/Normal-Stock". Notiere das explizit in der Analyse — es ist die Begründung, warum bestimmte Abzüge (nicht) greifen. Kriterien: SMA200-Abstand > +20%, 1Y-Gain > +100%, Max-DD 1Y > -25%.
+
+**Output als Tabelle (in Step 1 Analyse):**
+
+| Indikator | Aktuell | Band-n | Sample | Fwd-5d Avg | Green-Rate | Signal | Adjust |
+|-----------|---------|--------|--------|-----------|------------|--------|--------|
+| RSI | XX.X | n=XX | SOLID/WEAK/THIN | +X.XX% | XX% | bullisch/neutral/bearish | ±X% |
+| BB-Position | XX.X% | n=XX | ... | +X.XX% | XX% | ... | ±X% |
+| Dist 3M-High | ±X.X% | n=XX | ... | Break-Rate XX% | — | ... | ±X% |
+| Kombi (falls sinnvoll) | ... | n=XX | ... | ... | ... | ... | ±X% |
+
+**Archetyp:** TREND-STOCK / Range-Stock / Normal
+**Summe Indikator-Adjustments für Step 3:** ±X%
+
+---
+
 ## 1.5 News & Catalysts
 
 **Inputs (alle drei Quellen pflicht):**
