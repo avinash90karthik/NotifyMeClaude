@@ -1,92 +1,109 @@
 # STEP 2: INVESTMENT DEBATE
 
 **Asset:** {{SYMBOL}}
-
-**Input:** Data + JSON from Step 1. Regime: {{REGIME from Step 1}}.
-
----
-
-## Regime Weighting
-
-| Regime | Trend signals (SMA, MACD) | Oscillators (RSI, BB) | Overall |
-|--------|--------------------------|----------------------|---------|
-| TRENDING | x1.3 (dominant) | x0.7 | x1.0 |
-| RANGE | x0.7 | x1.3 (dominant) | x1.0 |
-| CHOPPY | x1.0 | x1.0 | x0.7 (all weaker) |
-| TRANSITIONAL | x1.0 | x1.0 | x1.0 |
-
-Apply this weighting to argument strength throughout the debate.
+**Input:** Stichpunkte + 4 Ratings aus Step 1.
 
 ---
 
-## Round 1: BULL (4-6 sentences per argument, concrete numbers, reference chart)
+## Regeln für die Debatte
 
-1. **Technical:** Trend signals, RSI momentum (use delta/divergence from Step 1), MACD, SMA setup
-2. **News & Catalysts:** Reference NSI score, cite specific headlines with dates
-3. **Fundamental:** Supply/demand, valuation, flows
-4. **Macro:** Fed, USD, inflation, geopolitics
+- Nutze ausschließlich Daten aus Step 1. Keine neuen Zahlen, keine Web-Suchen.
+- Die vier Step-1-Ratings (Technical Green-Rate, Price-Action, News+Reddit, Event/Catalyst) sind FIXIERT. Die Debatte darf sie zitieren, interpretieren, kontextualisieren — aber NICHT verändern. Anchoring auf Debatten-Confidence ist der Hauptfehler, den diese Struktur verhindert.
+- Debatte liefert nur zwei NEUE Werte: **Chart Structure** (qualitativ, aus Chart-Analyse § 1.4) und **Reversion-Edge** (aus reversion_guard.py, siehe unten).
 
-**Bull target:** $XX.XX (+XX%) | Confidence: XX% | Time: X weeks
+## Round 1: BULL (4-6 Sätze pro Argument, konkrete Zahlen, Chart-Referenz)
 
-## Round 1: BEAR (4-6 sentences per argument, must REFUTE Bull)
+1. **Technical:** Indicator-Context-Werte aus Step 1 zitieren (RSI-Band green-rate, BB, DistHigh), Archetyp einordnen
+2. **Price-Action:** Greens-10d, Trend-5d, price_action Verdict
+3. **News/Catalysts:** NSI, konkrete Headlines mit Datum, Retail-Flag
+4. **Macro:** VIX, F&G, Fed, nur wenn <7d für den Trade relevant
 
-1. **Technical:** Warning signals, overbought/oversold risks, what Bull missed
-2. **News & Risks:** Why catalysts are priced in, downside risks
-3. **Fundamental Weakness:** What Bull overlooked
-4. **Macro Headwinds:** What works against the trade
+Bull-Ziel: $XX.XX (+XX%) | Confidence: XX% | Horizont: 1-5d
 
-**Bear target:** $XX.XX (-XX%) | Confidence: XX% | Time: X weeks
+## Round 1: BEAR (4-6 Sätze, muss Bull widerlegen)
 
-## Round 2: Rebuttals (3-4 sentences each)
+Gleicher Aufbau, gegen Bull. Schwachstellen in den Step-1-Daten, nicht Bauchgefühl.
 
-**Bull rebuts** Bear arguments 1-3 + one new argument.
-**Bear rebuts** Bull arguments 1-3 + one new argument.
+Bear-Ziel: $XX.XX (-XX%) | Confidence: XX% | Horizont: 1-5d
 
-## Round 3: Final Synthesis (4-6 sentences each)
+## Round 2: Rebuttals (3-4 Sätze)
 
-**Bull Final:** Strongest remaining argument, what couldn't be refuted, adjusted target.
-Bull Final Confidence: XX%
+Bull widerlegt Bear-Argumente 1-3 + ein neues. Bear widerlegt Bull 1-3 + ein neues.
 
-**Bear Final:** Strongest remaining argument, what couldn't be refuted, adjusted target.
-Bear Final Confidence: XX%
+## Round 3: Final Synthesis (4-6 Sätze)
 
----
-
-## SHORT Trade Scorecard (MANDATORY)
-
-| Criterion (0-10 each) | LONG | SHORT |
-|------------------------|------|-------|
-| Technical Signals | /10 | /10 |
-| News Momentum | /10 | /10 |
-| Fundamentals | /10 | /10 |
-| Macro Environment | /10 | /10 |
-| Chart Pattern | /10 | /10 |
-| Risk/Reward | /10 | /10 |
-| **TOTAL** | **/60** | **/60** |
-
-**If SHORT >= LONG or difference < 5:** Develop concrete SHORT setup (entry, KO, target).
-**If LONG clearly better (>10 pts):** Proceed as LONG.
-**If unclear (5-10 pts):** Develop both for Step 3.
+**Bull Final:** Stärkstes nicht widerlegtes Argument, angepasstes Ziel, Bull-Final-Confidence XX%
+**Bear Final:** Stärkstes nicht widerlegtes Argument, angepasstes Ziel, Bear-Final-Confidence XX%
 
 ---
 
-## Output
+## Reversion-Edge vorziehen
 
-```json
-{
-  "step": 2,
-  "symbol": "{{SYMBOL}}",
-  "bull_target_usd": 0.00,
-  "bear_target_usd": 0.00,
-  "bull_confidence_pct": 0,
-  "bear_confidence_pct": 0,
-  "scorecard": { "long_total": 0, "short_total": 0 },
-  "strongest_bull_arg": "...",
-  "strongest_bear_arg": "...",
-  "recommended_direction": "LONG|SHORT|BOTH"
-}
+Vor dem Scorecard-Fill einmal laufen lassen (Step 3 holt es sich nochmal, aber die Scorecard braucht es hier):
+
+```bash
+python3 reversion_guard.py {{SYMBOL}} --direction LONG
+python3 reversion_guard.py {{SYMBOL}} --direction SHORT
 ```
 
+Mapping Verdict → Reversion-Edge-Rating:
+
+| Script-Verdict | LONG-Rating | SHORT-Rating |
+|----------------|-------------|--------------|
+| LONG "Kein Reversion-Edge" UND SHORT "NO-TRADE" | 6 | 2 |
+| LONG "Kein Reversion-Edge" UND SHORT "valid" | 4 | 7 |
+| LONG "Pullback-Pflicht" UND SHORT "NO-TRADE" | 3 | 2 |
+| LONG "Pullback-Pflicht" UND SHORT "valid" | 2 | 7 |
+
+Interpretation: "Kein Reversion-Edge" LONG bedeutet Continuation-Bias → LONG bekommt Edge. "Pullback-Pflicht" heißt Entry verschoben, aber Richtung intakt — nicht automatisch Edge. SHORT-valid heißt Blowoff-Fade historisch bewiesen → SHORT bekommt Edge.
+
+---
+
+## 6-Achsen Scorecard (MANDATORY)
+
+Vier Achsen (1-4) kommen WÖRTLICH aus Step 1 Rating-Block. Zwei Achsen (5-6) aus Debatte + reversion_guard.
+
+| Criterion (0-10) | LONG | SHORT | Quelle |
+|------------------|------|-------|--------|
+| 1. Technical Green-Rate | /10 | /10 | Step 1 Rating 1 (unverändert) |
+| 2. Price-Action Reality | /10 | /10 | Step 1 Rating 2 (unverändert) |
+| 3. News + Reddit Flow | /10 | /10 | Step 1 Rating 3 (unverändert) |
+| 4. Event/Catalyst | /10 | /10 | Step 1 Rating 4 (unverändert) |
+| 5. Chart Structure | /10 | /10 | Debatte — Pattern, S/R, Volumen-Setup |
+| 6. Reversion-Edge | /10 | /10 | reversion_guard.py Verdict |
+| **TOTAL** | **/60** | **/60** | |
+
+**Entscheidungsregel:**
+- LONG-Total ≥ SHORT+10 → LONG-Setup in Step 3
+- SHORT-Total ≥ LONG+10 → SHORT-Setup in Step 3
+- Differenz < 10 → beide Setups entwickeln, Step 3 Judge entscheidet
+- Beide Totals < 30 → NO-TRADE prüfen
+
+---
+
+## Output-Card (kein JSON)
+
 ```
+Step 2:
+╔════════════════════════════════════════════════════╗
+║ SCORECARD — {{SYMBOL}}                             ║
+╠════════════════════════════════════════════════════╣
+║                              LONG   │   SHORT      ║
+║ 1. Technical Green-Rate      X/10   │   X/10       ║
+║ 2. Price-Action Reality      X/10   │   X/10       ║
+║ 3. News + Reddit Flow        X/10   │   X/10       ║
+║ 4. Event/Catalyst            X/10   │   X/10       ║
+║ 5. Chart Structure           X/10   │   X/10       ║
+║ 6. Reversion-Edge            X/10   │   X/10       ║
+║ ─────────────────────────────────── │ ──────       ║
+║ TOTAL                       XX/60   │  XX/60       ║
+╠════════════════════════════════════════════════════╣
+║ Bull-Ziel:   $XX.XX (+XX%) Confidence XX%          ║
+║ Bear-Ziel:   $XX.XX (-XX%) Confidence XX%          ║
+║ Strongest Bull:  <1 Satz>                          ║
+║ Strongest Bear:  <1 Satz>                          ║
+║ Recommended:     LONG | SHORT | BOTH | NO-TRADE    ║
+╚════════════════════════════════════════════════════╝
+
 [STEP 2 COMPLETE]
 ```
