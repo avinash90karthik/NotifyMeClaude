@@ -82,6 +82,19 @@ Das Script:
 
 WEAK = halber Adjust. THIN = nur als Hinweis, kein Adjust.
 
+### v9 Extrem-Oversold-Bonus (Rule 19, MANDATORY)
+
+Wenn das aktuelle RSI-Band aus dem Script-Output die folgenden Bedingungen erfüllt, **addiere explizit** den Oversold-Bonus zur LONG-Confidence. Er überstimmt Regime-Abzüge.
+
+| RSI-Band aktuell | Fwd-5d Green-Rate | Sample | LONG-Bonus |
+|------------------|-------------------|--------|------------|
+| < 20 | ≥ 65% | n ≥ 20 [SOLID] | **+5%** |
+| < 15 | ≥ 70% | n ≥ 20 [SOLID] | **+8%** (Kapitulations-Tief) |
+
+Beispiel-Lesung: `indicator_context.py` zeigt "RSI 16 | Fwd5 +4.2% green=75% [SOLID n=34]" → **+5% LONG-Bonus** pflichtmäßig in die Summe-Adjust-Tabelle unten einrechnen und im Judge zitieren.
+
+**Begründung-Quelle:** Backtest 16.04.2026, 5/5 Predictions mit Conf <50% bei Extrem-Oversold gingen +8.82% in Signalrichtung. Das System hatte sie wegen TRENDING-Abzügen blockiert, aber die stock-eigene Fwd-Green-Rate dominiert historisch.
+
 **Verbot:** Keine "Überkauft-Reflexe" ohne Script-Output. Sätze wie "RSI 72 ist überkauft → -5%" oder "BB >100% → Fade wahrscheinlich → -5%" sind ohne vorher zitierte Green-Rate Bias, nicht Analyse.
 
 **Output-Tabelle in deiner Analyse:**

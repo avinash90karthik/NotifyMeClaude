@@ -335,3 +335,72 @@ python prediction_db.py portfolio   # Hedges mit [H] markiert, nicht als Slot ge
 - [ ] Portfolio-Anzeige: Hedges mit [H] markieren
 - [ ] Track Record: Hedges separat auswerten
 - [ ] 2 weitere Live-Tests für Validierung
+
+---
+
+# v9 — Oversold-Bonus + Scout-Invertierung (April 2026)
+
+Datum: 2026-04-16. Anlass: Backtest auf 40 gefüllten Predictions zeigte zwei harte Muster.
+
+## Was Backtest zeigte
+
+**1. Der vergessene Edge-Bereich <50% Confidence**
+
+5 von 40 Predictions landeten im <50%-Confidence-Bereich und wurden abgelehnt. Alle 5 gingen in Signalrichtung, Ø +8.82% fwd5d, 100% Accuracy.
+
+Gemeinsames Muster:
+- RSI extrem oversold (15-30)
+- Commodities oder Stocks nach scharfem Crash
+- System-Abzüge ("TRENDING abwärts", "Pre-Open-Pattern schwach", "CHOPPY") zogen Confidence unter 60% Gate
+
+Die stock-eigene Fwd-5d-Green-Rate bei RSI <20 war durchgängig >65% [SOLID]. Die Regime-Abzüge hatten diese direkte Mean-Reversion-Evidenz überstimmt.
+
+**2. Der 60-65%-Coin-Flip-Bracket**
+
+Accuracy nach Confidence-Bracket (fwd5d):
+
+| Bracket | Accuracy | Ø Move |
+|---------|----------|--------|
+| 60-65% | 56% | +0.33% |
+| 65-70% | 60% | +8.22% |
+| 70%+ | 75% | +6.83% |
+
+60-65% ist effektiv Coin-Flip. Die klassische Scout/Confirmation-Aufteilung (60/40) packt die Hauptgröße in den unsichersten Punkt.
+
+## v9 Rule 19 — Extrem-Oversold-Bonus
+
+Wenn `indicator_context.py` am aktuellen RSI-Band <20 zeigt: Fwd-5d Green-Rate ≥65% UND n≥20 [SOLID] → **+5% Confidence-Bonus** für LONG, überstimmt Regime-Abzüge.
+
+Bei RSI-Band <15 [SOLID + green ≥70%] → **+8% Bonus** (Kapitulations-Tief).
+
+Der Bonus wird nach Differenz-Strafe (bei Scorecard |Diff|<10) addiert. Er ist das einzige Element, das Regime-Vetos via Confidence umgehen darf — weil die Stock-eigene Historie die Regime-Statistik lokal überstimmt.
+
+Harte Vetos (V1-V5) bleiben unangetastet.
+
+## v9 Rule 20 — Scout-Confirmation-Invertierung
+
+Die Scout/Confirmation-Aufteilung wird abhängig von Confidence:
+
+| Confidence | Scout | Confirmation |
+|------------|-------|--------------|
+| 60-65% | **40%** (invertiert) | **60%** |
+| ≥65% | 60% (klassisch) | 40% |
+
+Bei knapper Confidence kleinerer Initial-Einsatz — Schaden bei Fehlsignal reduziert. Confirmation kommt bei Bestätigung (Scout +5% im Plus) zum höheren Preis, aber mit echtem Trendbeweis.
+
+Confirmation-Trigger selbst unverändert aus v7: +5% im Plus ODER klarer Regime-Beweis.
+
+## Nicht-Ziele von v9
+
+- KO-Logik unverändert (max(ATR, Chart))
+- Position-Sizing-Tabelle unverändert (60-65% bleibt 15% Total, nicht 10%)
+- Exits v8 unverändert (80% bei +20%)
+- Gate bei 60% Confidence unverändert (Oversold-Bonus kann Confidence ÜBER das Gate heben, nicht darunter)
+
+## Status v9
+
+- [x] Rule 19 Oversold-Bonus in CLAUDE.md + Step 1 + Step 3 hart verankert
+- [x] Rule 20 Scout-Invertierung in CLAUDE.md + Step 3 Position-Sizing-Tabelle
+- [x] Step 3 Card dokumentiert v9-Split + Oversold-Bonus
+- [x] Quick-Reference in CLAUDE.md-Header auf v7/v8/v9
+- [ ] Live-Validierung: nach 5 Trades unter v9 Rules Backtest erneut laufen

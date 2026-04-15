@@ -16,9 +16,14 @@ Raw Confidence = max(LONG-Total, SHORT-Total) / 60 × 100   (%)
 Differenz-Strafe:
   |LONG-Total − SHORT-Total| < 10   →   Confidence × 0.9
   |LONG-Total − SHORT-Total| ≥ 10   →   Confidence × 1.0
+
+v9 Oversold-Bonus (Rule 19) — nur für LONG:
+  Indicator-Context RSI-Band <20 + Fwd5 green ≥65% + n≥20  →  +5% Confidence
+  Indicator-Context RSI-Band <15 + Fwd5 green ≥70% + n≥20  →  +8% Confidence (Kapitulation)
+  Bonus wird NACH Differenz-Strafe addiert.
 ```
 
-Das Gate aus CLAUDE.md ist automatisch konsistent: 36/60 = 60% = Trade-Gate.
+Das Gate aus CLAUDE.md ist automatisch konsistent: 36/60 = 60% = Trade-Gate (vor Oversold-Bonus).
 
 ### Judge-Override (erlaubt, aber mit Pflicht-Doku)
 
@@ -169,18 +174,24 @@ Cert-Vorschlag: passendes Produkt (Turbo Long/Short oder Warrant, Strike ~ KO-Le
 
 ---
 
-## Position Sizing
+## Position Sizing (v9: Scout-Invertierung bei knapper Confidence)
 
-| Confidence | Total (% Portfolio) | Scout (60%) | Confirmation (40%) |
-|------------|---------------------|-------------|--------------------|
-| 60-65% | 15% | 9% | 6% |
-| 65-70% | 20% | 12% | 8% |
-| 70%+ | 25% | 15% | 10% |
+**Rule 20 (v9):** Bei Confidence 60-65% ist der Scout **kleiner** als die Confirmation (40/60 statt 60/40). Ab ≥65% klassische Aufteilung (60/40).
+
+| Confidence | Total (% Portfolio) | Scout % von Total | Confirmation % von Total | Scout (% Portfolio) | Confirmation (% Portfolio) |
+|------------|---------------------|-------------------|--------------------------|---------------------|----------------------------|
+| 60-65% | 15% | **40% (invertiert)** | **60%** | 6% | 9% |
+| 65-70% | 20% | 60% | 40% | 12% | 8% |
+| 70%+ | 25% | 60% | 40% | 15% | 10% |
+
+**Begründung (aus Backtest 16.04.2026):** 60-65% Confidence-Bracket hat nur 56% Accuracy und +0.33% Ø-Move (Coin-Flip). Invertierter Scout reduziert den Schaden bei Fehlsignal, Confirmation-Buy nach Bestätigung (mind. +5% im Plus) setzt die Hauptgröße erst bei echter Trendbestätigung.
 
 **Rechnen:**
 - Portfolio-Value aus `prediction_db.py portfolio`
 - Scout = Portfolio × Scout-% → durch Cert-Ask-Preis → Cert-Anzahl
-- Confirmation = Portfolio × Confirm-% → erst nach Signal-Bestätigung
+- Confirmation = Portfolio × Confirm-% → erst nach Signal-Bestätigung (Scout +5% im Plus ODER klarer Regime-Beweis)
+
+**Card-Pflicht:** Step 3 Card und Step 4 Order-Plan müssen explizit dokumentieren, ob Scout-Invertierung aktiv ist ("v9 Scout-invertiert" oder "v9 Scout-klassisch").
 
 ### Risk-per-Trade Tabelle
 
@@ -188,8 +199,8 @@ Cert-Vorschlag: passendes Produkt (Turbo Long/Short oder Warrant, Strike ~ KO-Le
 |--------|------|
 | Portfolio-Value | XXX EUR |
 | Position Size (XX%) | XXX EUR |
-| Scout (60%) | XXX EUR / XX Certs |
-| Confirmation (40%) | XXX EUR / XX Certs |
+| Scout (XX% von Total — v9 split) | XXX EUR / XX Certs |
+| Confirmation (XX% von Total — v9 split) | XXX EUR / XX Certs |
 | Max Loss pro Trade (10%) | XXX EUR |
 | Aktuell im Risk | XXX EUR |
 | Remaining Risk-Budget | XXX EUR |
@@ -220,7 +231,12 @@ Step 3:
 ║ Target (+20%):     XX.XX                                     ║
 ║                                                              ║
 ║ Position Size:     XX% Portfolio (XXX EUR)                   ║
-║ Certs Scout:       XX Stück @ €X.XX                          ║
+║ v9 Split:          Scout-invertiert (40/60) |                ║
+║                    Scout-klassisch (60/40)                   ║
+║ Oversold-Bonus:    NEIN | +5% (RSI<20 green XX%) |           ║
+║                    +8% (RSI<15 green XX% Kapitulation)       ║
+║ Certs Scout:       XX Stück @ €X.XX (XX% von Total)          ║
+║ Certs Confirm:     XX Stück @ €X.XX (XX% von Total)          ║
 ║                                                              ║
 ║ V-Vetos aktiv:     <keine | V1/V3/...>                       ║
 ║ W-Warnings aktiv:  <keine | W1/W5/...>  → Trade-Plan-Mods    ║
