@@ -168,6 +168,31 @@ Tabelle:
 
 Key Insight: [Was sagt das Pattern über die wahrscheinliche Richtung?]
 
+## 1.8a Pattern Timeline (MANDATORY)
+
+```bash
+python3 pattern_timeline.py {{SYMBOL}}
+```
+
+Zwei Modi in einem Output:
+- **Mode 1 (Similar-Day):** Fwd-Return-Verteilung für Day +1 bis +5 basierend auf Tagen mit ähnlichem heutigen Return (Klassifikation in 5 Return-Bänder, n meist >100).
+- **Mode 2 (Analog-Match):** sucht historische 7-Tage-Fenster die matchen auf (Korrelation ≥0.7, RSI ±7, ATR-Regime 0.7-1.4). Skip wenn <10 Analoge.
+
+Je Tag: Mean, ±1σ-Range, Green-Rate. Beide Modi parallel + AGREEMENT/DIVERGE-Check pro Tag.
+
+**Interpretation:**
+- **Beide Modi AGREE alle 5 Tage** → Forecast robust, kann als Confidence-Input gewertet werden.
+- **DIVERGE ≥3 Tage** → Forecast-Unsicherheit. Signal-Confidence in Step 3 nicht über 60-63% treiben, auch wenn Scorecard höher ist.
+- **Mode 2 SKIP** (Analoge <10) → kein Edge belegbar durch Pattern-Matching. Nur Mode 1 nutzen, als Hinweis nicht als Treiber.
+- **±1σ-Range** ist der realistische Entry-Limit-Korridor. Wenn Day+1 Mean +0.5% aber Untergrenze −2%, darf Limit bei Close−1.5% gesetzt werden (P25-Zone).
+
+**Output für Step 1 Stichpunkte:**
+```
+Pattern Timeline: <Mode1-Fwd5 +X.X% green X% / Mode2-Fwd5 +Y.Y% green Y% [n=Z]>
+                  AGREEMENT|DIVERGE (Tage X/5)
+                  Entry-Korridor morgen: ±1σ [ -X.X% .. +X.X% ] von Close
+```
+
 ## 1.8b Earnings Window Pattern (MANDATORY)
 
 ```bash
@@ -244,6 +269,7 @@ Step 1:
 - Macro: <VIX, F&G, Fed, relevante Makro-Events>
 - Correlation: <Sektor-Konzentration, Portfolio-Clash-Flag>
 - Day Pattern: <Similar-Day Fwd5 green-rate + Key Insight>
+- Pattern Timeline: <Mode1/Mode2 Fwd5 + AGREEMENT/DIVERGE + Entry-Korridor>
 - Earnings Window: <Skip / Phase / Warning / Edge>
 - Events: <Haupt-Event, Klarheit/Unsicherheit, Trade-Decision>
 ```
