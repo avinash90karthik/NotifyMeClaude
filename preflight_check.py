@@ -24,8 +24,12 @@ Exit codes:
 
 import argparse
 import json
+import os
 import sys
+import urllib.parse
+import urllib.request
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 try:
     import pytz
@@ -159,26 +163,103 @@ def fetch_earnings_context(symbol):
         return None, f"Earnings fetch failed: {e}"
 
 
-def fetch_price_snapshot(symbol):
-    """Minimal price snapshot — just enough so Claude knows the ticker is real."""
+def _load_env_key(name):
+    """Read a key from .env (simple KEY=VALUE parser). Returns None if absent."""
+    val = os.environ.get(name)
+    if val:
+        return val.strip()
+    env_path = Path(__file__).resolve().parent / ".env"
+    if not env_path.exists():
+        return None
     try:
-        t = yf.Ticker(symbol)
-        info = t.info
-        hist = t.history(period="5d")
-        if hist.empty:
-            return None, f"No history for {symbol}"
-        price = info.get("currentPrice") or info.get("regularMarketPrice") or float(hist["Close"].iloc[-1])
-        prev = info.get("previousClose") or float(hist["Close"].iloc[-2]) if len(hist) >= 2 else price
-        chg = ((price - prev) / prev * 100) if prev else 0.0
+        for line in env_path.read_text().splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            if k.strip() == name:
+                return v.strip().strip('"').strip("'")
+    except Exception:
+        return None
+    return None
+
+
+def _fetch_twelvedata_quote(symbol):
+    """Fallback price source when yfinance flakes. Returns (snap, err)."""
+    api_key = _load_env_key("TWELVEDATA_API") or _load_env_key("TWELVEDATA_API_KEY")
+    if not api_key:
+        return None, "TWELVEDATA_API not set in .env"
+    try:
+        params = urllib.parse.urlencode({"symbol": symbol, "apikey": api_key})
+        url = f"https://api.twelvedata.com/quote?{params}"
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        if data.get("status") == "error" or "close" not in data:
+            return None, f"twelvedata: {data.get('message', 'no data')}"
+        price = float(data["close"])
+        prev = float(data.get("previous_close") or price)
+        chg_raw = data.get("percent_change")
+        chg = float(chg_raw) if chg_raw not in (None, "") else (
+            ((price - prev) / prev * 100) if prev else 0.0
+        )
         return {
-            "price": round(float(price), 2),
-            "prev_close": round(float(prev), 2),
+            "price": round(price, 2),
+            "prev_close": round(prev, 2),
             "change_pct": round(chg, 2),
-            "currency": info.get("currency", "USD"),
-            "name": info.get("shortName") or info.get("longName") or symbol,
+            "currency": data.get("currency", "USD"),
+            "name": data.get("name") or symbol,
+            "source": "twelvedata",
         }, None
     except Exception as e:
-        return None, f"Price fetch failed: {e}"
+        return None, f"twelvedata fetch failed: {e}"
+
+
+def fetch_price_snapshot(symbol):
+    """Minimal price snapshot — just enough so Claude knows the ticker is real.
+
+    Primary source: yfinance. Fallback: twelvedata (when Yahoo API flakes).
+    """
+    yf_err = None
+    try:
+        t = yf.Ticker(symbol)
+        hist = t.history(period="5d")
+        try:
+            info = t.info or {}
+        except Exception:
+            info = {}
+        if hist.empty and not info:
+            yf_err = f"No history or info for {symbol}"
+        else:
+            price = (
+                info.get("currentPrice")
+                or info.get("regularMarketPrice")
+                or (float(hist["Close"].iloc[-1]) if not hist.empty else None)
+            )
+            if price is None:
+                yf_err = f"No price for {symbol}"
+            else:
+                if info.get("previousClose"):
+                    prev = float(info["previousClose"])
+                elif len(hist) >= 2:
+                    prev = float(hist["Close"].iloc[-2])
+                else:
+                    prev = float(price)
+                chg = ((price - prev) / prev * 100) if prev else 0.0
+                return {
+                    "price": round(float(price), 2),
+                    "prev_close": round(float(prev), 2),
+                    "change_pct": round(chg, 2),
+                    "currency": info.get("currency", "USD"),
+                    "name": info.get("shortName") or info.get("longName") or symbol,
+                    "source": "yfinance",
+                }, None
+    except Exception as e:
+        yf_err = f"yfinance: {e}"
+
+    snap, td_err = _fetch_twelvedata_quote(symbol)
+    if snap is not None:
+        return snap, None
+    return None, f"Price fetch failed — {yf_err}; fallback {td_err}"
 
 
 def build_search_queries(symbol, date_ctx):

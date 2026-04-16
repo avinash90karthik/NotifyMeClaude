@@ -155,7 +155,10 @@ def parse_support_resistance(hist, price):
 def collect(symbol):
     """Collect all data for a symbol. Returns structured dict."""
     ticker = yf.Ticker(symbol)
-    info = ticker.info
+    try:
+        info = ticker.info or {}
+    except Exception:
+        info = {}
     hist = ticker.history(period='1y')
 
     if hist.empty:
@@ -181,22 +184,29 @@ def collect(symbol):
             if col in hist.columns:
                 hist[col] = hist[col] / 100
 
-    # Fetch live FX rates as needed
-    try:
-        eurusd = yf.Ticker('EURUSD=X').info.get('regularMarketPrice')
-        if not eurusd or eurusd <= 0:
-            return {'error': 'EUR/USD rate unavailable — refusing to use hardcoded fallback'}
-    except Exception:
-        return {'error': 'EUR/USD rate fetch failed — refusing to use hardcoded fallback'}
+    # Fetch live FX rates as needed — use history() instead of .info (Yahoo .info is flaky)
+    def _fx_last(symbol):
+        try:
+            h = yf.Ticker(symbol).history(period='5d')
+            if not h.empty:
+                return float(h['Close'].iloc[-1])
+        except Exception:
+            pass
+        try:
+            v = yf.Ticker(symbol).info.get('regularMarketPrice')
+            return float(v) if v else None
+        except Exception:
+            return None
+
+    eurusd = _fx_last('EURUSD=X')
+    if not eurusd or eurusd <= 0:
+        return {'error': 'EUR/USD rate unavailable — refusing to use hardcoded fallback'}
 
     gbpusd = None
     if native_currency == 'GBP':
-        try:
-            gbpusd = yf.Ticker('GBPUSD=X').info.get('regularMarketPrice')
-            if not gbpusd or gbpusd <= 0:
-                return {'error': 'GBP/USD rate unavailable — refusing to use hardcoded fallback'}
-        except Exception:
-            return {'error': 'GBP/USD rate fetch failed — refusing to use hardcoded fallback'}
+        gbpusd = _fx_last('GBPUSD=X')
+        if not gbpusd or gbpusd <= 0:
+            return {'error': 'GBP/USD rate unavailable — refusing to use hardcoded fallback'}
 
     # Technicals source: ETF proxy for futures
     proxy = FUTURES_ETF_PROXY.get(symbol)
