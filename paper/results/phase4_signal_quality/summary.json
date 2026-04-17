@@ -1,0 +1,24 @@
+{
+  "n_signals": 257,
+  "n_long": 257,
+  "n_short": 0,
+  "mean_adj_fwd5_pct": 0.256,
+  "median_adj_fwd5_pct": 0.21,
+  "mean_adj_fwd10_pct": 0.552,
+  "hit_rate_5d_pct": 53.31,
+  "hit_rate_10d_pct": 54.09,
+  "by_confidence_bracket": [
+    {
+      "bracket": "60-65%",
+      "n": 244,
+      "mean_fwd5_pct": 0.236,
+      "hit_rate_5d_pct": 52.87
+    },
+    {
+      "bracket": "65-70%",
+      "n": 13,
+      "mean_fwd5_pct": 0.629,
+      "hit_rate_5d_pct": 61.54
+    }
+  ]
+}
