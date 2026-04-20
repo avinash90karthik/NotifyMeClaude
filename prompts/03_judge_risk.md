@@ -98,31 +98,62 @@ python3 entry_calibration.py {{SYMBOL}}                          # Intraday-Dip-
 
 ### Verdict-Logik
 
-| Reversion-Guard sagt | Entry-Regel | entry_price in DB |
-|----------------------|-------------|-------------------|
-| LONG: Pullback-Pflicht | Limit ≤ Close − 1×ATR | Limit-Level |
-| LONG: Kein Reversion-Edge | Limit im Buy-Range (upper bound für schnelleren Fill) | Limit-Level |
-| LONG: Echter Breakout (kein Reversion-Setup, Bruch R1) | Entry = Trigger-Level | Trigger-Level |
-| SHORT: Valid | Limit ≥ Close + 1×ATR ODER Extension-Bruch-Level | Trigger-Level |
+| Reversion-Guard sagt | Entry-Center-Regel | entry_price in DB |
+|----------------------|--------------------|-------------------|
+| LONG: Pullback-Pflicht | Center = Close − 1×ATR | Center-Level |
+| LONG: Kein Reversion-Edge | Center = Buy-Range-Upper (P25-Dip) | Center-Level |
+| LONG: Echter Breakout (kein Reversion-Setup, Bruch R1) | Center = Trigger-Level | Trigger-Level |
+| SHORT: Valid | Center = Close + 1×ATR ODER Extension-Bruch-Level | Trigger-Level |
 | SHORT: NO-TRADE | Setup abbrechen | — |
 
-**Hart:** `prediction_db.py record --entry` = Limit-/Trigger-Level, niemals der Close. HDD.DE #82 ist der Post-Mortem-Grund für diese Regel.
+**Hart:** `prediction_db.py record --entry` = **Center-Level** der Range (nicht Primär, nicht Fallback), niemals der Close. HDD.DE #82 ist der Post-Mortem-Grund für diese Regel.
+
+### Limit-Range statt Punktwert (Vola-abgeleitet, PFLICHT)
+
+Ein Punkt-Limit ("exakt $89.00") verfehlt systematisch Fills, wenn der Markt den Wert nur knapp touchiert. Stattdessen: **Range um Center-Level**, Breite aus Volatilität.
+
+**Formel:**
+```
+Range-Halbbreite = max(0.25 × ATR, 0.5% × Close, 0.10 EUR)
+Primär-Level     = Center − Halbbreite  (optimistisch, besserer Fill-Preis)
+Fallback-Level   = Center + Halbbreite  (defensiv, höhere Fill-Wahrscheinlichkeit)
+```
+
+- `0.25 × ATR` ist die Grund-Vola-Komponente — spiegelt das stock-spezifische Intraday-Noise-Level
+- `0.5% × Close` ist der Floor für Low-ATR-Titel (z.B. SAP: ATR 2% → Range wäre sonst zu eng)
+- `0.10 EUR` ist der absolute Minimum-Tick-Floor (Warrants/Turbos, deren Spread-Treppe > Computed-Range ist)
+- Max aus allen drei = finale Halbbreite
+
+**Cert-Seite:** Range auf Cert umrechnen über `Cert-Range = Halbbreite × Hebel × EUR-Faktor / Stock-Preis × Cert-Preis` — einfacher: Primär-Cert-Level = Cert-Limit bei Stock=Primär-Level interpolieren. Dokumentiere Stock-Level UND Cert-Level in der Card.
+
+**Fallback-Trigger-Zeit:** 60-90 Minuten nach Primär-Order-Platzierung (bei US-Open-Entry typisch 11:00-11:30 NY / 17:00-17:30 CET). Vor dem Trigger NICHT anheben.
 
 ### Entry-Plan-Card (Pflicht in Step-3-Output)
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║  ENTRY-PLAN                                                  ║
+║  ENTRY-PLAN (Limit-Range, Vola-abgeleitet)                   ║
 ╠══════════════════════════════════════════════════════════════╣
-║  1. Limit-Order:   Cert @ €X.XX  (= Stock @ XX.XX)           ║
-║     Gültig bis XX:XX Uhr                                     ║
-║  2. Falls nicht gefüllt bis XX:XX:                           ║
-║     Limit anheben auf €X.XX  (= P25-Level aus Buy-Range)     ║
-║  3. Absoluter Fallback (XX:XX):                              ║
-║     Market Buy NUR wenn Daten noch stimmen                   ║
-║  KEIN Market Buy vor Schritt 1–2.                            ║
+║  Center-Level:     Stock $XX.XX  (= Cert €X.XX)              ║
+║  Range-Halbbreite: $X.XX  (max(0.25×ATR, 0.5%, 0.10€))       ║
+║                                                              ║
+║  1. PRIMÄR-LIMIT:  Cert @ €X.XX  (= Stock @ $XX.XX)          ║
+║     Range-Low, optimistischer Fill                           ║
+║     Gültig bis XX:XX CET                                     ║
+║                                                              ║
+║  2. FALLBACK-LIMIT (ab XX:XX CET, +60-90min):                ║
+║     Cert @ €X.XX  (= Stock @ $XX.XX)                         ║
+║     Range-High, defensiver Fill                              ║
+║                                                              ║
+║  3. ABSOLUTER NO-CHASE-LEVEL:                                ║
+║     Stock > $XX.XX  (= Center + 2×Halbbreite)                ║
+║     → Trade verfällt, NICHT kaufen                           ║
+║                                                              ║
+║  KEIN Market-Buy, keine Orders außerhalb Range.              ║
 ╚══════════════════════════════════════════════════════════════╝
 ```
+
+**DB-Record:** `--entry <Center-Level>` — Backtest braucht den mittleren erwarteten Fill-Preis, nicht den optimistischen oder defensiven.
 
 Cert-Vorschlag: passendes Produkt (Turbo Long/Short oder Warrant, Strike ~ KO-Level, Hebel 4-8×, auf Trade Republic verfügbar) mit ISIN und theoretischem Preis. User bestätigt realen Marktpreis — dann Step 4.
 

@@ -54,13 +54,24 @@ def get_historical_dates(ed: pd.DataFrame, limit: int = 10) -> list[pd.Timestamp
     return list(past.index[:limit])
 
 
-def compute_window_stats(symbol: str, earnings_dates: list[pd.Timestamp]) -> dict:
+def compute_window_stats(symbol: str, earnings_dates: list[pd.Timestamp],
+                         trade_entry_day: int | None = None,
+                         trade_exit_day: int | None = None) -> dict:
+    """
+    Compute pre/post-earnings price action.
+
+    Legacy (backward) mode: T-X to T0 returns (how far was price X days before earnings).
+    Trade-Window mode: if trade_entry_day/trade_exit_day are set, also compute
+      interval returns T-entry_day → T-exit_day (actual trade P&L if held).
+    """
     t = yf.Ticker(symbol)
     h = t.history(period="10y")
     if len(h) == 0:
         return {}
 
     results = {"T-5d": [], "T-3d": [], "T-1d": [], "T+1d": [], "T+3d": [], "T+5d": []}
+    trade_returns: list[float] = []
+    trade_returns_by_month: dict[int, list[float]] = {}
     per_event: list[dict] = []
 
     for ed_date in earnings_dates:
@@ -78,6 +89,7 @@ def compute_window_stats(symbol: str, earnings_dates: list[pd.Timestamp]) -> dic
 
         row = {
             "date": ed_date.strftime("%Y-%m-%d"),
+            "month": ed_date.month,
             "T-5d": pct(max(0, pos - 5), pos),
             "T-3d": pct(max(0, pos - 3), pos),
             "T-1d": pct(max(0, pos - 1), pos),
@@ -85,6 +97,18 @@ def compute_window_stats(symbol: str, earnings_dates: list[pd.Timestamp]) -> dic
             "T+3d": pct(pos, min(len(h) - 1, pos + 3)),
             "T+5d": pct(pos, min(len(h) - 1, pos + 5)),
         }
+
+        # Trade-Window mode: interval return from entry_day to exit_day
+        if trade_entry_day is not None and trade_exit_day is not None:
+            entry_pos = pos - trade_entry_day
+            exit_pos = pos - trade_exit_day
+            if entry_pos >= 0 and exit_pos >= 0 and exit_pos < len(h):
+                interval = pct(entry_pos, exit_pos)
+                row["trade_window"] = interval
+                if interval is not None:
+                    trade_returns.append(interval)
+                    trade_returns_by_month.setdefault(ed_date.month, []).append(interval)
+
         per_event.append(row)
         for k in ["T-5d", "T-3d", "T-1d", "T+1d", "T+3d", "T+5d"]:
             if row[k] is not None:
@@ -100,7 +124,26 @@ def compute_window_stats(symbol: str, earnings_dates: list[pd.Timestamp]) -> dic
                 "min": min(vals),
                 "max": max(vals),
             }
-    return {"per_event": per_event, "stats": stats}
+
+    trade_stats = None
+    if trade_returns:
+        trade_stats = {
+            "avg": sum(trade_returns) / len(trade_returns),
+            "median": sorted(trade_returns)[len(trade_returns) // 2],
+            "green_pct": sum(1 for v in trade_returns if v > 0) / len(trade_returns) * 100,
+            "n": len(trade_returns),
+            "min": min(trade_returns),
+            "max": max(trade_returns),
+            "entry_day": trade_entry_day,
+            "exit_day": trade_exit_day,
+            "by_month": {m: {
+                "avg": sum(v) / len(v),
+                "green_pct": sum(1 for x in v if x > 0) / len(v) * 100,
+                "n": len(v),
+            } for m, v in trade_returns_by_month.items()},
+        }
+
+    return {"per_event": per_event, "stats": stats, "trade_stats": trade_stats}
 
 
 def classify_phase(days_to_earnings: int) -> str:
@@ -124,6 +167,51 @@ def print_banner(symbol: str):
     print(line)
     print(f"  EARNINGS WINDOW PATTERN — {symbol}")
     print(line)
+
+
+def print_trade_window(result: dict, target_month: int | None = None):
+    ts = result.get("trade_stats")
+    if not ts:
+        return
+    print()
+    print("  === TRADE-WINDOW MODE ===")
+    print(f"  Entry: T-{ts['entry_day']}d  →  Exit: T-{ts['exit_day']}d  (Interval held, n={ts['n']})")
+    print()
+    print(f"  {'Date':12} {'Month':6} {'Trade-Window Return':>22}")
+    print("  " + "-" * 44)
+    for row in result.get("per_event", []):
+        tw = row.get("trade_window")
+        tw_str = f"{tw:+7.2f}%" if tw is not None else "    n/a"
+        month_str = pd.Timestamp(row["date"]).strftime("%b")
+        mark = " ←" if target_month is not None and row.get("month") == target_month else ""
+        print(f"  {row['date']}  {month_str:6} {tw_str:>22}{mark}")
+    print("  " + "-" * 44)
+    print(f"  Summary (all quarters): Ø {ts['avg']:+.2f}% | median {ts['median']:+.2f}% | green {ts['green_pct']:.0f}% | n={ts['n']}")
+    print(f"                          range [{ts['min']:+.1f}% .. {ts['max']:+.1f}%]")
+
+    if target_month is not None and target_month in ts["by_month"]:
+        mb = ts["by_month"][target_month]
+        month_name = pd.Timestamp(f"2020-{target_month:02d}-01").strftime("%B")
+        print(f"  Same-month ({month_name}) quarters: Ø {mb['avg']:+.2f}% | green {mb['green_pct']:.0f}% | n={mb['n']}")
+        if mb["n"] < 3:
+            print(f"                          (THIN n<3 — directional hint, not hard signal)")
+
+    print()
+    print("  === CONFIDENCE-ADJUST (Trade-Window) ===")
+    g = ts["green_pct"]
+    avg = ts["avg"]
+    if g >= 65 and avg > 0.5:
+        print(f"  Green-Rate {g:.0f}% + Ø {avg:+.2f}% → LONG +3% / SHORT -3%")
+    elif g >= 55 and avg > 0:
+        print(f"  Green-Rate {g:.0f}% + Ø {avg:+.2f}% → LONG +1% / SHORT -1%")
+    elif g <= 35 and avg < -0.5:
+        print(f"  Green-Rate {g:.0f}% + Ø {avg:+.2f}% → LONG -3% / SHORT +3%")
+    elif g <= 45 and avg < 0:
+        print(f"  Green-Rate {g:.0f}% + Ø {avg:+.2f}% → LONG -1% / SHORT +1%")
+    else:
+        print(f"  Green-Rate {g:.0f}% + Ø {avg:+.2f}% → neutral, kein Adjust")
+    if ts["n"] < 8:
+        print(f"  Sample n={ts['n']} THIN → halbiere Adjust oder kein Hard-Abzug")
 
 
 def print_near(symbol: str, next_ed: pd.Timestamp, days: int, result: dict):
@@ -233,7 +321,20 @@ def main():
                         help="Only run full analysis if earnings within N days (default 30)")
     parser.add_argument("--force", action="store_true",
                         help="Run full analysis even if earnings not near")
+    parser.add_argument("--trade-entry", type=int, default=None,
+                        help="Trade-window mode: entry day (e.g. 8 for T-8d). Pair with --trade-exit.")
+    parser.add_argument("--trade-exit", type=int, default=None,
+                        help="Trade-window mode: exit day (e.g. 3 for T-3d). Must be < --trade-entry.")
+    parser.add_argument("--same-month", action="store_true",
+                        help="Highlight historical quarters in same calendar month as next earnings.")
     args = parser.parse_args()
+
+    if (args.trade_entry is None) != (args.trade_exit is None):
+        print("ERROR: --trade-entry and --trade-exit must be used together", file=sys.stderr)
+        sys.exit(1)
+    if args.trade_entry is not None and args.trade_exit >= args.trade_entry:
+        print("ERROR: --trade-exit must be < --trade-entry (entry is further from earnings)", file=sys.stderr)
+        sys.exit(1)
 
     symbol = args.symbol.upper()
     print_banner(symbol)
@@ -262,12 +363,17 @@ def main():
         print("\n  NO HISTORICAL EARNINGS DATES in yfinance data")
         sys.exit(2)
 
-    result = compute_window_stats(symbol, historical)
+    result = compute_window_stats(symbol, historical,
+                                  trade_entry_day=args.trade_entry,
+                                  trade_exit_day=args.trade_exit)
     if not result.get("per_event"):
         print("\n  COULD NOT COMPUTE pattern (price history insufficient)")
         sys.exit(2)
 
     print_near(symbol, next_ed, days, result)
+
+    target_month = next_ed.month if args.same_month else None
+    print_trade_window(result, target_month=target_month)
     print()
 
 

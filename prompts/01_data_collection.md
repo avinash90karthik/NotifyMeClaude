@@ -210,24 +210,38 @@ Pattern Timeline: <Mode1-Fwd5 +X.X% green X% / Mode2-Fwd5 +Y.Y% green Y% [n=Z]>
 
 ```bash
 python3 earnings_pattern.py {{SYMBOL}}
+# Wenn Earnings ≤ 15 Tage UND LONG/SHORT Setup erwogen wird, ZUSÄTZLICH:
+python3 earnings_pattern.py {{SYMBOL}} --trade-entry <T-N> --trade-exit <T-M> --same-month
+#   T-N = heutiger Abstand in Handelstagen zu Earnings (Entry-Tag)
+#   T-M = Exit-Abstand = typisch 1-3 (einen bis drei Tage vor Earnings raus)
+#   --same-month hebt historische Quartale im selben Kalendermonat hervor
 ```
 
-Script-Logik:
-- Earnings ≤ 30 Tage: volle Pattern-Analyse (letzte 10 Earnings, T-5d bis T+5d Stats, Interpretation, Warning)
+Script-Logik (zwei Modi):
+- **Backward-Mode** (ohne --trade-entry): T-X→T0 Returns, beantwortet "wie weit weg war der Preis X Tage vor Earnings?". Nützlich für grobe Phase-Einordnung, **aber misst NICHT das Trade-Window.**
+- **Trade-Window-Mode** (mit --trade-entry/--trade-exit): Interval-Return T-N→T-M, beantwortet "wenn ich heute rein und Tag vor Earnings raus — was ist historisch passiert?". Das ist die **primäre Metrik für unsere 1-5d Trade-Horizon.**
+
+Sonstiges:
 - Earnings > 30 Tage: Skip mit Hinweis (Standard-Day-Pattern aus § 1.8 reicht)
 - Keine Earnings (Commodity/Index): sauber übersprungen
 
-Wenn volle Analyse lief, Tabelle füllen (T-5d, T-3d, T-1d, T+1d, T+3d, T+5d: Avg % / Green Rate / n).
+Wenn volle Analyse lief, Tabelle füllen (Backward-Mode T-5d/T-3d/T-1d/T+1d/T+3d/T+5d Avg/Green/n) UND separat Trade-Window-Return pro Quartal + Summary.
 
 Nach dem Lauf zwingend dokumentieren:
 1. Aktuelle Phase im Earnings-Fenster
 2. Edge-Richtung aus Script-Output (Pre-Earnings-Drift / Post-Earnings / KEIN klares Muster)
-3. Aktuelle-Phase-Warning: Wenn Script "Aktuelle Phase historisch SCHWACH" ausgibt → -5% Confidence-Abzug im Judge, pflichtmäßig.
+3. **Trade-Window-Adjust (Primärquelle):** der vom Script ausgegebene Confidence-Adjust gilt — NICHT der Backward-Mode-WARNING-Abzug.
+4. Same-Month-Hinweis: falls Script ≥3 Quartale im Zielmonat findet, als Validierungs-Signal werten; bei THIN (<3) nur als Richtungs-Hinweis.
 
-Harte Regeln:
-- WARNING + Trade-Richtung gegen Tendenz → -5% Confidence MINIMUM
-- KEIN klares Muster → kein Abzug, kein Bonus
-- EDGE: Pre-Earnings-Drift + LONG + passende Phase → +3% Confidence
+Harte Regeln (v2 — Trade-Window-dominant):
+- **Trade-Window Green-Rate ≥65% + Ø >+0.5%** → LONG +3% / SHORT -3%
+- **Trade-Window Green-Rate 55-65% + Ø >0%** → LONG +1% / SHORT -1%
+- **Trade-Window Green-Rate ≤45% + Ø <0%** → LONG -1% / SHORT +1%
+- **Trade-Window Green-Rate ≤35% + Ø <-0.5%** → LONG -3% / SHORT +3% (WARNING bleibt)
+- **Trade-Window n<8 (THIN)** → halbieren oder nur als Richtungs-Hinweis
+- Backward-Mode-WARNING nur als **Sekundär-Signal** (Kontext, kein Auto-Abzug) wenn Trade-Window-Stats vorliegen
+
+**Begründung für den v2-Wechsel (20.04.2026, HOOD):** Die ursprüngliche Regel nutzte T-5d→T0 Backward-Returns und zog pauschal -5% bei schwacher "Phase". Das misst aber **Drift zum Earnings-Day**, nicht den **Return über das gehaltene Trade-Interval**. Für HOOD (T-8): Backward-Stats zeigten 30% green T-5d→T0, real gehaltenes Interval T-8→T-3 zeigte 80% green + Ø +1.57%. Die beiden Metriken können gegensätzliche Signale geben — die Trade-Window-Metrik ist die korrekte für unseren 1-5d Horizon.
 
 Earnings-Pattern overridet den Standard-Day-Pattern bei naher Earnings.
 

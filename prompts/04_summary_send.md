@@ -50,16 +50,19 @@ python3 prediction_db.py open ID --shares XX --cert-price XX.XX [--cert-type tur
 ║                                                              ║
 ║ Position:        XX% Portfolio = XXX EUR                     ║
 ║                  Scout XX% / Confirm XX%                     ║
-║ Stück @ Limit:   XXX Stück @ €X.XX                           ║
+║ Stück @ Center:  XXX Stück @ €X.XX (Center-Level)            ║
 ║                                                              ║
-║ ─ ENTRY-PLAN ────────────────────────────────────────────    ║
-║ 1. LIMIT:        Cert €X.XX  (Stock @ XX.XX)  bis XX:XX      ║
-║ 2. ANHEBEN:      Cert €X.XX  (Stock @ XX.XX)  ab XX:XX       ║
-║ 3. FALLBACK:     Market nur nach Neubewertung                ║
+║ ─ ENTRY-PLAN (Limit-Range) ──────────────────────────────    ║
+║ Center:          Stock $XX.XX  (Cert €X.XX)                  ║
+║ Halbbreite:      $X.XX  (max(0.25×ATR, 0.5%, 0.10€))         ║
+║ 1. PRIMÄR:       Cert €X.XX  (Stock $XX.XX)  bis XX:XX CET   ║
+║ 2. FALLBACK:     Cert €X.XX  (Stock $XX.XX)  ab XX:XX CET    ║
+║                  (+60-90 Min nach Primär)                    ║
+║ 3. NO-CHASE:     Stock > $XX.XX (Center + 2×Halbbreite)      ║
+║                  → Trade verfällt, NICHT kaufen              ║
 ║                                                              ║
-║ Don't-Chase:     Preis aktuell X.X% über Limit → OK|WAIT     ║
-║                  (>2% über Limit = WAIT, auf Dip warten)     ║
-║ Zeitfenster:     XX:XX Berlin — [OK | nach 22:00: Limit      ║
+║ Don't-Chase:     Preis aktuell X.X% über Fallback → OK|WAIT  ║
+║ Zeitfenster:     XX:XX Berlin — [OK | nach 22:00: Limits     ║
 ║                  für morgen, kein Trade heute]               ║
 ║                                                              ║
 ║ ─ EXITS (v8) ────────────────────────────────────────────    ║
@@ -87,6 +90,48 @@ Rationale für die Card-Felder:
 - **Don't-Chase** und **Zeitfenster** sind die zwei Einzeiler aus der alten Entry-Timing-Kette, die tatsächlich neuen Wert haben. Rest war Dopplung zu Step 3.
 - **Judge-Override** ist verpflichtend sichtbar (CLAUDE.md: User sieht jeden Override).
 - **Reversion-Guard-Zeile** zeigt, welcher Entry-Modus gewählt wurde.
+- **Entry-Plan Range:** drei Ebenen (Primär, Fallback, No-Chase) mit expliziten Stock- UND Cert-Levels. Kein Punkt-Limit mehr.
+
+### Aktive Cert-Aufforderung (PFLICHT — unabhängig vom Signal)
+
+Nach der Trading-Card IMMER eine Cert-Aufforderung an den User anhängen, unabhängig davon ob Signal = LONG / SHORT / NO-TRADE. Unterschied liegt nur in der Tonlage:
+
+**Bei Signal = LONG/SHORT (Gate PASS):**
+```
+► Cert-Aufforderung:
+  Bitte such mir ein Cert raus mit:
+  - Typ: Turbo-{Long|Short} auf {{SYMBOL}}
+  - KO: ~${KO-Level} (unser finaler KO)
+  - Hebel: {Xx-Yx}  ← aus ATR% abgeleitet
+      • ATR <3%: Hebel 6-10× (Low-Vola erlaubt mehr Hebel)
+      • ATR 3-5%: Hebel 4-6× (Standard)
+      • ATR 5-7%: Hebel 3-4× (High-Vola)
+      • ATR >7%: Warrants/Options statt Turbo (V1-Veto)
+  - Aktueller Ask-Preis (für exakte Stück-Zahl)
+  - Verfügbar auf Trade Republic
+```
+
+**Bei Signal = NO-TRADE aber knapp (Confidence 55-59%):**
+```
+► Cert-Aufforderung (Stand-by, falls Bedingungen flippen):
+  Gate verfehlt um X%. Wenn morgen {konkreter Trigger} eintritt, wäre Trade aktiv.
+  Such vorsorglich ein Cert raus mit:
+  - Typ: Turbo-{Long|Short} auf {{SYMBOL}}
+  - KO: ~${KO-Level}
+  - Hebel: {Xx-Yx}  (nach ATR-Tabelle oben)
+  - Aktueller Ask-Preis
+  - Verfügbar auf Trade Republic
+
+  Wir warten nicht auf den Cert — nur falls Re-Run morgen PASS gibt.
+```
+
+**Bei Signal = NO-TRADE und klar unter Gate (<55%):**
+Keine Cert-Aufforderung. Begründung: "Kein Setup in Reichweite." stattdessen.
+
+**Bei Signal = NO-TRADE aber Chart qualitativ gut (z.B. Reversion-Guard SHORT-NO-TRADE bei LONG-Setup, aber Confidence <55%):**
+Keine Cert-Aufforderung. Trade ist nicht in Reichweite.
+
+Die Hebel-ATR-Mapping-Tabelle ist **verpflichtend** — kein freies Ratespiel beim Hebel-Vorschlag.
 
 ---
 
