@@ -35,6 +35,13 @@ memory/anne_responder_state.json
 memory/anne_responder_active
 memory/anne_context.md
 
+# SQLite write-ahead-log working files (auto-managed by SQLite, not data)
+*.db-shm
+*.db-wal
+
 # Personal scripts (not for repo)
 anne_responder.py
 local_monitor.py
+position_watcher.py
+watcher*.log
+watcher_state.json
