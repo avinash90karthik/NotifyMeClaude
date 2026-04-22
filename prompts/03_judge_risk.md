@@ -1,280 +1,287 @@
 # STEP 3: JUDGE & RISK
 
 **Asset:** {{SYMBOL}}
-**Input:** Step 1 Stichpunkte + Ratings | Step 2 Scorecard + Bull/Bear-Synthese.
+**Input:** Step 1 bullets + ratings | Step 2 scorecard + Bull/Bear synthesis.
+
+This step produces the **stock trade plan only** (signal, confidence, entry/stop/KO/target on the underlying, position sizing in EUR). Cert selection, leverage formula, and KO-range for the certificate live entirely in Step 4. Do not propose a cert here.
 
 ---
 
-## Judge-Verdict
+## Judge Verdict
 
-### Signal + Confidence (Formel, keine freie Liste)
+### Signal + Confidence (formula, not free-form list)
 
 ```
-Richtung       = LONG wenn Scorecard-LONG-Total > Scorecard-SHORT-Total, sonst SHORT
+Direction      = LONG if Scorecard-LONG-Total > Scorecard-SHORT-Total, else SHORT
 Raw Confidence = max(LONG-Total, SHORT-Total) / 60 × 100   (%)
 
-Differenz-Strafe:
-  |LONG-Total − SHORT-Total| < 10   →   Confidence × 0.9
-  |LONG-Total − SHORT-Total| ≥ 10   →   Confidence × 1.0
+Smooth differential penalty (replaces the old < 10 / >= 10 cliff):
+  Diff = |LONG-Total - SHORT-Total|
+  penalty_factor = 1 - 0.15 * exp(-Diff / 4)
 
-v9 Oversold-Bonus (Rule 19) — nur für LONG:
-  Indicator-Context RSI-Band <20 + Fwd5 green ≥65% + n≥20  →  +5% Confidence
-  Indicator-Context RSI-Band <15 + Fwd5 green ≥70% + n≥20  →  +8% Confidence (Kapitulation)
-  Bonus wird NACH Differenz-Strafe addiert.
+  Diff = 0  -> 0.85
+  Diff = 4  -> 0.94
+  Diff = 10 -> 0.987
+  Diff = 20 -> 0.999
+
+  Confidence = Raw Confidence × penalty_factor
+
+v9 Oversold Bonus (Rule 19) - LONG only:
+  Indicator-Context RSI band <20 + Fwd5 green ≥ 65% + n ≥ 20  ->  +5% confidence
+  Indicator-Context RSI band <15 + Fwd5 green ≥ 70% + n ≥ 20  ->  +8% confidence (capitulation)
+  Bonus is added AFTER the differential penalty.
 ```
 
-Das Gate aus CLAUDE.md ist automatisch konsistent: 36/60 = 60% = Trade-Gate (vor Oversold-Bonus).
+The Gate from CLAUDE.md is automatically consistent: 36/60 = 60% = trade gate (before oversold bonus).
 
-### Judge-Override (erlaubt, aber mit Pflicht-Doku)
+### Judge Override (allowed, with mandatory documentation)
 
-Der Judge darf die Scorecard überstimmen, wenn mindestens ein Step-1-Rating **erkennbar fehlkalibriert** ist. Fehlkalibrierung heißt:
-- Sample zu klein (THIN) wurde als vollwertig gezählt
-- Rating-Quelle nicht aus Step 1 zitiert (verbotener Bauchgefühl-Punkt)
-- Harte neue Information seit Step 1 erschienen (Trump-Post, Earnings-Gap)
+The Judge may override the scorecard when at least one Step-1 rating is **demonstrably miscalibrated**. Miscalibration means:
+- Sample too small (THIN) was counted as full
+- Rating source not cited from Step 1 (forbidden gut-feel point)
+- Hard new information has appeared since Step 1 (Trump post, earnings gap)
 
-Ein Override MUSS dokumentiert werden mit:
-1. **Welches Rating** fehlkalibriert ist
-2. **Warum** (ein Satz mit konkretem Quellenverweis)
-3. **Impact**: Scorecard sagte X, Judge entschied Y
+An override MUST be documented with:
+1. **Which rating** is miscalibrated
+2. **Why** (one sentence with concrete source reference)
+3. **Impact**: scorecard said X, Judge decided Y
 
-Diese Dokumentation wandert verbatim in die Step-3-Card UND in die Step-4-Trading-Card — der User muss jeden Override sehen.
+This documentation is copied verbatim into the Step-3 card AND the Step-4 trading card - the user must see every override.
 
-### Neutralitäts-Check (hart vor Final-Signal)
+### Neutrality Check (hard, before final signal)
 
-- Spiegel-Test: Würde ich bei spiegelbildlichen Daten (RSI 90 statt 10, +17% statt −17%) **dieselben** Argumente gelten lassen? Asymmetrisch = Bias.
-- Gate ist Confidence < 60% ODER aktives V-Veto. Alles andere („zu spät einsteigen", „R/R nicht perfekt", „Counter-Trend ungemütlich") sind Trade-Plan-Justierungen (kleinere Size, engere Targets), keine Signal-Vetos.
-- NO-TRADE ist ein valides Ergebnis, aber nur bei echter Gate-Verletzung — nicht aus Vorsicht.
+- Mirror test: would I let through the **same** arguments at mirrored data (RSI 90 instead of 10, +17% instead of -17%)? Asymmetric = bias.
+- Gate is Confidence < 60% OR an active V-veto. Everything else ("entered too late", "R/R not perfect", "counter-trend uncomfortable") is a trade-plan adjustment (smaller size, tighter targets), not a signal veto.
+- NO-TRADE is a valid result, but only on a real gate violation - not from caution.
 
 ### Horizon
 
-**Nur 1-5 Tage** (CLAUDE.md Rule 17). Medium-/Long-Term werden NICHT bewertet. Wenn 1-5d kein Edge zeigt → Signal = NO-TRADE.
+**1-5 days only** (CLAUDE.md Rule 17). Medium-/long-term setups are NOT scored. If 1-5d shows no edge -> signal = NO-TRADE.
 
-Verboten: „Setup aktiv ab Datum X", „wiederkommen in Y Wochen", „warten bis T-7 pre-earnings". Solche Muster sind RISIKO-Warnungen oder Watchlist-Trigger, niemals Trade-Trigger.
+Forbidden: "setup active from date X", "come back in Y weeks", "wait for T-7 pre-earnings". These patterns are RISK warnings or watchlist triggers, never trade triggers.
 
 ---
 
-## KO-Level
+## KO Level (on the underlying)
 
-KO = dasjenige Level, das WEITER vom Preis entfernt ist (ATR-basiert oder Chart-basiert).
+KO = the level that is FARTHER from the price (ATR-based or chart-based).
 
-### A — ATR-basierter KO
+### A - ATR-based KO
 
-| Asset Class | Multiplikator | Kriterium |
-|-------------|---------------|-----------|
+| Asset Class | Multiplier | Criterion |
+|-------------|------------|-----------|
 | Large Cap | 2.0× ATR | Market Cap > $50B |
 | Mid/Small Cap | 2.5× ATR | Market Cap < $50B |
-| Commodities | 3.0× ATR | Futures (=F Suffix) |
-| Crypto-related | 3.0× ATR | BTC/Crypto-Exposure |
+| Commodities | 3.0× ATR | Futures (=F suffix) |
+| Crypto-related | 3.0× ATR | BTC/Crypto exposure |
 
-Multiplikator-Aufschläge (KO weiter weg legen):
-- ATR5/ATR14 > 1.5 (Vola-Spike) → +0.5
-- Earnings < 5 Tage → +0.5
+Multiplier surcharges (push KO further):
+- ATR5/ATR14 > 1.5 (vol spike) -> +0.5
+- Earnings < 5 days -> +0.5
 
 ```
-ATR-KO (LONG)  = Preis − (ATR × Multiplikator)
-ATR-KO (SHORT) = Preis + (ATR × Multiplikator)
+ATR-KO (LONG)  = price - (ATR × multiplier)
+ATR-KO (SHORT) = price + (ATR × multiplier)
 ```
 
-### B — Chart-basierter KO
+### B - Chart-based KO
 
-Stärkster Support (LONG) oder Widerstand (SHORT) aus Step 1 § 1.4, + 0.5-1% Puffer.
+Strongest support (LONG) or resistance (SHORT) from Step 1 § 1.4, + 0.5-1% buffer.
 
-### C — Final KO
+### C - Final KO
 
-| Methode | Level | Distanz |
-|---------|-------|---------|
-| ATR-basiert | XX.XX | X.X% |
-| Chart-basiert | XX.XX | X.X% |
+| Method | Level | Distance |
+|--------|-------|----------|
+| ATR-based | XX.XX | X.X% |
+| Chart-based | XX.XX | X.X% |
 | **FINAL** | **XX.XX** | **X.X%** (further of the two) |
 
 ---
 
-## Optimal Entry (Rule 18 + Script-gesteuert)
+## Optimal Entry (Rule 18 + Rule 22, script-driven)
 
 ```bash
-python3 reversion_guard.py {{SYMBOL}} --direction <LONG|SHORT>   # aus Step 2 vorgezogen
-python3 entry_calibration.py {{SYMBOL}}                          # Intraday-Dip-Statistik + Buy-Range
+python3 reversion_guard.py {{SYMBOL}} --direction <LONG|SHORT>   # already pulled in Step 2
+python3 entry_calibration.py {{SYMBOL}}                          # intraday-dip statistics + buy range
 ```
 
-### Verdict-Logik
+### Verdict logic
 
-| Reversion-Guard sagt | Entry-Center-Regel | entry_price in DB |
-|----------------------|--------------------|-------------------|
-| LONG: Pullback-Pflicht | Center = Close − 1×ATR | Center-Level |
-| LONG: Kein Reversion-Edge | Center = Buy-Range-Upper (P25-Dip) | Center-Level |
-| LONG: Echter Breakout (kein Reversion-Setup, Bruch R1) | Center = Trigger-Level | Trigger-Level |
-| SHORT: Valid | Center = Close + 1×ATR ODER Extension-Bruch-Level | Trigger-Level |
-| SHORT: NO-TRADE | Setup abbrechen | — |
+| Reversion-Guard says | Entry-Center rule | entry_price in DB |
+|----------------------|-------------------|-------------------|
+| LONG: Pullback-Pflicht | Center = Close - 1×ATR | Center level |
+| LONG: Kein Reversion-Edge | Center = Buy-range upper (P25 dip) | Center level |
+| LONG: real breakout (no reversion setup, R1 break) | Center = trigger level | Trigger level |
+| SHORT: valid | Center = Close + 1×ATR OR extension-break level | Trigger level |
+| SHORT: NO-TRADE | abort setup | - |
 
-**Hart:** `prediction_db.py record --entry` = **Center-Level** der Range (nicht Primär, nicht Fallback), niemals der Close. HDD.DE #82 ist der Post-Mortem-Grund für diese Regel.
+**Hard:** `prediction_db.py record --entry` = **Center level** of the range (not Primär, not Fallback), never the close. HDD.DE #82 is the post-mortem reason for this rule.
 
-### Limit-Range statt Punktwert (Vola-abgeleitet, PFLICHT)
+### Limit Range instead of point value (vol-derived, MANDATORY)
 
-Ein Punkt-Limit ("exakt $89.00") verfehlt systematisch Fills, wenn der Markt den Wert nur knapp touchiert. Stattdessen: **Range um Center-Level**, Breite aus Volatilität.
+A point limit ("exactly $89.00") systematically misses fills when the market only just touches the value. Instead: **range around center level**, width from volatility.
 
-**Formel:**
+**Formula:**
 ```
-Range-Halbbreite = max(0.25 × ATR, 0.5% × Close, 0.10 EUR)
-Primär-Level     = Center − Halbbreite  (optimistisch, besserer Fill-Preis)
-Fallback-Level   = Center + Halbbreite  (defensiv, höhere Fill-Wahrscheinlichkeit)
+Range half-width = max(0.25 × ATR, 0.5% × Close, 0.10 EUR)
+Primary level    = Center - half-width  (optimistic, better fill price)
+Fallback level   = Center + half-width  (defensive, higher fill probability)
 ```
 
-- `0.25 × ATR` ist die Grund-Vola-Komponente — spiegelt das stock-spezifische Intraday-Noise-Level
-- `0.5% × Close` ist der Floor für Low-ATR-Titel (z.B. SAP: ATR 2% → Range wäre sonst zu eng)
-- `0.10 EUR` ist der absolute Minimum-Tick-Floor (Warrants/Turbos, deren Spread-Treppe > Computed-Range ist)
-- Max aus allen drei = finale Halbbreite
+- `0.25 × ATR` is the basic vol component - reflects the stock-specific intraday noise level
+- `0.5% × Close` is the floor for low-ATR names (e.g. SAP: ATR 2% -> range would otherwise be too tight)
+- `0.10 EUR` is the absolute minimum tick floor (warrants/turbos whose spread step > computed range)
+- Max of all three = final half-width
 
-**Cert-Seite:** Range auf Cert umrechnen über `Cert-Range = Halbbreite × Hebel × EUR-Faktor / Stock-Preis × Cert-Preis` — einfacher: Primär-Cert-Level = Cert-Limit bei Stock=Primär-Level interpolieren. Dokumentiere Stock-Level UND Cert-Level in der Card.
+**Fallback trigger time:** 60-90 minutes after primary order placement (at US-open entry typically 11:00-11:30 NY / 17:00-17:30 CET). Do not raise the order before the trigger.
 
-**Fallback-Trigger-Zeit:** 60-90 Minuten nach Primär-Order-Platzierung (bei US-Open-Entry typisch 11:00-11:30 NY / 17:00-17:30 CET). Vor dem Trigger NICHT anheben.
-
-### Entry-Plan-Card (Pflicht in Step-3-Output)
+### Entry Plan Card (mandatory in Step 3 output)
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║  ENTRY-PLAN (Limit-Range, Vola-abgeleitet)                   ║
+║  ENTRY PLAN (limit range, vol-derived) - UNDERLYING          ║
 ╠══════════════════════════════════════════════════════════════╣
-║  Center-Level:     Stock $XX.XX  (= Cert €X.XX)              ║
-║  Range-Halbbreite: $X.XX  (max(0.25×ATR, 0.5%, 0.10€))       ║
+║  Center level:     Stock $XX.XX                              ║
+║  Range half-width: $X.XX  (max(0.25×ATR, 0.5%, 0.10€))       ║
 ║                                                              ║
-║  1. PRIMÄR-LIMIT:  Cert @ €X.XX  (= Stock @ $XX.XX)          ║
-║     Range-Low, optimistischer Fill                           ║
-║     Gültig bis XX:XX CET                                     ║
+║  1. PRIMARY LIMIT:    Stock @ $XX.XX  (range low)            ║
+║     valid until XX:XX CET                                    ║
 ║                                                              ║
-║  2. FALLBACK-LIMIT (ab XX:XX CET, +60-90min):                ║
-║     Cert @ €X.XX  (= Stock @ $XX.XX)                         ║
-║     Range-High, defensiver Fill                              ║
+║  2. FALLBACK LIMIT (from XX:XX CET, +60-90 min):             ║
+║     Stock @ $XX.XX  (range high)                             ║
 ║                                                              ║
-║  3. ABSOLUTER NO-CHASE-LEVEL:                                ║
-║     Stock > $XX.XX  (= Center + 2×Halbbreite)                ║
-║     → Trade verfällt, NICHT kaufen                           ║
+║  3. ABSOLUTE NO-CHASE LEVEL:                                 ║
+║     Stock > $XX.XX  (= Center + 2×half-width)                ║
+║     -> trade expires, do NOT buy                             ║
 ║                                                              ║
-║  KEIN Market-Buy, keine Orders außerhalb Range.              ║
+║  No market buys, no orders outside the range.                ║
 ╚══════════════════════════════════════════════════════════════╝
 ```
 
-**DB-Record:** `--entry <Center-Level>` — Backtest braucht den mittleren erwarteten Fill-Preis, nicht den optimistischen oder defensiven.
+**DB record:** `--entry <Center-Level>` - the backtest needs the mid expected fill price, not the optimistic or defensive one.
 
-Cert-Vorschlag: passendes Produkt (Turbo Long/Short oder Warrant, Strike ~ KO-Level, Hebel 4-8×, auf Trade Republic verfügbar) mit ISIN und theoretischem Preis. User bestätigt realen Marktpreis — dann Step 4.
+The cert-side translation of this range (cert primary/fallback levels in EUR), the cert leverage selection, and the KO range that Trade Republic should hit are all done in Step 4 - not here.
 
 ---
 
-## Trade Plan
+## Trade Plan (underlying)
 
-**Entry (Limit):** XX.XX  |  **KO:** XX.XX  |  **Stop (mental, above KO):** XX.XX
+**Entry (limit center):** XX.XX  |  **KO:** XX.XX  |  **Stop (mental, above KO):** XX.XX
 
-**Exits (v8, ersetzt v5):**
-- 80% SELL bei +20% Cert-Gewinn — sofort
-- Rest max +30%, danach Stop trailing
-- Trump-Event / Overnight-Event → alles raus
+**Exits (v9, replaces v5/v8):**
+- 80% SELL at +20% cert gain - immediately
+- Rest max +30%, then trail
+- Trump event / overnight event -> all out
 
-**Time-Stops:** 3 Tage < 5% Profit → halbieren | 5 Tage seitwärts → exit | Earnings < 2 Tage → 50% sichern
+**Time stops:** 3 days < 5% profit -> halve | 5 days sideways -> exit | Earnings < 2 days -> 50% off
 
-**Erwartete Dauer:** 1-3d Momentum / 2-4d Pullback / 1-2d Event. Falls > 5d → Turbo-Eignung explizit warnen.
+**Expected duration:** 1-3d momentum / 2-4d pullback / 1-2d event. If > 5d -> warn explicitly that the cert is not suitable.
 
 ---
 
 ## Risk Audit
 
-### V-Vetos (hart — bei EINEM aktivem V: Signal = NO-TRADE)
+### V Vetos (hard - one active V means signal = NO-TRADE)
 
 | # | Rule | Value | Status |
 |---|------|-------|--------|
-| V1 | ATR > 7%? (Warrants/Options statt KO) | ATR=X.X% | PASS/VETO |
+| V1 | ATR > 7%? (warrants/options instead of KO) | ATR=X.X% | PASS/VETO |
 | V2 | CHOPPY + Score < 50? | Regime=X, Score=X | PASS/VETO |
-| V3 | ≥ 3 offene Positionen? | X/3 | PASS/VETO |
-| V4 | Sektor > 60%? | Sektor: X% | PASS/VETO |
-| V5 | Monats-Drawdown > 20%? | P&L: X% | PASS/VETO |
+| V3 | ≥ 3 open positions? | X/3 | PASS/VETO |
+| V4 | Sector > 60%? | Sector: X% | PASS/VETO |
+| V5 | Monthly drawdown > 20%? | P&L: X% | PASS/VETO |
 
-### W-Warnings (ändern NUR Trade-Plan, keine Confidence-Minus)
+### W Warnings (modify trade-plan ONLY, no confidence penalty)
 
-| # | Rule | Wirkung bei aktiv | Status |
-|---|------|-------------------|--------|
-| W1 | Earnings < 5 Tage | KO-Multiplikator +0.5 | PASS/WARN |
-| W2 | Correlation zu offener Position | Size halbieren | PASS/WARN |
-| W3 | KO < 2× ATR (zu eng) | KO weiter, Multiplikator anheben | PASS/WARN |
-| W5 | Overnight-Event < 24h (FOMC/CPI/NFP/Trump/Earnings) | Overnight-Regel (s.u.) | PASS/WARN |
+| # | Rule | Effect when active | Status |
+|---|------|--------------------|--------|
+| W1 | Earnings < 5 days | KO multiplier +0.5 | PASS/WARN |
+| W2 | Correlation to open position | Halve size | PASS/WARN |
+| W3 | KO < 2× ATR (too tight) | Push KO out, raise multiplier | PASS/WARN |
+| W5 | Overnight event < 24h (FOMC/CPI/NFP/Trump/Earnings) | Overnight rule (below) | PASS/WARN |
 
-**W5 Overnight-Protection** (aus `memory/strategy_v7_draft.md` § Overnight-Event-Regel):
-- Position ≥ +10% → Stop auf BE (Pflicht)
-- Position ≥ +15% → 50% Partial-Exit oder Stop auf +5%
-- Position < +10% → Default = schließen, oder Risk-Acceptance dokumentieren
-- Freitag: immer BE-Stop vor Wochenende
+**W5 Overnight Protection** (from `memory/strategy_v9.md` § Overnight Event Rule):
+- Position ≥ +10% -> stop to BE (mandatory)
+- Position ≥ +15% -> 50% partial exit or stop to +5%
+- Position < +10% -> default = close, or document risk acceptance
+- Friday: always BE-stop before the weekend
 
-**Result:** APPROVED / BLOCKED — [Grund]
+**Result:** APPROVED / BLOCKED - [reason]
 
 ---
 
-## Position Sizing (v9: Scout-Invertierung bei knapper Confidence)
+## Position Sizing (v9: Scout-inverted sizing for borderline confidence)
 
-**Rule 20 (v9):** Bei Confidence 60-65% ist der Scout **kleiner** als die Confirmation (40/60 statt 60/40). Ab ≥65% klassische Aufteilung (60/40).
+**Rule 20:** At Confidence 60-65% the Scout is **smaller** than the Confirmation (40/60 instead of 60/40). From ≥65% the classic split (60/40).
 
-| Confidence | Total (% Portfolio) | Scout % von Total | Confirmation % von Total | Scout (% Portfolio) | Confirmation (% Portfolio) |
-|------------|---------------------|-------------------|--------------------------|---------------------|----------------------------|
-| 60-65% | 15% | **40% (invertiert)** | **60%** | 6% | 9% |
+| Confidence | Total (% portfolio) | Scout % of Total | Confirmation % of Total | Scout (% portfolio) | Confirmation (% portfolio) |
+|------------|---------------------|------------------|-------------------------|---------------------|----------------------------|
+| 60-65% | 15% | **40% (inverted)** | **60%** | 6% | 9% |
 | 65-70% | 20% | 60% | 40% | 12% | 8% |
 | 70%+ | 25% | 60% | 40% | 15% | 10% |
 
-**Begründung (aus Backtest 16.04.2026):** 60-65% Confidence-Bracket hat nur 56% Accuracy und +0.33% Ø-Move (Coin-Flip). Invertierter Scout reduziert den Schaden bei Fehlsignal, Confirmation-Buy nach Bestätigung (mind. +5% im Plus) setzt die Hauptgröße erst bei echter Trendbestätigung.
+**Rationale (from backtest 2026-04-16):** the 60-65% confidence bracket has only 56% accuracy and +0.33% avg move (coin-flip). Inverted Scout reduces damage on a wrong signal; Confirmation buy after confirmation (Scout at least +5% in profit) deploys the main size only on real trend confirmation.
 
-**Rechnen:**
-- Portfolio-Value aus `prediction_db.py portfolio`
-- Scout = Portfolio × Scout-% → durch Cert-Ask-Preis → Cert-Anzahl
-- Confirmation = Portfolio × Confirm-% → erst nach Signal-Bestätigung (Scout +5% im Plus ODER klarer Regime-Beweis)
+**Compute:**
+- Portfolio value from `prediction_db.py portfolio`
+- Scout = Portfolio × Scout-% -> divide by cert ask price -> cert count
+- Confirmation = Portfolio × Confirm-% -> only after signal confirmation (Scout +5% in profit OR clear regime evidence)
 
-**Card-Pflicht:** Step 3 Card und Step 4 Order-Plan müssen explizit dokumentieren, ob Scout-Invertierung aktiv ist ("v9 Scout-invertiert" oder "v9 Scout-klassisch").
+**Card requirement:** Step 3 card and Step 4 order plan must explicitly document whether scout-inversion is active ("v9 scout-inverted" or "v9 scout-classic").
 
-### Risk-per-Trade Tabelle
+### Risk-per-Trade Table
 
-| Metric | Wert |
-|--------|------|
-| Portfolio-Value | XXX EUR |
-| Position Size (XX%) | XXX EUR |
-| Scout (XX% von Total — v9 split) | XXX EUR / XX Certs |
-| Confirmation (XX% von Total — v9 split) | XXX EUR / XX Certs |
-| Max Loss pro Trade (10%) | XXX EUR |
-| Aktuell im Risk | XXX EUR |
-| Remaining Risk-Budget | XXX EUR |
+| Metric | Value |
+|--------|-------|
+| Portfolio value | XXX EUR |
+| Position size (XX%) | XXX EUR |
+| Scout (XX% of total - v9 split) | XXX EUR |
+| Confirmation (XX% of total - v9 split) | XXX EUR |
+| Max loss per trade (10%) | XXX EUR |
+| Currently at risk | XXX EUR |
+| Remaining risk budget | XXX EUR |
+
+(Cert count = Scout EUR / cert ask price - computed in Step 4 once the cert is known.)
 
 ---
 
-## Output-Card (kein JSON)
+## Output Card (no JSON)
 
 ```
 Step 3:
 ╔══════════════════════════════════════════════════════════════╗
-║ JUDGE VERDICT — {{SYMBOL}}                                   ║
+║ JUDGE VERDICT - {{SYMBOL}}                                   ║
 ╠══════════════════════════════════════════════════════════════╣
 ║ Signal:            LONG | SHORT | NO-TRADE                   ║
-║ Confidence:        XX%   (Raw XX% × Differenz-Faktor)        ║
-║ Scorecard-Diff:    LONG XX / SHORT XX  (Diff=XX)             ║
+║ Confidence:        XX%   (Raw XX% × penalty XX  + bonus XX)  ║
+║ Scorecard diff:    LONG XX / SHORT XX  (Diff=XX)             ║
 ║                                                              ║
-║ Judge-Override:    JA / NEIN                                 ║
+║ Judge override:    YES / NO                                  ║
 ║   Rating:          <Technical|Price-Action|News|Event>       ║
-║   Grund:           <1-2 Sätze, Quellenverweis>               ║
-║   Impact:          Scorecard sagte <X>, Judge entschied <Y>  ║
+║   Reason:          <1-2 sentences, source reference>         ║
+║   Impact:          scorecard said <X>, Judge decided <Y>     ║
 ║                                                              ║
 ║ Reversion-Guard:   <Pullback-Pflicht @ X.XX | No-Edge |      ║
 ║                     SHORT-NO-TRADE>                          ║
-║ Entry (Limit):     XX.XX                                     ║
-║ Stop (mental):     XX.XX                                     ║
-║ KO (final):        XX.XX  (X.X%, Methode: ATR|Chart)         ║
-║ Target (+20%):     XX.XX                                     ║
+║ Entry (limit ctr): XX.XX (underlying)                        ║
+║ Stop (mental):     XX.XX (underlying)                        ║
+║ KO (final):        XX.XX  (X.X%, method: ATR|Chart)          ║
+║ Target (+20%):     XX.XX (underlying equivalent of +20% cert)║
 ║                                                              ║
-║ Position Size:     XX% Portfolio (XXX EUR)                   ║
-║ v9 Split:          Scout-invertiert (40/60) |                ║
-║                    Scout-klassisch (60/40)                   ║
-║ Oversold-Bonus:    NEIN | +5% (RSI<20 green XX%) |           ║
-║                    +8% (RSI<15 green XX% Kapitulation)       ║
-║ Certs Scout:       XX Stück @ €X.XX (XX% von Total)          ║
-║ Certs Confirm:     XX Stück @ €X.XX (XX% von Total)          ║
+║ Position size:     XX% portfolio (XXX EUR)                   ║
+║ v9 split:          Scout-inverted (40/60) |                  ║
+║                    Scout-classic (60/40)                     ║
+║ Oversold bonus:    NO | +5% (RSI<20 green XX%) |             ║
+║                    +8% (RSI<15 green XX% capitulation)       ║
 ║                                                              ║
-║ V-Vetos aktiv:     <keine | V1/V3/...>                       ║
-║ W-Warnings aktiv:  <keine | W1/W5/...>  → Trade-Plan-Mods    ║
-║ Approved:          JA / NEIN                                 ║
+║ V-Vetos active:    <none | V1/V3/...>                        ║
+║ W-Warnings active: <none | W1/W5/...>  -> trade-plan mods    ║
+║ Approved:          YES / NO                                  ║
 ╚══════════════════════════════════════════════════════════════╝
 
-Reasoning: <2-3 Sätze, Chart + Indicator-Context + Signal>
+Reasoning: <2-3 sentences, chart + indicator-context + signal>
+
+Next step (Step 4): pick cert + KO range + leverage from formula, attach cert-request card.
 
 [STEP 3 COMPLETE]
 ```

@@ -24,6 +24,8 @@ from datetime import datetime, timezone
 import yfinance as yf
 import pandas as pd
 
+from indicators import sigmoid_adjust
+
 
 def fetch_earnings_dates(symbol: str) -> pd.DataFrame | None:
     t = yf.Ticker(symbol)
@@ -150,16 +152,16 @@ def classify_phase(days_to_earnings: int) -> str:
     if days_to_earnings < 0:
         return "POST-EARNINGS"
     if days_to_earnings <= 1:
-        return "T-1d (Tag vor Earnings)"
+        return "T-1d (day before earnings)"
     if days_to_earnings <= 3:
-        return "T-3d bis T-1d"
+        return "T-3d to T-1d"
     if days_to_earnings <= 5:
-        return "T-5d bis T-3d"
+        return "T-5d to T-3d"
     if days_to_earnings <= 10:
-        return "T-10d bis T-5d"
+        return "T-10d to T-5d"
     if days_to_earnings <= 20:
-        return "T-20d bis T-10d (frueh)"
-    return f"T-{days_to_earnings}d (sehr frueh)"
+        return "T-20d to T-10d (early)"
+    return f"T-{days_to_earnings}d (very early)"
 
 
 def print_banner(symbol: str):
@@ -175,7 +177,7 @@ def print_trade_window(result: dict, target_month: int | None = None):
         return
     print()
     print("  === TRADE-WINDOW MODE ===")
-    print(f"  Entry: T-{ts['entry_day']}d  →  Exit: T-{ts['exit_day']}d  (Interval held, n={ts['n']})")
+    print(f"  Entry: T-{ts['entry_day']}d  ->  Exit: T-{ts['exit_day']}d  (Interval held, n={ts['n']})")
     print()
     print(f"  {'Date':12} {'Month':6} {'Trade-Window Return':>22}")
     print("  " + "-" * 44)
@@ -197,21 +199,26 @@ def print_trade_window(result: dict, target_month: int | None = None):
             print(f"                          (THIN n<3 — directional hint, not hard signal)")
 
     print()
-    print("  === CONFIDENCE-ADJUST (Trade-Window) ===")
+    print("  === CONFIDENCE-ADJUST (Trade-Window, sigmoid) ===")
     g = ts["green_pct"]
     avg = ts["avg"]
-    if g >= 65 and avg > 0.5:
-        print(f"  Green-Rate {g:.0f}% + Ø {avg:+.2f}% → LONG +3% / SHORT -3%")
-    elif g >= 55 and avg > 0:
-        print(f"  Green-Rate {g:.0f}% + Ø {avg:+.2f}% → LONG +1% / SHORT -1%")
-    elif g <= 35 and avg < -0.5:
-        print(f"  Green-Rate {g:.0f}% + Ø {avg:+.2f}% → LONG -3% / SHORT +3%")
-    elif g <= 45 and avg < 0:
-        print(f"  Green-Rate {g:.0f}% + Ø {avg:+.2f}% → LONG -1% / SHORT +1%")
+    n = ts["n"]
+    # Earnings sample is structurally small (~10 quarters max).
+    # SOLID at n>=8, WEAK at n=4-7, THIN below.
+    long_adjust = sigmoid_adjust(g / 100.0, n, solid_n=8, weak_n=4)
+    if abs(avg) < 0.3:
+        long_adjust = 0.0
+        note = " (gated: |avg|<0.3% -> no directional edge)"
+    elif n < 4:
+        note = " (THIN n<4: weight 0 - no adjust)"
+    elif n < 8:
+        note = " (WEAK n=4-7: half weight applied)"
     else:
-        print(f"  Green-Rate {g:.0f}% + Ø {avg:+.2f}% → neutral, kein Adjust")
-    if ts["n"] < 8:
-        print(f"  Sample n={ts['n']} THIN → halbiere Adjust oder kein Hard-Abzug")
+        note = ""
+    print(
+        f"  Green-Rate {g:.0f}% | Avg {avg:+.2f}% | n={n}  ->  "
+        f"LONG {long_adjust:+.2f}% / SHORT {-long_adjust:+.2f}%{note}"
+    )
 
 
 def print_near(symbol: str, next_ed: pd.Timestamp, days: int, result: dict):
@@ -263,14 +270,14 @@ def print_near(symbol: str, next_ed: pd.Timestamp, days: int, result: dict):
         print()
 
         if post_avg > pre_avg + 0.5 and post_green_avg > 60:
-            print("  EDGE: Post-Earnings (Action kommt am/nach Earnings-Day)")
-            print("        → LONG VOR Earnings ist historisch SCHWACH")
+            print("  EDGE: Post-Earnings (move happens at/after earnings day)")
+            print("        -> LONG BEFORE earnings is historically WEAK")
         elif pre_avg > post_avg + 0.5 and pre_green_avg > 60:
-            print("  EDGE: Pre-Earnings-Drift (klassischer Run-Up)")
-            print("        → LONG in letzten Tagen vor Earnings bullish")
+            print("  EDGE: Pre-Earnings drift (classic run-up)")
+            print("        -> LONG in last days before earnings is bullish")
         else:
-            print("  EDGE: KEIN klares Muster (Coin-Flip)")
-            print("        → Pre/Post-Earnings unbestimmt")
+            print("  EDGE: NO clear pattern (coin-flip)")
+            print("        -> Pre/Post-earnings indeterminate")
 
     # Warning for current phase
     print()
@@ -293,24 +300,24 @@ def print_near(symbol: str, next_ed: pd.Timestamp, days: int, result: dict):
         if avgs:
             avg = sum(avgs) / len(avgs)
             green = sum(greens) / len(greens)
-            print(f"  AKTUELLE PHASE ({classify_phase(days)}):")
-            print(f"  → Historisch {avg:+.2f}% / {green:.0f}% green in diesem Fenster")
+            print(f"  CURRENT PHASE ({classify_phase(days)}):")
+            print(f"  -> Historically {avg:+.2f}% / {green:.0f}% green in this window")
             if avg < 0 or green < 50:
-                print(f"  ⚠  WARNING: Aktuelle Phase ist historisch SCHWACH für LONG")
-                print(f"     → Confidence-Abzug -5% wenn LONG-Trade geplant")
+                print("  WARNING: current phase is historically WEAK for LONG")
+                print("     (Backward-mode signal - SECONDARY context only when Trade-Window mode is also run)")
 
 
 def print_not_near(symbol: str, next_ed: pd.Timestamp | None, days: int | None, threshold: int):
     print()
     if next_ed is None:
         print(f"  NO FUTURE EARNINGS DATE found for {symbol}")
-        print(f"  → Earnings-Window-Pattern check: SKIPPED")
+        print(f"  -> Earnings window pattern check: SKIPPED")
     else:
         print(f"  Next Earnings: {next_ed.strftime('%Y-%m-%d')}")
         print(f"  Days to Earnings: {days}")
         print(f"  Threshold: {threshold} days")
-        print(f"  → Earnings not near (>{threshold}d) — pattern check SKIPPED")
-        print(f"  → Standard day-pattern analysis (Step 1.8) reicht aus")
+        print(f"  -> Earnings not near (>{threshold}d) - pattern check SKIPPED")
+        print(f"  -> Standard day-pattern analysis (Step 1.8) is sufficient")
     print()
 
 
@@ -342,7 +349,7 @@ def main():
     ed = fetch_earnings_dates(symbol)
     if ed is None or len(ed) == 0:
         print(f"\n  NO EARNINGS DATA available for {symbol}")
-        print(f"  → Skipping (most likely: index, commodity, futures)")
+        print(f"  -> Skipping (most likely: index, commodity, futures)")
         sys.exit(0)
 
     next_ed = get_next_earnings(ed)

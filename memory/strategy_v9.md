@@ -1,8 +1,8 @@
-# Strategy v7 — Direct Position Hedge
+# Strategy v9 — Current Single Source of Truth
 
-> **Status:** AKTIV — Live-Test bestanden (ENR.DE 26-27.03.2026)
-> **Basis:** v5 core + v6 Blind Re-Analysis + Direct Hedge + Pivot
-> **Ziel:** Bei intakter These Verluste reduzieren OHNE Position zu schließen
+> **Status:** ACTIVE — supersedes v5, v6, v7, v8. All references in prompts and CLAUDE.md point here.
+> **History:** v5 core + v6 Blind Re-Analysis + v7 Direct Hedge + Pivot + v8 Exits + v9 Scout-Inversion + Oversold-Bonus.
+> **Goal:** Cumulative ruleset for the current Silver Hawk Trading system. v5/v7-style references in the body below are kept for **historical context** of why a rule exists; the active behavior is what this document spells out.
 
 ---
 

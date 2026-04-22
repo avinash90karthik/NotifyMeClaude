@@ -1,11 +1,181 @@
 # STEP 4: SUMMARY & DELIVERY
 
 **Asset:** {{SYMBOL}}
-**Input:** Cards aus Step 1, Step 2, Step 3.
+**Input:** Cards from Step 1, Step 2, Step 3.
+
+This step produces the final user-facing artifact. Order: **Trading Card -> Cert Request -> DB Record**. Step 3 already settled the underlying-side trade plan; Step 4 picks the certificate, validates the leverage math, and records the prediction.
 
 ---
 
-## 1. DB-Record (PFLICHT — auch bei NO-TRADE)
+## 1. Trading Card (final user output)
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║ {{SYMBOL}} - FINAL                                           ║
+╠══════════════════════════════════════════════════════════════╣
+║ Signal:          LONG | SHORT | NO-TRADE                     ║
+║ Confidence:      XX%   (Scorecard: LONG XX / SHORT XX)       ║
+║ Price:           $XX.XX  (EUR XX.XX)                         ║
+║ Regime:          TRENDING | RANGE | CHOPPY | TRANSITIONAL    ║
+║                                                              ║
+║ Judge override:  YES | NO                                    ║
+║   Rating:        <Technical|Price-Action|News|Event>         ║
+║   Reason:        <1 sentence - only when YES>                ║
+║   Impact:        scorecard <X> -> Judge <Y>                  ║
+║                                                              ║
+║ ─ ENTRY PLAN (limit range, underlying) ──────────────        ║
+║ Center:          Stock $XX.XX                                ║
+║ Half-width:      $X.XX  (max(0.25×ATR, 0.5%, 0.10€))         ║
+║ 1. PRIMARY:      Stock $XX.XX  (range low) until XX:XX CET   ║
+║ 2. FALLBACK:     Stock $XX.XX  (range high) from XX:XX CET   ║
+║                  (+60-90 min after primary)                  ║
+║ 3. NO-CHASE:     Stock > $XX.XX (Center + 2×half-width)      ║
+║                  -> trade expires, do NOT buy                ║
+║                                                              ║
+║ ─ STOCK TRADE PLAN ──────────────────────────────────        ║
+║ Stop (mental):   $XX.XX (underlying)                         ║
+║ KO (underlying): $XX.XX                                      ║
+║ Target +20%cert: ≈ $XX.XX (underlying equivalent)            ║
+║                                                              ║
+║ ─ POSITION SIZING ───────────────────────────────────        ║
+║ Position:        XX% portfolio = XXX EUR                     ║
+║ v9 split:        Scout XX% / Confirm XX%                     ║
+║ Scout EUR:       XXX EUR                                     ║
+║ Confirm EUR:     XXX EUR                                     ║
+║                                                              ║
+║ ─ EXITS (v9) ────────────────────────────────────────        ║
+║ +20% cert:       80% out immediately                         ║
+║ +30%+ cert:      rest with trail                             ║
+║ Time stop:       3d <5% -> halve  |  5d sideways -> exit     ║
+║ Overnight/Trump: all out                                     ║
+║                                                              ║
+║ ─ CONTEXT ───────────────────────────────────────────        ║
+║ Reversion-Guard: <Pullback-Pflicht @ X.XX | No-Edge |        ║
+║                   SHORT-NO-TRADE>                            ║
+║ S:               XX / XX / XX                                ║
+║ R:               XX / XX / XX                                ║
+║ Next event:      <event + time + clarity/uncertainty>        ║
+║                                                              ║
+║ Don't-Chase:     price now X.X% above fallback -> OK|WAIT    ║
+║ Time window:     XX:XX Berlin - [OK | after 22:00: limits    ║
+║                  for tomorrow, no trade today]               ║
+║                                                              ║
+║ V-Vetos active:  none | V1/V3/...                            ║
+║ W-Warnings:      none | W1/W5/...  -> trade-plan mods        ║
+║ Approved:        YES | NO                                    ║
+║                                                              ║
+║ Reasoning:       <2-3 sentences from Step 3 - core thesis>   ║
+╚══════════════════════════════════════════════════════════════╝
+```
+
+Field rationale:
+- **Don't-Chase** and **Time window** are the two single-liners from the old entry-timing chain that actually add value. The rest was duplication from Step 3.
+- **Judge override** is mandatory-visible (CLAUDE.md: user sees every override).
+- **Reversion-Guard line** shows which entry mode was chosen.
+- **Entry plan** is on the **underlying** - cert-side translation lives in the cert request below. One source of truth for the stock trigger, one source of truth for the cert.
+
+---
+
+## 2. Cert Request (MANDATORY - depends on signal)
+
+The cert request always follows the trading card, even on NO-TRADE. The format depends on the signal strength.
+
+### 2a. Leverage formula (target-based on +20% cert in 1-5 days)
+
+The cert leverage is chosen so that a realistic stock move hits the +20% target AND a normal counter-day (1× ATR) does NOT knock the position out.
+
+**Formula:**
+```
+Stock-move-for-+20%  =  0.8 × ATR%        (realistic 2-3 day move)
+Leverage             =  20 / Stock-move-for-+20%
+                     =  25 / ATR%         (round to 0.5 step)
+
+Implied KO distance  =  100 / Leverage    (implicit from leverage)
+KO buffer to ATR     =  KO-distance / ATR%   (must be >= 3.0)
+```
+
+**Reference table (derived from formula):**
+
+| ATR% | Leverage (target +20% in ~3d) | KO distance ≈ | KO / ATR | Check |
+|------|-------------------------------|---------------|----------|-------|
+| <2%  | 12-15× | 7-8% | 3.5-4× | OK |
+| 2-3% | 9-12×  | 8-11% | 3.5-4× | OK |
+| 3-4% | 7-9×   | 11-14% | 3.5-4× | OK |
+| 4-5% | 5-7×   | 14-20% | 3.5-4× | OK |
+| 5-7% | 4-5×   | 20-25% | 3.5-4× | OK (high vol) |
+| >7%  | -      | -     | -    | V1 veto: warrants/options only |
+
+**Why this formula:**
+- **0.8× ATR as 2-3d move:** ATR is daily true range. Over 2-3 days, ~0.7-1.0× ATR cumulates as net move (not 2-3× ATR - that's only extreme continuation). 0.8× is the median.
+- **KO at 3.5-4× ATR distance:** survives a normal -1σ day (~0.8-1× ATR counter-move) with buffer. CLAUDE.md W3 warning ("KO < 2× ATR") is safely avoided.
+- **Leverage scales inversely with ATR:** low-vol stocks need more leverage to reach +20% (otherwise too slow); high-vol stocks need less (otherwise stop-out risk).
+
+**Mandatory sanity check (always perform):**
+```
+Leverage × KO-distance% ≈ 100     (mathematical coherence)
+KO-distance / ATR%      ≥ 3.0     (vol buffer)
+```
+
+If the chosen cert violates either check -> pick a different cert or adjust leverage.
+
+### 2b. Cert range (sanity check, not a separate trade trigger)
+
+The stock-side limit range from Step 3 is the trigger. The cert-side range is a **sanity check** only:
+
+```
+Cert primary level    ≈ ask at Stock = primary level   (interpolate via cert delta)
+Cert fallback level   ≈ ask at Stock = fallback level
+Cert range width      = |Cert fallback - Cert primary|
+
+Check: Cert range width must be > broker spread (typically €0.01-0.05).
+       Otherwise the range is smaller than the spread and the trade is unfillable
+       -> pick a different cert with smaller spread.
+```
+
+EUR/USD movement and discrete cert tick steps are the two main reasons we do this sanity check - the relationship is mostly linear, but tick steps and FX shift can collapse the range.
+
+### 2c. Request templates
+
+**On Signal = LONG/SHORT (Gate PASS):**
+```
+Cert request:
+  Please find a cert with:
+  - Type: Turbo-{Long|Short} on {{SYMBOL}}
+  - KO range: ${KO-low} to ${KO-high}
+      (from leverage formula: KO-distance = 100/leverage)
+  - Leverage range: {Lev-low}× to {Lev-high}×
+      (formula: 25/ATR% = {target-leverage}×, range ±20%)
+  - Current ask price (for exact share count)
+  - Available on Trade Republic
+
+  Pre-buy sanity check:
+  - Leverage × KO-distance% ≈ 100?  [YES/NO]
+  - KO-distance ≥ 3× ATR%?           [YES/NO]
+  - Cert range width > broker spread? [YES/NO]
+```
+
+**On Signal = NO-TRADE but borderline (confidence 55-59%):**
+```
+Cert request (stand-by, in case conditions flip):
+  Gate missed by X%. If tomorrow {concrete trigger} happens, the trade activates.
+  Pre-source a cert with:
+  - Type: Turbo-{Long|Short} on {{SYMBOL}}
+  - KO range: ${KO-low} to ${KO-high}
+  - Leverage range: {Lev-low}× to {Lev-high}×  (25/ATR% formula)
+  - Current ask price
+  - Available on Trade Republic
+
+  We do NOT buy the cert now - only have it ready if tomorrow's re-run gives PASS.
+```
+
+**On Signal = NO-TRADE clearly below gate (<55%):**
+No cert request. Reason: "no setup in reach." instead.
+
+The leverage formula + sanity checks are **mandatory** - no free-form leverage proposals.
+
+---
+
+## 3. DB Record (MANDATORY - even on NO-TRADE)
 
 ```bash
 python3 prediction_db.py record {{SYMBOL}} \
@@ -17,171 +187,25 @@ python3 prediction_db.py record {{SYMBOL}} \
   --ko [XX.XX] \
   --regime [TRENDING|RANGE|CHOPPY|TRANSITIONAL] \
   --atr-pct [X.X] \
-  --reason "Brief thesis summary (1-2 Sätze, aus Step 3 Reasoning)"
+  --reason "Brief thesis summary (1-2 sentences from Step 3 reasoning)"
 ```
 
-**Hart (Rule 18):** `--entry` = Limit-/Trigger-Level aus Step 3 Entry-Plan, NIEMALS der Close. Bei Judge-Override muss der Override-Grund im `--reason` auftauchen.
+**Hard (Rule 18 + Rule 22):** `--entry` = limit/trigger CENTER level from Step 3 entry plan, NEVER the close. On Judge override, the override reason must appear in `--reason`.
 
-**Nach User-Bestätigung des Trades:**
+**After user confirms the trade:**
 ```bash
 python3 prediction_db.py open ID --shares XX --cert-price XX.XX [--cert-type turbo|warrant|stock]
 ```
 
 ---
 
-## 2. Trading Card (der finale Output für den User)
+## 4. Wait for User Confirmation
+
+- The analysis is in the DB with status `analysis`. No trade yet.
+- User confirms trade -> `prediction_db.py open ID ...`
+- User confirms v9 confirmation buy -> `prediction_db.py confirm ID ...`
+- Portfolio state updates automatically in the DB.
 
 ```
-╔══════════════════════════════════════════════════════════════╗
-║ {{SYMBOL}} — FINAL                                           ║
-╠══════════════════════════════════════════════════════════════╣
-║ Signal:          LONG | SHORT | NO-TRADE                     ║
-║ Confidence:      XX%   (Scorecard: LONG XX / SHORT XX)       ║
-║ Price:           $XX.XX  (EUR XX.XX)                         ║
-║ Regime:          TRENDING | RANGE | CHOPPY | TRANSITIONAL    ║
-║                                                              ║
-║ Judge-Override:  JA | NEIN                                   ║
-║   Rating:        <Technical|Price-Action|News|Event>         ║
-║   Grund:         <1 Satz — nur bei JA>                       ║
-║   Impact:        Scorecard <X> → Judge <Y>                   ║
-║                                                              ║
-║ Cert:            [ISIN]  |  KO: XX.XX  |  Hebel: ~Xx         ║
-║ Stop (mental):   XX.XX (Underlying)                          ║
-║                                                              ║
-║ Position:        XX% Portfolio = XXX EUR                     ║
-║                  Scout XX% / Confirm XX%                     ║
-║ Stück @ Center:  XXX Stück @ €X.XX (Center-Level)            ║
-║                                                              ║
-║ ─ ENTRY-PLAN (Limit-Range) ──────────────────────────────    ║
-║ Center:          Stock $XX.XX  (Cert €X.XX)                  ║
-║ Halbbreite:      $X.XX  (max(0.25×ATR, 0.5%, 0.10€))         ║
-║ 1. PRIMÄR:       Cert €X.XX  (Stock $XX.XX)  bis XX:XX CET   ║
-║ 2. FALLBACK:     Cert €X.XX  (Stock $XX.XX)  ab XX:XX CET    ║
-║                  (+60-90 Min nach Primär)                    ║
-║ 3. NO-CHASE:     Stock > $XX.XX (Center + 2×Halbbreite)      ║
-║                  → Trade verfällt, NICHT kaufen              ║
-║                                                              ║
-║ Don't-Chase:     Preis aktuell X.X% über Fallback → OK|WAIT  ║
-║ Zeitfenster:     XX:XX Berlin — [OK | nach 22:00: Limits     ║
-║                  für morgen, kein Trade heute]               ║
-║                                                              ║
-║ ─ EXITS (v8) ────────────────────────────────────────────    ║
-║ +20% Cert:       80% raus sofort                             ║
-║ +30%+ Cert:      Rest mit Trail                              ║
-║ Time-Stop:       3d <5% → halbieren  |  5d seitwärts → Exit  ║
-║ Overnight/Trump: alles raus                                  ║
-║                                                              ║
-║ ─ KONTEXT ───────────────────────────────────────────────    ║
-║ Reversion-Guard: <Pullback-Pflicht @ X.XX | No-Edge |        ║
-║                   SHORT-NO-TRADE>                            ║
-║ S:               XX / XX / XX                                ║
-║ R:               XX / XX / XX                                ║
-║ Nächstes Event:  <Event + Uhrzeit + Klarheit/Unsicherheit>   ║
-║                                                              ║
-║ V-Vetos aktiv:   keine | V1/V3/...                           ║
-║ W-Warnings:      keine | W1/W5/...  → Trade-Plan-Mods        ║
-║ Approved:        JA | NEIN                                   ║
-║                                                              ║
-║ Reasoning:       <2-3 Sätze aus Step 3 — Kern-Thesis>        ║
-╚══════════════════════════════════════════════════════════════╝
-```
-
-Rationale für die Card-Felder:
-- **Don't-Chase** und **Zeitfenster** sind die zwei Einzeiler aus der alten Entry-Timing-Kette, die tatsächlich neuen Wert haben. Rest war Dopplung zu Step 3.
-- **Judge-Override** ist verpflichtend sichtbar (CLAUDE.md: User sieht jeden Override).
-- **Reversion-Guard-Zeile** zeigt, welcher Entry-Modus gewählt wurde.
-- **Entry-Plan Range:** drei Ebenen (Primär, Fallback, No-Chase) mit expliziten Stock- UND Cert-Levels. Kein Punkt-Limit mehr.
-
-### Aktive Cert-Aufforderung (PFLICHT — unabhängig vom Signal)
-
-Nach der Trading-Card IMMER eine Cert-Aufforderung an den User anhängen, unabhängig davon ob Signal = LONG / SHORT / NO-TRADE. Unterschied liegt nur in der Tonlage:
-
-### Hebel-Berechnung (target-basiert, PFLICHT)
-
-Ziel: **+20% Cert-Gewinn in 1-5 Tagen**. Der Hebel wird so gewählt, dass ein realistischer Stock-Move das +20%-Ziel trifft — und gleichzeitig ein normaler Gegen-Tag (1× ATR) die Position NICHT ausknockt.
-
-**Formel:**
-```
-Stock-Move-für-+20% = 0.8 × ATR%     (realistischer 2-3-Tage-Move)
-Hebel                = 20 / Stock-Move-für-+20%
-                     = 25 / ATR%     (gerundet auf 0.5er-Schritt)
-
-KO-Distanz           = 100 / Hebel   (implizit durch Hebel)
-KO-Puffer zu ATR     = KO-Distanz / ATR%   (muss ≥ 3.0 sein)
-```
-
-**Tabelle (aus Formel abgeleitet):**
-
-| ATR% | Hebel (Ziel +20% in ~3d) | KO-Distanz ≈ | KO / ATR | Check |
-|------|--------------------------|---------------|----------|-------|
-| <2% | 12-15× | 7-8% | 3.5-4× | OK |
-| 2-3% | 9-12× | 8-11% | 3.5-4× | OK |
-| 3-4% | 7-9× | 11-14% | 3.5-4× | OK |
-| 4-5% | 5-7× | 14-20% | 3.5-4× | OK |
-| 5-7% | 4-5× | 20-25% | 3.5-4× | OK (High-Vola) |
-| >7% | — | — | — | V1-Veto: Warrants/Options |
-
-**Warum diese Formel:**
-- **0.8× ATR als 2-3d-Move:** ATR ist Daily-True-Range. In 2-3 Tagen kumuliert sich typisch 0.7-1.0× ATR als Netto-Move (nicht 2-3× ATR — das wäre nur bei Extrem-Continuation). 0.8× ist der Median.
-- **KO bei 3.5-4× ATR Distanz:** überlebt einen normalen -1σ-Tag (~0.8-1× ATR Gegen-Move) mit Puffer. CLAUDE.md W3-Warning ("KO <2× ATR") ist damit sicher vermieden.
-- **Hebel skaliert invers mit ATR:** Low-Vola-Stocks brauchen mehr Hebel um +20% zu erreichen (sonst zu langsam), High-Vola-Stocks brauchen weniger (sonst Stop-Out-Risk).
-
-**Sanity-Check (immer durchführen):**
-```
-Hebel × KO-Distanz% ≈ 100     (mathematische Kohärenz)
-KO-Distanz / ATR%   ≥ 3.0     (Vola-Puffer)
-```
-
-Wenn Cert-Auswahl diese zwei Checks verletzt → anderes Cert suchen oder Hebel anpassen.
-
-**Bei Signal = LONG/SHORT (Gate PASS):**
-```
-► Cert-Aufforderung:
-  Bitte such mir ein Cert raus mit:
-  - Typ: Turbo-{Long|Short} auf {{SYMBOL}}
-  - KO-Range: ${KO-Untergrenze} bis ${KO-Obergrenze}
-      (abgeleitet aus Hebel-Formel: KO-Distanz = 100/Hebel)
-  - Hebel-Range: {Hebel-low}× bis {Hebel-high}×
-      (aus Formel: 25/ATR% = {Zielhebel}×, Range ±20%)
-  - Aktueller Ask-Preis (für exakte Stück-Zahl)
-  - Verfügbar auf Trade Republic
-
-  Sanity-Check vor Kauf:
-  - Hebel × KO-Distanz% ≈ 100?  [JA/NEIN]
-  - KO-Distanz ≥ 3× ATR%?        [JA/NEIN]
-```
-
-**Bei Signal = NO-TRADE aber knapp (Confidence 55-59%):**
-```
-► Cert-Aufforderung (Stand-by, falls Bedingungen flippen):
-  Gate verfehlt um X%. Wenn morgen {konkreter Trigger} eintritt, wäre Trade aktiv.
-  Such vorsorglich ein Cert raus mit:
-  - Typ: Turbo-{Long|Short} auf {{SYMBOL}}
-  - KO-Range: ${KO-Untergrenze} bis ${KO-Obergrenze}
-  - Hebel-Range: {Hebel-low}× bis {Hebel-high}×  (25/ATR% Formel)
-  - Aktueller Ask-Preis
-  - Verfügbar auf Trade Republic
-
-  Wir warten nicht auf den Cert — nur falls Re-Run morgen PASS gibt.
-```
-
-**Bei Signal = NO-TRADE und klar unter Gate (<55%):**
-Keine Cert-Aufforderung. Begründung: "Kein Setup in Reichweite." stattdessen.
-
-**Bei Signal = NO-TRADE aber Chart qualitativ gut (z.B. Reversion-Guard SHORT-NO-TRADE bei LONG-Setup, aber Confidence <55%):**
-Keine Cert-Aufforderung. Trade ist nicht in Reichweite.
-
-Die Hebel-Formel + Sanity-Checks sind **verpflichtend** — kein freies Ratespiel beim Hebel-Vorschlag.
-
----
-
-## 3. Wait for User Confirmation
-
-- Analyse ist mit Status `analysis` in der DB. Noch kein Trade.
-- User bestätigt Trade → `prediction_db.py open ID ...`
-- User bestätigt v5/v7 Confirmation-Buy → `prediction_db.py confirm ID ...`
-- Portfolio-State aktualisiert sich automatisch in der DB.
-
-```
-[STEP 4 COMPLETE — ANALYSIS FINISHED]
+[STEP 4 COMPLETE - ANALYSIS FINISHED]
 ```

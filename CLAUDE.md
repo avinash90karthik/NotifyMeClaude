@@ -6,24 +6,28 @@ Trading notification system built around a multi-agent analysis framework. Portf
 
 ---
 
-## TRADING STRATEGY v7/v8/v9 (ACTIVE)
+## TRADING STRATEGY v9 (ACTIVE)
 
-> **Full rules:** `memory/strategy_v7_draft.md` (v7 core + hedge + pivot + v8 exits + v9 scout-inversion + oversold-bonus)
+> **Full rules:** `memory/strategy_v9.md` — single source of truth. Supersedes v5/v6/v7/v8 (those labels are kept inside the strategy doc only as historical context for why each rule exists).
 
 ### Quick Reference
 
-- **Entry (v9):** Bei Confidence 60-65% → Scout 40% / Confirmation 60% (invertiert). Bei Confidence ≥65% → Scout 60% / Confirmation 40% (klassisch). No follow-up if Scout >10% up/down.
+- **Entry:** At Confidence 60-65% → Scout 40% / Confirmation 60% (inverted). At Confidence ≥65% → Scout 60% / Confirmation 40% (classic). No follow-up if Scout >10% up/down.
 - **Position Sizing:** 60-65% conf → 15% portfolio | 65-70% → 20% | 70%+ → 25%
-- **Exit (v8):** 80% at +20% IMMEDIATELY. Rest max +30%. Trump-Events = alles raus
-- **Stops:** ONE stop, set at purchase — no negotiating
-- **Slots:** MAX 3 open positions (hedge does NOT count as slot)
-- **Gate:** ≥60% confidence — NO exceptions
-- **Time stops:** 3 days without +5% → halve; 5 days → exit
-- **KO:** max(ATR-based, chart-based) — Large Cap 2x, Small/Mid 2.5x, Commodities 3x
-- **ATR >7%:** Warrants/options only (no KO certs)
-- **Overnight events:** Protect profits before known events (see strategy doc § Overnight-Event-Regel)
+- **Exit:** 80% at +20% IMMEDIATELY. Rest max +30%. Trump events = all out.
+- **Stops:** ONE stop, set at purchase — no negotiating.
+- **Slots:** MAX 3 open positions (hedge does NOT count as slot).
+- **Gate:** ≥60% confidence — NO exceptions.
+- **Time stops:** 3 days without +5% → halve; 5 days → exit.
+- **KO:** max(ATR-based, chart-based) — Large Cap 2x, Small/Mid 2.5x, Commodities 3x.
+- **ATR >7%:** Warrants/options only (no KO certs).
+- **Overnight events:** Protect profits before known events (see strategy doc § Overnight Event Rule).
 
-For v7 hedge rules, pivot rules, position sizing → `memory/strategy_v7_draft.md`
+For hedge rules, pivot rules, position sizing → `memory/strategy_v9.md`.
+
+### Output language
+
+All step output, cards, ratings, and reasoning text are written in **English**. The user-facing conversation around the analysis stays German; the analysis artifacts themselves (Step 1-4 cards) are English. Scripts also print English.
 
 ### Hard Rules for Analyses
 

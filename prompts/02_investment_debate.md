@@ -1,92 +1,108 @@
 # STEP 2: INVESTMENT DEBATE
 
 **Asset:** {{SYMBOL}}
-**Input:** Stichpunkte + 4 Ratings aus Step 1.
+**Input:** Bullets + 4 ratings from Step 1.
 
 ---
 
-## Regeln für die Debatte
+## Rules for the debate
 
-- Nutze ausschließlich Daten aus Step 1. Keine neuen Zahlen, keine Web-Suchen.
-- Die vier Step-1-Ratings (Technical Green-Rate, Price-Action, News+Reddit, Event/Catalyst) sind FIXIERT. Die Debatte darf sie zitieren, interpretieren, kontextualisieren — aber NICHT verändern. Anchoring auf Debatten-Confidence ist der Hauptfehler, den diese Struktur verhindert.
-- Debatte liefert nur zwei NEUE Werte: **Chart Structure** (qualitativ, aus Chart-Analyse § 1.4) und **Reversion-Edge** (aus reversion_guard.py, siehe unten).
+- Use only data from Step 1. No new numbers, no web searches.
+- The four Step-1 ratings (Technical Green-Rate, Price-Action, News+Reddit, Event/Catalyst) are FIXED. The debate may cite, interpret, contextualize - but NOT change them. Anchoring on debate-confidence is the main mistake this structure prevents.
+- The debate produces only two NEW values: **Chart Structure** (qualitative, from chart analysis § 1.4) and **Reversion-Edge** (from reversion_guard.py, see below).
 
-## Round 1: BULL (4-6 Sätze pro Argument, konkrete Zahlen, Chart-Referenz)
+## Round 1: BULL (4-6 sentences per argument, concrete numbers, chart reference)
 
-1. **Technical:** Indicator-Context-Werte aus Step 1 zitieren (RSI-Band green-rate, BB, DistHigh), Archetyp einordnen
-2. **Price-Action:** Greens-10d, Trend-5d, price_action Verdict
-3. **News/Catalysts:** NSI, konkrete Headlines mit Datum, Retail-Flag
-4. **Macro:** VIX, F&G, Fed, nur wenn <7d für den Trade relevant
+1. **Technical:** cite the indicator-context values from Step 1 (RSI band green-rate, BB, DistHigh), classify the archetype
+2. **Price-Action:** Greens-10d, Trend-5d, price_action verdict
+3. **News/Catalysts:** NSI, concrete headlines with date, retail flag
+4. **Macro:** VIX, F&G, Fed - only if relevant within <7d for the trade
 
-Bull-Ziel: $XX.XX (+XX%) | Confidence: XX% | Horizont: 1-5d
+Bull target: $XX.XX (+XX%) | Confidence: XX% | Horizon: 1-5d
 
-## Round 1: BEAR (4-6 Sätze, muss Bull widerlegen)
+## Round 1: BEAR (4-6 sentences, must rebut Bull)
 
-Gleicher Aufbau, gegen Bull. Schwachstellen in den Step-1-Daten, nicht Bauchgefühl.
+Same structure, against Bull. Weaknesses in the Step-1 data, not gut feel.
 
-Bear-Ziel: $XX.XX (-XX%) | Confidence: XX% | Horizont: 1-5d
+Bear target: $XX.XX (-XX%) | Confidence: XX% | Horizon: 1-5d
 
-## Round 2: Rebuttals (3-4 Sätze)
+## Round 2: Rebuttals (3-4 sentences)
 
-Bull widerlegt Bear-Argumente 1-3 + ein neues. Bear widerlegt Bull 1-3 + ein neues.
+Bull rebuts Bear arguments 1-3 + one new. Bear rebuts Bull 1-3 + one new.
 
-## Round 3: Final Synthesis (4-6 Sätze)
+## Round 3: Final synthesis (4-6 sentences)
 
-**Bull Final:** Stärkstes nicht widerlegtes Argument, angepasstes Ziel, Bull-Final-Confidence XX%
-**Bear Final:** Stärkstes nicht widerlegtes Argument, angepasstes Ziel, Bear-Final-Confidence XX%
+**Bull final:** strongest non-rebutted argument, adjusted target, Bull final confidence XX%
+**Bear final:** strongest non-rebutted argument, adjusted target, Bear final confidence XX%
 
 ---
 
-## Reversion-Edge vorziehen
+## Reversion-Edge - what it means
 
-Vor dem Scorecard-Fill einmal laufen lassen (Step 3 holt es sich nochmal, aber die Scorecard braucht es hier):
+The `reversion_guard.py` script checks four per-stock triggers (RSI vs. own P80, green-streak length vs. own P80, daily-move vs. own P90, gap vs. own P90) against this stock's **own** forward-5d return distribution. A reversion-edge fires only when:
+
+- Today's metric exceeds the stock's own percentile threshold (extreme for THIS stock, not textbook)
+- AND the historical fwd-5d distribution at that level shows mean-reversion
+  (LONG: green-rate <45% means "pullback expected"; SHORT: green-rate <45% means "blowoff fades")
+- AND sample size is SOLID (n >= 8)
+
+Verdicts:
+
+- **LONG "Pullback-Pflicht"**: wait for limit entry below close (continuation OK but not at this price)
+- **LONG "Kein Reversion-Edge"**: continuation dominates, entry at close acceptable
+- **SHORT "valid"**: blowoff-fade historically works for this stock
+- **SHORT "NO-TRADE"**: no blowoff in this stock's history - continuation dominates, no SHORT
+
+## Pull Reversion-Edge forward
+
+Run once before filling the scorecard (Step 3 will fetch it again, but the scorecard needs it here):
 
 ```bash
 python3 reversion_guard.py {{SYMBOL}} --direction LONG
 python3 reversion_guard.py {{SYMBOL}} --direction SHORT
 ```
 
-Mapping Verdict → Reversion-Edge-Rating:
+Mapping verdict -> Reversion-Edge rating (symmetric, max LONG = 8 in strongest case):
 
-| Script-Verdict | LONG-Rating | SHORT-Rating |
+| Script verdict | LONG Rating | SHORT Rating |
 |----------------|-------------|--------------|
-| LONG "Kein Reversion-Edge" UND SHORT "NO-TRADE" | 6 | 2 |
-| LONG "Kein Reversion-Edge" UND SHORT "valid" | 4 | 7 |
-| LONG "Pullback-Pflicht" UND SHORT "NO-TRADE" | 3 | 2 |
-| LONG "Pullback-Pflicht" UND SHORT "valid" | 2 | 7 |
+| LONG "Kein Reversion-Edge" AND SHORT "NO-TRADE" | **8** | 2 |
+| LONG "Kein Reversion-Edge" AND SHORT "valid" | 4 | 7 |
+| LONG "Pullback-Pflicht" AND SHORT "NO-TRADE" | **5** | 2 |
+| LONG "Pullback-Pflicht" AND SHORT "valid" | 2 | 7 |
 
-Interpretation: "Kein Reversion-Edge" LONG bedeutet Continuation-Bias → LONG bekommt Edge. "Pullback-Pflicht" heißt Entry verschoben, aber Richtung intakt — nicht automatisch Edge. SHORT-valid heißt Blowoff-Fade historisch bewiesen → SHORT bekommt Edge.
+Interpretation: "Kein Reversion-Edge" LONG means continuation bias intact -> when SHORT is also a NO-TRADE, that's the strongest pro-LONG signal the script can give (LONG = 8). "Pullback-Pflicht" means entry deferred, but direction intact - not automatically penalized to 3, deserves 5. "Valid" SHORT means blowoff-fade is historically proven -> SHORT = 7.
 
 ---
 
-## 6-Achsen Scorecard (MANDATORY)
+## 6-Axis Scorecard (MANDATORY)
 
-Vier Achsen (1-4) kommen WÖRTLICH aus Step 1 Rating-Block. Zwei Achsen (5-6) aus Debatte + reversion_guard.
+Four axes (1-4) come VERBATIM from the Step 1 rating block. Two axes (5-6) come from the debate + reversion_guard.
 
-| Criterion (0-10) | LONG | SHORT | Quelle |
+| Criterion (0-10) | LONG | SHORT | Source |
 |------------------|------|-------|--------|
-| 1. Technical Green-Rate | /10 | /10 | Step 1 Rating 1 (unverändert) |
-| 2. Price-Action Reality | /10 | /10 | Step 1 Rating 2 (unverändert) |
-| 3. News + Reddit Flow | /10 | /10 | Step 1 Rating 3 (unverändert) |
-| 4. Event/Catalyst | /10 | /10 | Step 1 Rating 4 (unverändert) |
-| 5. Chart Structure | /10 | /10 | Debatte — Pattern, S/R, Volumen-Setup |
-| 6. Reversion-Edge | /10 | /10 | reversion_guard.py Verdict |
+| 1. Technical Green-Rate | /10 | /10 | Step 1 Rating 1 (unchanged) |
+| 2. Price-Action Reality | /10 | /10 | Step 1 Rating 2 (unchanged, loosened cap) |
+| 3. News + Reddit Flow | /10 | /10 | Step 1 Rating 3 (unchanged) |
+| 4. Event/Catalyst | /10 | /10 | Step 1 Rating 4 (unchanged) |
+| 5. Chart Structure | /10 | /10 | Debate - pattern, S/R, volume setup |
+| 6. Reversion-Edge | /10 | /10 | reversion_guard.py verdict (mapping above) |
 | **TOTAL** | **/60** | **/60** | |
 
-**Entscheidungsregel:**
-- LONG-Total ≥ SHORT+10 → LONG-Setup in Step 3
-- SHORT-Total ≥ LONG+10 → SHORT-Setup in Step 3
-- Differenz < 10 → beide Setups entwickeln, Step 3 Judge entscheidet
-- Beide Totals < 30 → NO-TRADE prüfen
+**Decision rule:**
+- LONG-Total ≥ SHORT+10 -> LONG setup in Step 3
+- SHORT-Total ≥ LONG+10 -> SHORT setup in Step 3
+- Difference < 10 -> develop both setups, Step 3 Judge decides
+- Both totals < 30 -> consider NO-TRADE
 
 ---
 
-## Output-Card (kein JSON)
+## Output Card (no JSON)
 
 ```
 Step 2:
 ╔════════════════════════════════════════════════════╗
-║ SCORECARD — {{SYMBOL}}                             ║
+║ SCORECARD - {{SYMBOL}}                             ║
 ╠════════════════════════════════════════════════════╣
 ║                              LONG   │   SHORT      ║
 ║ 1. Technical Green-Rate      X/10   │   X/10       ║
@@ -98,10 +114,10 @@ Step 2:
 ║ ─────────────────────────────────── │ ──────       ║
 ║ TOTAL                       XX/60   │  XX/60       ║
 ╠════════════════════════════════════════════════════╣
-║ Bull-Ziel:   $XX.XX (+XX%) Confidence XX%          ║
-║ Bear-Ziel:   $XX.XX (-XX%) Confidence XX%          ║
-║ Strongest Bull:  <1 Satz>                          ║
-║ Strongest Bear:  <1 Satz>                          ║
+║ Bull target: $XX.XX (+XX%) Confidence XX%          ║
+║ Bear target: $XX.XX (-XX%) Confidence XX%          ║
+║ Strongest Bull:  <1 sentence>                      ║
+║ Strongest Bear:  <1 sentence>                      ║
 ║ Recommended:     LONG | SHORT | BOTH | NO-TRADE    ║
 ╚════════════════════════════════════════════════════╝
 

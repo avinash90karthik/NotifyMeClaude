@@ -3,9 +3,46 @@
 Extracted from morning_screener.py / watchlist_check.py to eliminate
 ~400 lines of duplicated code. Includes wavelet denoising integration."""
 
+import math
+
 import numpy as np
 
 from wavelet_utils import denoise_ohlcv
+
+
+def sigmoid_adjust(
+    green_rate: float,
+    sample_n: int,
+    max_adjust: float = 5.0,
+    solid_n: int = 30,
+    weak_n: int = 15,
+) -> float:
+    """Continuous Confidence-Adjust from a forward-window green-rate.
+
+    Replaces the bucketed mappings (>65% -> +3% etc.) used previously in
+    indicator_context.py and earnings_pattern.py. The sigmoid removes the
+    arbitrary cliffs at bucket edges and keeps the same asymptotic bounds.
+
+    Args:
+        green_rate: Forward green-rate as a fraction in [0, 1].
+        sample_n: Number of observations in the band.
+        max_adjust: Asymptotic adjust magnitude. Default 5.0 (percent).
+        solid_n: Sample threshold for full weight (1.0). Default 30 for
+            indicator-context bands; pass 8 for earnings (max ~10 quarters).
+        weak_n: Sample threshold for half weight (0.5). Below this -> 0.0.
+            Default 15 for indicator-context; pass 4 for earnings.
+
+    Returns:
+        Adjust in [-max_adjust, +max_adjust]. Sample weight:
+          n >= solid_n -> 1.0
+          weak_n <= n < solid_n -> 0.5
+          n < weak_n -> 0.0
+    """
+    if sample_n < weak_n:
+        return 0.0
+    weight = 1.0 if sample_n >= solid_n else 0.5
+    centered = (green_rate - 0.5) * 4.0
+    return max_adjust * math.tanh(centered) * weight
 
 
 def detect_regime(adx, atr_pct, bb_width_percentile, plus_di, minus_di):
