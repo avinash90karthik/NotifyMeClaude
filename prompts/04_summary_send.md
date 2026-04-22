@@ -96,19 +96,59 @@ Rationale für die Card-Felder:
 
 Nach der Trading-Card IMMER eine Cert-Aufforderung an den User anhängen, unabhängig davon ob Signal = LONG / SHORT / NO-TRADE. Unterschied liegt nur in der Tonlage:
 
+### Hebel-Berechnung (target-basiert, PFLICHT)
+
+Ziel: **+20% Cert-Gewinn in 1-5 Tagen**. Der Hebel wird so gewählt, dass ein realistischer Stock-Move das +20%-Ziel trifft — und gleichzeitig ein normaler Gegen-Tag (1× ATR) die Position NICHT ausknockt.
+
+**Formel:**
+```
+Stock-Move-für-+20% = 0.8 × ATR%     (realistischer 2-3-Tage-Move)
+Hebel                = 20 / Stock-Move-für-+20%
+                     = 25 / ATR%     (gerundet auf 0.5er-Schritt)
+
+KO-Distanz           = 100 / Hebel   (implizit durch Hebel)
+KO-Puffer zu ATR     = KO-Distanz / ATR%   (muss ≥ 3.0 sein)
+```
+
+**Tabelle (aus Formel abgeleitet):**
+
+| ATR% | Hebel (Ziel +20% in ~3d) | KO-Distanz ≈ | KO / ATR | Check |
+|------|--------------------------|---------------|----------|-------|
+| <2% | 12-15× | 7-8% | 3.5-4× | OK |
+| 2-3% | 9-12× | 8-11% | 3.5-4× | OK |
+| 3-4% | 7-9× | 11-14% | 3.5-4× | OK |
+| 4-5% | 5-7× | 14-20% | 3.5-4× | OK |
+| 5-7% | 4-5× | 20-25% | 3.5-4× | OK (High-Vola) |
+| >7% | — | — | — | V1-Veto: Warrants/Options |
+
+**Warum diese Formel:**
+- **0.8× ATR als 2-3d-Move:** ATR ist Daily-True-Range. In 2-3 Tagen kumuliert sich typisch 0.7-1.0× ATR als Netto-Move (nicht 2-3× ATR — das wäre nur bei Extrem-Continuation). 0.8× ist der Median.
+- **KO bei 3.5-4× ATR Distanz:** überlebt einen normalen -1σ-Tag (~0.8-1× ATR Gegen-Move) mit Puffer. CLAUDE.md W3-Warning ("KO <2× ATR") ist damit sicher vermieden.
+- **Hebel skaliert invers mit ATR:** Low-Vola-Stocks brauchen mehr Hebel um +20% zu erreichen (sonst zu langsam), High-Vola-Stocks brauchen weniger (sonst Stop-Out-Risk).
+
+**Sanity-Check (immer durchführen):**
+```
+Hebel × KO-Distanz% ≈ 100     (mathematische Kohärenz)
+KO-Distanz / ATR%   ≥ 3.0     (Vola-Puffer)
+```
+
+Wenn Cert-Auswahl diese zwei Checks verletzt → anderes Cert suchen oder Hebel anpassen.
+
 **Bei Signal = LONG/SHORT (Gate PASS):**
 ```
 ► Cert-Aufforderung:
   Bitte such mir ein Cert raus mit:
   - Typ: Turbo-{Long|Short} auf {{SYMBOL}}
-  - KO: ~${KO-Level} (unser finaler KO)
-  - Hebel: {Xx-Yx}  ← aus ATR% abgeleitet
-      • ATR <3%: Hebel 6-10× (Low-Vola erlaubt mehr Hebel)
-      • ATR 3-5%: Hebel 4-6× (Standard)
-      • ATR 5-7%: Hebel 3-4× (High-Vola)
-      • ATR >7%: Warrants/Options statt Turbo (V1-Veto)
+  - KO-Range: ${KO-Untergrenze} bis ${KO-Obergrenze}
+      (abgeleitet aus Hebel-Formel: KO-Distanz = 100/Hebel)
+  - Hebel-Range: {Hebel-low}× bis {Hebel-high}×
+      (aus Formel: 25/ATR% = {Zielhebel}×, Range ±20%)
   - Aktueller Ask-Preis (für exakte Stück-Zahl)
   - Verfügbar auf Trade Republic
+
+  Sanity-Check vor Kauf:
+  - Hebel × KO-Distanz% ≈ 100?  [JA/NEIN]
+  - KO-Distanz ≥ 3× ATR%?        [JA/NEIN]
 ```
 
 **Bei Signal = NO-TRADE aber knapp (Confidence 55-59%):**
@@ -117,8 +157,8 @@ Nach der Trading-Card IMMER eine Cert-Aufforderung an den User anhängen, unabh�
   Gate verfehlt um X%. Wenn morgen {konkreter Trigger} eintritt, wäre Trade aktiv.
   Such vorsorglich ein Cert raus mit:
   - Typ: Turbo-{Long|Short} auf {{SYMBOL}}
-  - KO: ~${KO-Level}
-  - Hebel: {Xx-Yx}  (nach ATR-Tabelle oben)
+  - KO-Range: ${KO-Untergrenze} bis ${KO-Obergrenze}
+  - Hebel-Range: {Hebel-low}× bis {Hebel-high}×  (25/ATR% Formel)
   - Aktueller Ask-Preis
   - Verfügbar auf Trade Republic
 
@@ -131,7 +171,7 @@ Keine Cert-Aufforderung. Begründung: "Kein Setup in Reichweite." stattdessen.
 **Bei Signal = NO-TRADE aber Chart qualitativ gut (z.B. Reversion-Guard SHORT-NO-TRADE bei LONG-Setup, aber Confidence <55%):**
 Keine Cert-Aufforderung. Trade ist nicht in Reichweite.
 
-Die Hebel-ATR-Mapping-Tabelle ist **verpflichtend** — kein freies Ratespiel beim Hebel-Vorschlag.
+Die Hebel-Formel + Sanity-Checks sind **verpflichtend** — kein freies Ratespiel beim Hebel-Vorschlag.
 
 ---
 

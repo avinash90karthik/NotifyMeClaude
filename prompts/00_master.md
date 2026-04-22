@@ -26,6 +26,7 @@ Execute sequentially. Each step builds on the previous. No step may be skipped.
 - **Strategy:** `memory/strategy_v7_draft.md` (v7 core, hedge, pivot, v8 exits, overnight rule)
 - **Portfolio state:** `python prediction_db.py portfolio` — run BEFORE Step 1.
 - **yfinance = truth** for all price data. Never use web search for prices.
+- **Pre-/Post-Market mit yfinance:** Bei geschlossenem US-Markt liefert `preflight_check.py` nur den letzten Regular-Close. Für Extended-Hours Live-Preise `yf.Ticker(SYMBOL).info` (Felder `preMarketPrice`, `preMarketChangePercent`, `postMarketPrice`) oder `yf.Ticker(SYMBOL).history(period='1d', interval='5m', prepost=True)` nutzen. Twelvedata Basic-Plan kann KEIN Pre-/Post-Market — daran keine Zeit verlieren.
 - **Every trade** needs: entry, stop, KO, exits, time-stop.
 - **Horizon 1-5 days only.** No multi-week setups. "No edge today" is valid; "come back in 3 weeks" is forbidden.
 
