@@ -7,6 +7,8 @@
 
 ## Rules for the debate
 
+> **Hard Rule (6): The 6-axis scorecard is filled for BOTH directions** in every analysis. SHORT is not optional even when the bull thesis looks obvious - if SHORT-Total >= LONG-Total, that's the setup, regardless of preconceived direction. The mirror test in Step 3 catches asymmetric scoring. See `memory/strategy_v9.md § Why Rule 6` for the rationale.
+
 - Use only data from Step 1. No new numbers, no web searches.
 - The four Step-1 ratings (Technical Green-Rate, Price-Action, News+Reddit, Event/Catalyst) are FIXED. The debate may cite, interpret, contextualize - but NOT change them. Anchoring on debate-confidence is the main mistake this structure prevents.
 - The debate produces only two NEW values: **Chart Structure** (qualitative, from chart analysis § 1.4) and **Reversion-Edge** (from reversion_guard.py, see below).

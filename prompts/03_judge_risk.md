@@ -32,7 +32,7 @@ v9 Oversold Bonus (Rule 19) - LONG only:
   Bonus is added AFTER the differential penalty.
 ```
 
-The Gate from CLAUDE.md is automatically consistent: 36/60 = 60% = trade gate (before oversold bonus).
+The Gate is automatically consistent: 36/60 = 60% = trade gate (before oversold bonus).
 
 ### Judge Override (allowed, with mandatory documentation)
 
@@ -56,13 +56,15 @@ This documentation is copied verbatim into the Step-3 card AND the Step-4 tradin
 
 ### Horizon
 
-**1-5 days only** (CLAUDE.md Rule 17). Medium-/long-term setups are NOT scored. If 1-5d shows no edge -> signal = NO-TRADE.
+**1-5 days only.** Medium-/long-term setups are NOT scored. If 1-5d shows no edge -> signal = NO-TRADE.
 
 Forbidden: "setup active from date X", "come back in Y weeks", "wait for T-7 pre-earnings". These patterns are RISK warnings or watchlist triggers, never trade triggers.
 
 ---
 
 ## KO Level (on the underlying)
+
+> **Hard Rule (5): KO is computed, never estimated.** Both methods (ATR-based + chart-based) MUST be calculated; the "further of the two" is the final KO. No gut-feel KO levels - if calculation fails (e.g. ATR unavailable), the trade is invalid, not "estimated". See `memory/strategy_v9.md § Why Rule 5` for the post-mortem.
 
 KO = the level that is FARTHER from the price (ATR-based or chart-based).
 
@@ -211,6 +213,8 @@ The cert-side translation of this range (cert primary/fallback levels in EUR), t
 ---
 
 ## Position Sizing (v9: Scout-inverted sizing for borderline confidence)
+
+> **Hard Rule (8): All position recommendations are in % of portfolio**, never in absolute EUR. Reason: portfolio value changes, ratios are stable. The cert count in EUR comes only at the end of Step 4 (`Scout EUR / cert ask price`).
 
 **Rule 20:** At Confidence 60-65% the Scout is **smaller** than the Confirmation (40/60 instead of 60/40). From ≥65% the classic split (60/40).
 

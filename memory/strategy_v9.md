@@ -1,406 +1,265 @@
-# Strategy v9 — Current Single Source of Truth
-
-> **Status:** ACTIVE — supersedes v5, v6, v7, v8. All references in prompts and CLAUDE.md point here.
-> **History:** v5 core + v6 Blind Re-Analysis + v7 Direct Hedge + Pivot + v8 Exits + v9 Scout-Inversion + Oversold-Bonus.
-> **Goal:** Cumulative ruleset for the current Silver Hawk Trading system. v5/v7-style references in the body below are kept for **historical context** of why a rule exists; the active behavior is what this document spells out.
-
----
-
-## Das Problem mit v5/v6 Hedge
-
-```
-v5 Hedge: Index-SHORT (DAX/Nasdaq) als 3. Slot
-→ GESCHEITERT: DAX-Short am 24.03 = -27€ (-19%) in 1 Tag
-→ GRUND: Basis-Risiko — Index und Einzelaktie korrelieren nicht 1:1
-→ DAX stieg, ENR fiel (oder umgekehrt) → Hedge wirkte nicht
-```
-
----
-
-## v7 Kern-Änderung: Direct Position Hedge
-
-```
-╔═══════════════════════════════════════════════════════════════╗
-║  DIRECT POSITION HEDGE — v7                                   ║
-╠═══════════════════════════════════════════════════════════════╣
-║                                                               ║
-║  TRIGGER — HARTE REGEL:                                      ║
-║  → Zertifikat -20% vom Einstieg — SOFORT handeln!            ║
-║  → NICHT warten auf -25%, -30% oder schlimmer!               ║
-║  → Bei €6.000 Kapital: -20% vs -29% = €50-80 extra Verlust! ║
-║  → Gleicher Trigger wie v6 Blind Re-Analysis!                ║
-║                                                               ║
-║  BEDINGUNGEN (alle müssen erfüllt sein):                     ║
-║  1. Cert -20% → v6 Blind Re-Analysis durchgeführt            ║
-║  2. Blind-Ergebnis = GLEICHE Richtung (These intakt!)        ║
-║  3. Momentum KLAR dagegen (mind. 2 von 3):                   ║
-║     • MACD bearish und expandierend                          ║
-║     • SMA50 gebrochen                                        ║
-║     • Makro-Headwind (Geopolitik, Risk-Off)                  ║
-║  4. Katalysator ist EXTERN (Makro), NICHT stock-spezifisch   ║
-║                                                               ║
-║  WAS:                                                        ║
-║  → SHORT-Turbo auf DASSELBE Underlying öffnen                ║
-║  → NICHT Index, NICHT Sektor-ETF — DIREKT das gleiche!       ║
-║  → Null Basis-Risiko, mathematisch berechenbar               ║
-║                                                               ║
-║  GRÖßE:                                                     ║
-║  → Lottery (max = kleinste offene LONG-Position)              ║
-║  → Ziel: 50-65% der Long-Exposure hedgen                     ║
-║  → NIEMALS 100% hedgen (= teures Schließen)                  ║
-║                                                               ║
-║  SHORT-TURBO KO:                                             ║
-║  → ÜBER dem nächsten Widerstand                              ║
-║  → Mindestens 10% über aktuellem Kurs                        ║
-║  → Je weiter KO, desto weniger Hebel (= sicherer)           ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
-```
-
----
-
-## Exit-Regeln für den Hedge
-
-```
-╔═══════════════════════════════════════════════════════════════╗
-║  HEDGE EXIT — 3 Trigger + Time-Stop                          ║
-╠═══════════════════════════════════════════════════════════════╣
-║                                                               ║
-║  1. MOMENTUM DREHT:                                          ║
-║     → Grüner Tag + RSI steigt über 35-40                     ║
-║     → MACD-Histogramm dreht positiv                          ║
-║     → SHORT schließen, LONG laufen lassen                    ║
-║                                                               ║
-║  2. KATALYSATOR LÖST SICH AUF:                               ║
-║     → Geopolitik-Deeskalation, Makro-Wende                   ║
-║     → SHORT SOFORT schließen (Snap-Back = gefährlich)        ║
-║     → LONG profitiert vom Rebound                            ║
-║                                                               ║
-║  3. LONG-STOP WIRD ERREICHT:                                 ║
-║     → BEIDE Positionen schließen                             ║
-║     → Netto-Verlust deutlich kleiner als ohne Hedge          ║
-║                                                               ║
-║  TIME-STOP — HARTE REGEL (wie v5 Time-Stops):               ║
-║  → Max 5 Tage Hedge offen halten — KEINE Ausnahmen!         ║
-║  → Tag 5: Lage bewerten → schließen ODER Pivot              ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
-```
-
----
-
-## Pivot-Regel (NEU — aus Live-Test gelernt)
-
-```
-╔═══════════════════════════════════════════════════════════════╗
-║  PIVOT — Vom Hedge zum Richtungswechsel                       ║
-╠═══════════════════════════════════════════════════════════════╣
-║                                                               ║
-║  TRIGGER:                                                    ║
-║  → LONG Cert -40% UND SHORT im Plus                          ║
-║                                                               ║
-║  AKTION:                                                     ║
-║  1. LONG sofort schließen (Verlust akzeptieren)              ║
-║  2. Erlös in SHORT umschichten (Nachkauf)                    ║
-║  3. Ab hier: SHORT = normale Position mit v5-Exit-Regeln     ║
-║     → Recovery-Exit bei +15% (konservativer als +20%)        ║
-║     → 50% raus bei +15%, Rest Trail auf BE                   ║
-║                                                               ║
-║  WICHTIG:                                                    ║
-║  → Das ist KEIN Hedge mehr — es ist ein Richtungswechsel!    ║
-║  → cert_type in DB wechselt von 'hedge' zu 'turbo'          ║
-║  → Zählt ab jetzt als normaler Slot (1/3)                    ║
-║  → Recovery-Exits (+15%) gelten, NICHT Standard (+20%)       ║
-║                                                               ║
-║  WARUM -40% UND NICHT FRÜHER:                                ║
-║  → Bei -20%: Hedge gerade erst eröffnet, zu früh für Pivot  ║
-║  → Bei -30%: Momentum muss sich erst bestätigen              ║
-║  → Bei -40%: LONG ist zu weit weg, Recovery unrealistisch    ║
-║  → SHORT hat Momentum bewiesen → Richtung klar              ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
-```
-
----
-
-## Overnight-Event-Regel (v8 — April 2026)
-
-> **Auslöser:** +500 EUR Gewinne über 3 Tage, über Nacht durch Trump-Rede auf -300 EUR gedreht.
-> **Kern:** Turbo-Zertifikate + Overnight-Gaps = unkontrollierbares Risiko.
-
-### Regeln
-
-1. **Position ≥ +10% und bekanntes Event heute Nacht:**
-   → Stop auf Break-Even setzen (PFLICHT)
-
-2. **Position ≥ +15% und bekanntes Event heute Nacht:**
-   → 50% Teilverkauf ODER Stop auf +5%
-
-3. **Position < +10% und bekanntes Event heute Nacht:**
-   → Default: schließen (Gewinne < 10% lohnen Risiko nicht)
-   → Alternative: bewusst halten, aber Risiko dokumentieren
-
-4. **Freitag = IMMER auf BE vor Wochenende**
-   → Gilt auch für "Event Eves" (Abend vor bekanntem Event)
-
-### Bekannte Event-Typen
-
-| Event | Typischer Impact | Häufigkeit |
-|-------|-----------------|------------|
-| FOMC Rate Decision | 2-5% Gap | 8x/Jahr |
-| CPI Release | 1-3% Gap | Monatlich |
-| NFP (Non-Farm Payrolls) | 1-2% Gap | Monatlich |
-| Trump/Präsident-Reden | 1-5% Gap (unberechenbar) | Unregelmäßig |
-| Geopolitik (Eskalation) | 2-10% Gap | Unberechenbar |
-| Earnings (eigene Position) | 5-20% Gap | Quartalsweise |
-
-### Integration in Analyse-Pipeline
-
-- **Step 1:** Event-Calendar-Check als erste Aktion (vor Technicals)
-- **Step 3:** W5 im Risk Audit: "Overnight event within 24h?"
-- **Step 4:** Entry-Timing berücksichtigt Event-Nähe
-
-### v8 Exit-Änderung
-
-- **80% bei +20% SOFORT** (ersetzt v7 66%-Regel)
-- **Rest maximal bis +30%** (enger als v7)
-- **Trump-Events = alles raus** (keine Overnight-Positionen)
-
----
-
-## Warum Direct Hedge > Index Hedge
-
-| Kriterium | Index-Hedge (v5) | Direct Hedge (v7) |
-|-----------|-------------------|-------------------|
-| Basis-Risiko | HOCH — Index ≠ Aktie | **NULL — gleicher Basiswert** |
-| Berechenbar | Nein — Korrelation schwankt | **Ja — exakt gegenläufig** |
-| Praxis-Test | DAX-Short: -27€ in 1 Tag | ENR-Short: +€13 recovered |
-| Timing | Index hat eigene Dynamik | **Direkte Absicherung** |
-| Kosten | Spread auf fremdem Instrument | Spread auf bekanntem Instrument |
-
----
-
-## Warum Direct Hedge > Verkaufen
-
-| Kriterium | Verkaufen | Direct Hedge (v7) |
-|-----------|-----------|-------------------|
-| These intakt? | Verlust realisiert, Chance weg | **Beide Richtungen offen** |
-| Wenn Bounce | Muss neu kaufen (teurer, Spread) | **Long profitiert sofort** |
-| Wenn weiter fällt | Verlust begrenzt ✓ | **Short verdient, federt ab** |
-| Psychologie | "Verloren" | **"Abgesichert, warte auf Klarheit"** |
-
----
-
-## v7 Entscheidungsbaum (komplett)
-
-```
-Cert -20% vom Einstieg ← EIN Trigger für ALLES
-    │
-    ├─ v6 Blind Re-Analysis (OHNE Portfolio-Kontext!)
-    │   │
-    │   ├─ Blind = GEGENTEIL → SOFORT schließen (v6 Regel)
-    │   │
-    │   ├─ Blind = NEUTRAL → Position halbieren (v6 Regel)
-    │   │
-    │   └─ Blind = GLEICHE Richtung (These intakt!)
-    │       │
-    │       ├─ Momentum-Check (mind. 2/3):
-    │       │   □ MACD bearish expandierend?
-    │       │   □ SMA50 gebrochen?
-    │       │   □ Makro-Headwind?
-    │       │
-    │       ├─ ≥2 erfüllt → DIRECT HEDGE öffnen (v7)
-    │       │   → Short-Turbo, gleiches Underlying
-    │       │   → Lottery-Size, max = kleinste LONG
-    │       │   → KO über Widerstand (>10% über Kurs)
-    │       │   → cert_type = 'hedge' in DB
-    │       │
-    │       └─ <2 erfüllt → Halten mit Stop (v5 Standard)
-    │
-    ├─ Hedge läuft → Exit-Trigger prüfen (Momentum/Katalysator/Stop/Time)
-    │
-    ├─ LONG -40% UND SHORT im Plus → PIVOT (siehe Pivot-Regel)
-    │   → LONG schließen, Erlös in SHORT
-    │   → cert_type wechselt 'hedge' → 'turbo'
-    │   → Recovery-Exits: +15% für 50%, Rest Trail
-    │
-    └─ Cert NICHT bei -20% → kein Hedge, v5/v6 Exits normal
-```
-
----
-
-## DB-Integration
-
-### Neues Feld: `is_hedge`
-
-Hedges werden in `predictions` mit `cert_type = 'hedge'` erfasst.
-
-- **Hedge:** `cert_type = 'hedge'` → zählt NICHT als voller Slot, wird in Win-Rate separat gerechnet
-- **Nach Pivot:** `cert_type` wechselt zu `'turbo'` → zählt als normaler Slot
-- **Portfolio-Anzeige:** Hedges werden mit `[H]` markiert
-- **Track Record:** Hedges separat auswerten (Hedge-P&L vs. Trade-P&L)
-
-### CLI-Befehle
-
-```bash
-# Hedge eröffnen (cert_type='hedge')
-python prediction_db.py record ENR.DE --direction SHORT --confidence 60 ...
-python prediction_db.py open ID --shares 35 --cert-price 2.17 --cert-type hedge
-
-# Pivot (cert_type wechselt)
-python prediction_db.py pivot ID   # setzt cert_type von 'hedge' auf 'turbo'
-
-# Portfolio zeigt Hedges separat
-python prediction_db.py portfolio   # Hedges mit [H] markiert, nicht als Slot gezählt
-```
-
----
-
-## Erster Live-Test: ENR.DE 26-27.03.2026
-
-| Parameter | Wert |
-|-----------|------|
-| Long | 56x Turbo KO 136.72 @ €1.968 |
-| Short (Hedge) | 35x Turbo KO 170.69 @ ~€2.09 |
-| Hedge-Ratio | 62.5% (3.5 von 5.6 Aktien-Äquiv.) |
-| Auslöser | Iran-Eskalation, DAX -1.4%, ENR -5.18% |
-| These | Intakt (Backlog, Buyback, Triple-Index) |
-| Blind-Check | LONG bestätigt (RSI-Div bullish, GC intakt) |
-
-### Ergebnis Live-Test (27.03.2026)
-
-**Tag 1 (26.03):** Hedge eröffnet bei Cert -29% (zu spät! Regel sagt -20%)
-**Tag 2 (27.03):** ENR.DE fällt weiter auf €143,75 (-4,61%)
-- LONG bei -49,58% geschlossen → **-€52,68 Verlust**
-- Erlös (€55,56) komplett in SHORT umgeschichtet (PIVOT)
-- SHORT nachgekauft bei +10% → 57 Stk @ avg €2,32
-- 50% Take-Profit: 28 Stk @ €2,67 (+15%) → **+€13,04**
-- 29 Stk Runner mit BE-Stop → Trail auf €2,50
-
-**Netto bisher:** -€52,68 + €13,04 = **-€39,64** (Runner könnten noch €5-15 bringen)
-
-### Learnings
-
-1. **-20% Trigger einhalten!** Wir haben bei -29% gehedgt statt -20% → €10-15 mehr Verlust als nötig
-2. **Pivot bei -40%+ funktioniert:** LONG war nicht mehr zu retten, SHORT hatte Momentum → Umschichtung war richtig
-3. **Recovery-Exits konservativer:** +15% statt +20% bei Recovery-Plays. Ziel ist Verlust-Minimierung, nicht Gewinn-Maximierung
-4. **Nachkauf im Gewinner:** Bei +10% auf SHORT nachgekauft (aus LONG-Erlös) = Avg gesenkt, Position gestärkt
-5. **Bei €6.000 Kapital (April):** Gleicher Fehler (-49%) wäre -€500+. Disziplin beim -20% Trigger ist KRITISCH
-
----
-
-## Regeln unverändert von v5/v6
-
-- ≥60% Confidence Gate — KEINE Ausnahmen
-- Max 3 offene Positionen (Hedge zählt NICHT als voller Slot)
-- Max 10% Verlust pro Trade
-- Scout/Confirmation Entry (v5)
-- 80% Exit bei +20% SOFORT, Rest max +30% (v8)
-- Blind Re-Analysis bei -20% (v6)
-- KO-Distanz ≥2x ATR
-- Time-Stops: 3 Tage ohne +5% → halbieren, 5 Tage → Exit
-
-### Position Sizing (Confidence-basiert)
-
-| Konfidenz | Gesamt (% Portfolio) | Scout (60%) | Confirmation (40%) |
-|-----------|---------------------|-------------|-------------------|
-| 60-65% | Small **15%** | 9% | 6% |
-| 65-70% | Standard **20%** | 12% | 8% |
-| 70%+ | Standard **25%** | 15% | 10% |
-
-**Beispiel bei 6.000€ Portfolio, 70% Confidence:**
-- Gesamt: 25% = 1.500€
-- Scout: 15% = 900€
-- Confirmation: 10% = 600€
-
----
-
-## Offene Fragen (beantwortet)
-
-1. ~~Zählt der Hedge als eigener Slot?~~ → **NEIN**, cert_type='hedge' in DB, wird separat gezählt
-2. ~~Max Hedge-Dauer?~~ → **5 Tage — HARTE REGEL** (wie v5 Time-Stops)
-3. ~~Hedge-Größe fix oder dynamisch?~~ → **Lottery, max = kleinste LONG** (bewährt im Live-Test)
-4. Hedge bei BEIDEN offenen Positionen gleichzeitig erlaubt? → Noch offen (braucht Live-Test)
-5. ~~Backtesting~~ → Live-Test hat Index-Hedge-Probleme bestätigt
-
----
-
-## Status: AKTIV
-
-- [x] ENR.DE Live-Test dokumentiert
-- [x] Pivot-Regel definiert
-- [x] -20% als harter Trigger
-- [x] 5-Tage Time-Stop als harte Regel
-- [ ] DB-Integration: cert_type='hedge' + pivot-Befehl implementieren
-- [ ] Portfolio-Anzeige: Hedges mit [H] markieren
-- [ ] Track Record: Hedges separat auswerten
-- [ ] 2 weitere Live-Tests für Validierung
-
----
-
-# v9 — Oversold-Bonus + Scout-Invertierung (April 2026)
-
-Datum: 2026-04-16. Anlass: Backtest auf 40 gefüllten Predictions zeigte zwei harte Muster.
-
-## Was Backtest zeigte
-
-**1. Der vergessene Edge-Bereich <50% Confidence**
-
-5 von 40 Predictions landeten im <50%-Confidence-Bereich und wurden abgelehnt. Alle 5 gingen in Signalrichtung, Ø +8.82% fwd5d, 100% Accuracy.
-
-Gemeinsames Muster:
-- RSI extrem oversold (15-30)
-- Commodities oder Stocks nach scharfem Crash
-- System-Abzüge ("TRENDING abwärts", "Pre-Open-Pattern schwach", "CHOPPY") zogen Confidence unter 60% Gate
-
-Die stock-eigene Fwd-5d-Green-Rate bei RSI <20 war durchgängig >65% [SOLID]. Die Regime-Abzüge hatten diese direkte Mean-Reversion-Evidenz überstimmt.
-
-**2. Der 60-65%-Coin-Flip-Bracket**
-
-Accuracy nach Confidence-Bracket (fwd5d):
-
-| Bracket | Accuracy | Ø Move |
-|---------|----------|--------|
-| 60-65% | 56% | +0.33% |
-| 65-70% | 60% | +8.22% |
+# Strategy v9 — Reference Document
+
+> Single source of truth for **strategy rationale** (the "why"). Hard rules
+> themselves live in `prompts/`. This document is **not auto-loaded** by Claude;
+> it is referenced from prompts when the rationale is needed (e.g. via
+> `see strategy_v9.md § Why Rule 5`).
+
+## 1. Pipeline Architecture
+
+The trading system runs as a four-step pipeline preceded by a pre-flight
+script. Each step has a dedicated prompt file under `prompts/`:
+
+| Step | Prompt | Purpose |
+|------|--------|---------|
+| 0 | `preflight_check.py` | Date/market status + yfinance news + mandatory search queries |
+| 1 | `prompts/01_data_collection.md` | Price, indicators, chart, news, macro, patterns, events |
+| 2 | `prompts/02_investment_debate.md` | Bull vs Bear debate, 6-axis scorecard |
+| 3 | `prompts/03_judge_risk.md` | Signal + confidence, KO, reversion guard, risk audit, stock trade plan |
+| 4 | `prompts/04_summary_send.md` | Trading card, cert request, prediction DB record |
+
+Scripts that drive each step:
+- `collect_data.py` (Step 1.2)
+- `price_action_check.py` (Step 1.4)
+- `indicator_context.py` (Step 1.4 — sigmoid adjusts + STRONGEST AXIS aggregation)
+- `day_pattern.py`, `pattern_timeline.py` (Step 1.8 / 1.8a)
+- `earnings_pattern.py` (Step 1.8b — sigmoid adjust, earnings-specific n thresholds)
+- `event_impact.py` (Step 1.9)
+- `reversion_guard.py` (Step 2 + Step 3)
+- `entry_calibration.py` (Step 3)
+- `prediction_db.py record / open / confirm / close` (Step 4)
+
+Portfolio state lives in `memory/predictions.db` and is the single source of
+truth for positions, cash, slot count, and analysis history.
+
+## 2. Strategy History v5 → v9
+
+- **v5 (core).** Scout/Confirmation entry, Gate at 60% confidence, 80%/+20%
+  exit, 3-slot cap, KO from max(ATR, chart), Time-Stops at 3d/5d.
+- **v6 (Blind Re-Analysis).** When a cert hits −20%, re-run analysis without
+  portfolio context. If blind verdict flips → close immediately. If neutral →
+  halve position. If same direction → continue.
+- **v7 (Direct Position Hedge + Pivot).** Replaces v5 index-hedging (which
+  failed live: DAX-short −€27 in one day during ENR.DE drawdown). Uses a
+  short-turbo on the **same** underlying as the long position, sized 50–65%
+  of long exposure. Pivot rule: at LONG −40% AND SHORT in profit → close
+  long, redeploy proceeds into short, treat as a normal turbo position with
+  +15% recovery exits. See § 3 + § 4.
+- **v8 (Exits + Overnight Rule).** 80% out at +20% **immediately** (replaces
+  v5 66%-rule), rest max +30%. Trump events / known overnight catalysts →
+  close everything before the event. Triggered by a +€500 → −€300 overnight
+  flip on a Trump speech.
+- **v9 (Sigmoid + Aggregation + Scout-Inversion + Oversold-Bonus).** Confidence
+  adjusts switched from bucketed `>65% → +3%` to a continuous sigmoid
+  `5 × tanh((g − 0.5) × 4) × sample_weight`. Indicator-context aggregation
+  uses the STRONGEST single axis (max |adjust|) instead of naive sum across
+  RSI/BB/DistHigh, because those axes are positively correlated for trend
+  stocks. Scorecard caps loosened (Reversion-Edge LONG max 8/10, Price-Action
+  cap fires only on confirmed stabilization). Differential penalty smoothed
+  to `1 − 0.15 × exp(−Diff/4)` — no cliff at Diff = 10. Two new explicit
+  rules: Rule 19 Extreme-Oversold-Bonus and Rule 20 Scout-Inversion.
+
+v5/v6/v7/v8 mechanics are still active where v9 did not replace them
+(scout/confirmation, slot cap, KO methodology, hedge, pivot, overnight
+rule, time-stops). v9 is **cumulative**, not a clean rewrite.
+
+## 3. Hedge Logic (Direct Position Hedge)
+
+Trigger and conditions (all four must hold):
+
+1. The cert is at **−20% from entry** — act immediately, do not wait for
+   −25% / −30%.
+2. v6 Blind Re-Analysis was performed and the **blind verdict matches the
+   original direction** (the thesis is still intact).
+3. Momentum is **clearly against** the position — at least 2 of 3:
+   - MACD bearish and expanding
+   - SMA50 broken
+   - Macro headwind (geopolitics, risk-off)
+4. The catalyst is **external** (macro), not stock-specific.
+
+Action:
+
+- Open a **short turbo on the same underlying**, never an index, never a
+  sector ETF. This eliminates basis risk that v5 index-hedging suffered from.
+- Size: lottery-style, `max = smallest open long position`. Goal is to
+  hedge 50–65% of long exposure. Never hedge 100% — at 100% the hedge is
+  effectively a closed position with extra cost.
+- Short-turbo KO must be **above the next resistance**, minimum 10% above
+  current price. Wider KO = lower leverage = safer.
+- DB: `cert_type = 'hedge'` — does NOT count as a normal slot, tracked
+  separately in win-rate.
+
+Hedge exits — three triggers + one time-stop:
+
+1. **Momentum turns** (green day + RSI back above 35–40, MACD histogram
+   flips positive) → close short, let long run.
+2. **Catalyst dissolves** (de-escalation, macro shift) → close short
+   immediately, snap-back is dangerous.
+3. **Long stop hit** → close both, net loss is meaningfully smaller than
+   without the hedge.
+4. **Time-stop: max 5 days hedge open**, no exceptions. Day 5 → close or
+   pivot.
+
+## 4. Pivot Logic (Hedge → Direction Flip)
+
+Trigger: **LONG cert at −40% AND SHORT in profit.**
+
+Action:
+
+1. Close the long immediately, accept the loss.
+2. Redeploy the proceeds into the short (add to position).
+3. From this point the short is a **normal directional position**, not a
+   hedge. `cert_type` flips from `'hedge'` to `'turbo'` in the DB. It now
+   counts as a normal slot.
+4. Recovery exits apply: 50% out at +15% (more conservative than the
+   standard +20%), rest with trailing stop to break-even.
+
+Why −40% and not earlier: at −20% the hedge has just opened; at −30% the
+counter-momentum still needs to confirm; at −40% the long is too far gone
+for a realistic recovery and the short has proven directional momentum.
+
+## 5. Why Each Hard Rule Exists
+
+These are the post-mortems that justify the hard rules currently embedded
+in the prompts. The prompts state the rule; this section explains why.
+
+### § Why Rule 5 — KO is computed, never estimated
+
+Estimated KO levels invariably end up "round-number friendly" (e.g. €150
+because it looks clean) rather than data-derived. Round-number stops cluster
+with retail orders → liquidity sweeps that knock out positions for no
+fundamental reason. ATR-based + chart-based gives two independent anchors;
+taking the further-out value provides a buffer against single-method failure.
+If both methods fail to compute, the trade is invalid — not because we lack
+a number, but because we lack the **information** the calculation requires.
+
+### § Why Rule 6 — SHORT scorecard is mandatory
+
+Multiple historical analyses showed asymmetric scoring: when the bull thesis
+was emotionally compelling, the scorecard was filled out for LONG only and
+the SHORT side was implicitly dismissed. Forcing both sides through the same
+6-axis scoring catches the cases where SHORT actually has the higher total —
+which then triggers the mirror test in Step 3. Without this rule, the system
+silently develops a directional bias.
+
+### § Why Rule 7 — EUR/USD is always live from yfinance
+
+Past habit was to "approximate" FX with a recent value (e.g. "1.10") when
+yfinance was slow. With cert position sizes in EUR and underlying prices in
+USD, a 0.5% FX drift over a hold period becomes a 5–10× larger error in cert
+P&L because of leverage. yfinance pulls live FX with every collect_data run;
+hardcoded fallback FX values are forbidden because the consequence is
+silently mis-sized positions.
+
+### § Why Rule 8 — Position recommendations are in % of portfolio
+
+Portfolio value moves continuously (P&L, deposits, withdrawals). A
+recommendation in absolute EUR ages immediately — by the next analysis it
+is the wrong size. A recommendation in % is stable: 20% of portfolio means
+20% regardless of current value. Cert count in EUR is computed only at the
+last moment in Step 4 from `Scout EUR / cert ask price` against the current
+portfolio snapshot.
+
+### § Why Rule 21 — Earnings proximity is never a skip reason
+
+Three real cases (HIMS, HOOD, RKLB on 2026-04-20) were skipped with
+"earnings too close, hold time limited" — generic textbook reasoning. But
+each stock has its own pre-earnings behavior: HIMS coin-flip, HOOD
+historically bullish drift T-8 → T-3 (80% green, +1.57% avg), RKLB its own
+pattern. A blanket skip ignores the per-stock data that `earnings_pattern.py`
+exposes specifically for this case. The correct response is: run the script,
+read the per-stock pre-earnings green-rate, treat it as a confidence
+adjustment (sigmoid), and adjust **hold time** (exit one day before
+earnings) — but never reject the trade itself.
+
+## 6. Backtest Rationale (v9)
+
+Date: 2026-04-16. Backtest on 40 filled predictions revealed two patterns
+that drove v9.
+
+### 6.1 The forgotten edge under 50% confidence
+
+5 of 40 predictions landed below 50% confidence and were rejected. All 5
+moved in the signal direction, average +8.82% fwd-5d, 100% accuracy.
+
+Common pattern:
+- RSI extremely oversold (15–30)
+- Commodities or stocks after a sharp crash
+- System penalties ("TRENDING down", "Pre-Open weak", "CHOPPY") pulled
+  confidence below the 60% gate
+
+The stock's own fwd-5d green-rate at RSI <20 was consistently >65% [SOLID].
+Regime penalties had overridden this direct mean-reversion evidence. Rule
+19 (Extreme-Oversold-Bonus) was added to let stock-specific historical
+green-rate override regime penalties via a controlled +5% / +8% bonus.
+
+### 6.2 The 60–65% coin-flip bracket
+
+Accuracy by confidence bracket (fwd-5d):
+
+| Bracket | Accuracy | Avg Move |
+|---------|----------|----------|
+| 60–65% | 56% | +0.33% |
+| 65–70% | 60% | +8.22% |
 | 70%+ | 75% | +6.83% |
 
-60-65% ist effektiv Coin-Flip. Die klassische Scout/Confirmation-Aufteilung (60/40) packt die Hauptgröße in den unsichersten Punkt.
+60–65% is effectively a coin-flip. The classic Scout/Confirmation split
+(60/40) puts the **larger** initial size into the **least certain** bucket.
+Rule 20 (Scout-Inversion) flips this to 40/60 in the 60–65% bracket: smaller
+initial scout to limit damage on a wrong signal, larger confirmation only
+after the trend confirms (Scout +5% in profit).
 
-## v9 Rule 19 — Extrem-Oversold-Bonus
+### 6.3 Sigmoid adjusts replace bucket cliffs
 
-Wenn `indicator_context.py` am aktuellen RSI-Band <20 zeigt: Fwd-5d Green-Rate ≥65% UND n≥20 [SOLID] → **+5% Confidence-Bonus** für LONG, überstimmt Regime-Abzüge.
+Old bucketed mapping (`>65% → +3%`) created arbitrary 2% jumps at bucket
+edges (a stock at green-rate 64.9% got +1%, a stock at 65.1% got +3%).
+Sigmoid `5 × tanh((g − 0.5) × 4) × sample_weight` gives a smooth curve with
+the same asymptotic ±5% bounds and no edge cliffs. Same function used by
+`indicator_context.py` (per-axis) and `earnings_pattern.py` (trade-window
+mode), with earnings-specific sample thresholds (SOLID n≥8 instead of n≥30)
+because earnings sample size is structurally small (max ~10 quarters).
 
-Bei RSI-Band <15 [SOLID + green ≥70%] → **+8% Bonus** (Kapitulations-Tief).
+### 6.4 Strongest-Axis aggregation
 
-Der Bonus wird nach Differenz-Strafe (bei Scorecard |Diff|<10) addiert. Er ist das einzige Element, das Regime-Vetos via Confidence umgehen darf — weil die Stock-eigene Historie die Regime-Statistik lokal überstimmt.
+Naive sum of RSI-adjust + BB-adjust + DistHigh-adjust was wrong because
+those three axes are positively correlated for trend stocks (a stock near
+3M-high tends to also have high BB and elevated RSI). Summing double-counts
+the same underlying signal. Strongest-axis (max |adjust|) is a conservative
+single estimate. ENR.DE 2026-04-22 example: old naive sum gave +5% LONG
+adjust; strongest-axis correctly gave +3.17% (DistHigh, the highest-quality
+single signal of the three correlated axes).
 
-Harte Vetos (V1-V5) bleiben unangetastet.
+### 6.5 Smooth differential penalty
 
-## v9 Rule 20 — Scout-Confirmation-Invertierung
+Old penalty had a cliff: `Diff < 10 → ×0.9, Diff ≥ 10 → ×1.0`. This means
+a scorecard with Diff = 9 got 10% penalty, Diff = 10 got 0% — arbitrary.
+New form `1 − 0.15 × exp(−Diff/4)` gives:
+- Diff = 0 → 0.85 (max penalty for a tied scorecard)
+- Diff = 4 → 0.94
+- Diff = 10 → 0.987
+- Diff = 20 → 0.999 (effectively no penalty for a clear setup)
 
-Die Scout/Confirmation-Aufteilung wird abhängig von Confidence:
+No cliff. Reflects the actual confidence we should have in a setup based
+on how clearly the scorecard separates the two sides.
 
-| Confidence | Scout | Confirmation |
-|------------|-------|--------------|
-| 60-65% | **40%** (invertiert) | **60%** |
-| ≥65% | 60% (klassisch) | 40% |
+## 7. Position Sizing Reference
 
-Bei knapper Confidence kleinerer Initial-Einsatz — Schaden bei Fehlsignal reduziert. Confirmation kommt bei Bestätigung (Scout +5% im Plus) zum höheren Preis, aber mit echtem Trendbeweis.
+| Confidence | Total (% portfolio) | Scout % of total | Confirmation % of total |
+|------------|---------------------|------------------|-------------------------|
+| 60–65% | 15% | **40%** (inverted, v9 Rule 20) | **60%** |
+| 65–70% | 20% | 60% (classic) | 40% |
+| 70%+ | 25% | 60% (classic) | 40% |
 
-Confirmation-Trigger selbst unverändert aus v7: +5% im Plus ODER klarer Regime-Beweis.
+Confirmation trigger is unchanged from v7: Scout +5% in profit OR clear
+regime confirmation.
 
-## Nicht-Ziele von v9
+## 8. Open Questions
 
-- KO-Logik unverändert (max(ATR, Chart))
-- Position-Sizing-Tabelle unverändert (60-65% bleibt 15% Total, nicht 10%)
-- Exits v8 unverändert (80% bei +20%)
-- Gate bei 60% Confidence unverändert (Oversold-Bonus kann Confidence ÜBER das Gate heben, nicht darunter)
-
-## Status v9
-
-- [x] Rule 19 Oversold-Bonus in CLAUDE.md + Step 1 + Step 3 hart verankert
-- [x] Rule 20 Scout-Invertierung in CLAUDE.md + Step 3 Position-Sizing-Tabelle
-- [x] Step 3 Card dokumentiert v9-Split + Oversold-Bonus
-- [x] Quick-Reference in CLAUDE.md-Header auf v7/v8/v9
-- [ ] Live-Validierung: nach 5 Trades unter v9 Rules Backtest erneut laufen
+- Hedging both open positions simultaneously — not yet validated (needs
+  live test).
+- v9 live validation — re-run backtest after 5 more trades under the v9
+  ruleset.
+- DB: implement `pivot` CLI command properly (currently still manual
+  `cert_type` flip).
+- Track-Record: separate hedge P&L from directional-trade P&L in dashboard
+  (deferred to PR-B / PR-C).

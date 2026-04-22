@@ -24,6 +24,8 @@ Collects: price, RSI (delta/divergence/slope), MACD, ATR, ADX, regime, SMA50/200
 
 Review output. Flag anomalies (elevated ATR, divergence, regime shift).
 
+> **Hard Rule (7): EUR/USD is always live from yfinance.** Never hardcode an exchange rate (e.g. "1.10" as fallback). `collect_data.py` already pulls live FX. If yfinance fails for FX, the analysis aborts - no hardcoded substitute.
+
 ## 1.3 Pre-Open Pattern Check
 
 ```bash
@@ -250,6 +252,8 @@ Pattern Timeline: <Mode1-Fwd5 +X.X% green X% / Mode2-Fwd5 +Y.Y% green Y% [n=Z]>
 ```
 
 ## 1.8b Earnings Window Pattern (MANDATORY)
+
+> **Hard Rule (21): Earnings proximity is NEVER a skip reason.** Forbidden phrases: "earnings in X days, too close", "window closed", "hold time too limited". Mandatory: run earnings_pattern.py and use the **per-stock pre-earnings green-rate as a confidence adjustment** (sigmoid output, ~±5%), not as a gate. If pre-earnings is historically bullish (green-rate >=55%, avg>0) -> LONG edge, do NOT skip. If bearish (<=45%) -> consider SHORT or LONG with reduced size. Adjust hold time (exit 1 day before earnings), but never reject the trade. See `memory/strategy_v9.md § Why Rule 21` for the HIMS/HOOD/RKLB post-mortem.
 
 ```bash
 python3 earnings_pattern.py {{SYMBOL}}
