@@ -1,13 +1,15 @@
 """Shared technical indicator calculations for Silver Hawk Trading.
 
-Extracted from morning_screener.py / watchlist_check.py to eliminate
-~400 lines of duplicated code. Includes wavelet denoising integration."""
+Originally extracted from screener and watchlist scripts to eliminate
+~400 lines of duplicated code. Includes wavelet denoising integration.
+Today consumed by collect_data, indicator_context, earnings_pattern,
+preopen_check and backtest under scripts/."""
 
 import math
 
 import numpy as np
 
-from wavelet_utils import denoise_ohlcv
+from lib.wavelet_utils import denoise_ohlcv
 
 
 def sigmoid_adjust(

@@ -40,8 +40,8 @@ import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_FILE = os.path.join(SCRIPT_DIR, 'memory', 'predictions.db')
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_FILE = os.path.join(PROJECT_ROOT, 'memory', 'predictions.db')
 
 
 # ─── Database ────────────────────────────────────────────────────────
@@ -650,7 +650,7 @@ def export_predictions(args):
         return
 
     cols = [d[0] for d in conn.execute('SELECT * FROM predictions LIMIT 1').description]
-    path = os.path.join(SCRIPT_DIR, 'memory', 'predictions_export.csv')
+    path = os.path.join(PROJECT_ROOT, 'memory', 'predictions_export.csv')
     with open(path, 'w') as f:
         f.write(','.join(cols) + '\n')
         for r in rows:

@@ -18,13 +18,16 @@ import json
 import os
 import sys
 from collections import defaultdict
+
+# Allow `from lib.X` and `from scripts.Y` when invoked as `python3 scripts/preopen_backtest.py`
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 import numpy as np
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PATTERNS_FILE = os.path.join(SCRIPT_DIR, 'memory', 'preopen_patterns.json')
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PATTERNS_FILE = os.path.join(PROJECT_ROOT, 'memory', 'preopen_patterns.json')
 ET = ZoneInfo('America/New_York')
 WARMUP_DAYS = 250
 MIN_SAMPLES_DEFAULT = 20
@@ -45,7 +48,7 @@ ALL_DIMS = ('score', 'rsi_zone', 'regime', 'gap', 'macd', 'volume', 'bb', 'futur
 
 def get_watchlist_symbols():
     """Load US symbols from predictions.db watchlist (skip EU stocks)."""
-    from prediction_db import get_watchlist_symbols as db_watchlist
+    from scripts.prediction_db import get_watchlist_symbols as db_watchlist
     return [s['symbol'] for s in db_watchlist()
             if not any(s['symbol'].endswith(sfx) for sfx in EU_SUFFIXES)]
 
@@ -288,8 +291,8 @@ def flatten_multi(df):
 def run_backtest(symbols, min_samples=20):
     """Run the full pre-open pattern backtest."""
     import yfinance as yf
-    from indicators import calc_technicals
-    from morning_screener import score_long, score_short
+    from lib.indicators import calc_technicals
+    from lib.scoring import score_long, score_short
 
     single = len(symbols) == 1
 

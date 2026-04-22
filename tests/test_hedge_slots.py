@@ -19,7 +19,7 @@ class TestHedgeSlotCounting:
         """prediction_db.py portfolio must filter cert_type='hedge' from slots."""
         src_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            'prediction_db.py'
+            'scripts', 'prediction_db.py'
         )
         with open(src_path) as f:
             source = f.read()

@@ -2,14 +2,14 @@
 
 **Asset:** {{SYMBOL}}
 
-Pre-flight runs before Step 1 (`python3 preflight_check.py {{SYMBOL}}`, see Step 0). The verbatim checklist with your answers MUST appear before § 1.1. If the pre-flight did not run, STOP and tell the user.
+Pre-flight runs before Step 1 (`python3 scripts/preflight_check.py {{SYMBOL}}`, see Step 0). The verbatim checklist with your answers MUST appear before § 1.1. If the pre-flight did not run, STOP and tell the user.
 
 ---
 
 ## 1.1 Portfolio Check
 
 ```bash
-python3 prediction_db.py portfolio
+python3 scripts/prediction_db.py portfolio
 ```
 
 Inspect open positions, cash, slot count before continuing.
@@ -17,7 +17,7 @@ Inspect open positions, cash, slot count before continuing.
 ## 1.2 Technical Data
 
 ```bash
-python3 collect_data.py {{SYMBOL}}
+python3 scripts/collect_data.py {{SYMBOL}}
 ```
 
 Collects: price, RSI (delta/divergence/slope), MACD, ATR, ADX, regime, SMA50/200, short interest, S/R, earnings, market status.
@@ -31,9 +31,9 @@ Review output. Flag anomalies (elevated ATR, divergence, regime shift).
 ```bash
 python3 -c "import json; d=json.load(open('memory/preopen_patterns.json')); print('IN DB' if '{{SYMBOL}}' in d.get('symbols',[]) else 'NOT IN DB')"
 # If NOT IN DB:
-python3 preopen_backtest.py --symbols {{SYMBOL}}
+python3 scripts/preopen_backtest.py --symbols {{SYMBOL}}
 # Then:
-python3 preopen_check.py {{SYMBOL}} --entry-timing
+python3 scripts/preopen_check.py {{SYMBOL}} --entry-timing
 ```
 
 Document: verdict, hit rates, gap-fill %, best entry timing.
@@ -51,7 +51,7 @@ Fill the chart table: trend, SMA 50/200 (golden/death cross), RSI + divergence, 
 ### Price-Action Reality Check (Rule 14, MANDATORY)
 
 ```bash
-python3 price_action_check.py {{SYMBOL}}
+python3 scripts/price_action_check.py {{SYMBOL}}
 ```
 
 The script returns 5/10/20-day trend + green-day count + verdict. Rules:
@@ -63,7 +63,7 @@ The script returns 5/10/20-day trend + green-day count + verdict. Rules:
 ### Indicator Context Check (Rule 16, MANDATORY)
 
 ```bash
-python3 indicator_context.py {{SYMBOL}} --expected-price <Close from 1.2> --expected-date <last trading day>
+python3 scripts/indicator_context.py {{SYMBOL}} --expected-price <Close from 1.2> --expected-date <last trading day>
 ```
 
 The script:
@@ -214,7 +214,7 @@ From `prediction_db.py portfolio`: list open positions with sectors. Check:
 ## 1.8 Recent Day Pattern
 
 ```bash
-python3 day_pattern.py {{SYMBOL}}
+python3 scripts/day_pattern.py {{SYMBOL}}
 ```
 
 Table:
@@ -229,7 +229,7 @@ Key Insight: [What does the pattern say about the likely direction?]
 ## 1.8a Pattern Timeline (MANDATORY)
 
 ```bash
-python3 pattern_timeline.py {{SYMBOL}}
+python3 scripts/pattern_timeline.py {{SYMBOL}}
 ```
 
 Two modes in one output:
@@ -256,9 +256,9 @@ Pattern Timeline: <Mode1-Fwd5 +X.X% green X% / Mode2-Fwd5 +Y.Y% green Y% [n=Z]>
 > **Hard Rule (21): Earnings proximity is NEVER a skip reason.** Forbidden phrases: "earnings in X days, too close", "window closed", "hold time too limited". Mandatory: run earnings_pattern.py and use the **per-stock pre-earnings green-rate as a confidence adjustment** (sigmoid output, ~±5%), not as a gate. If pre-earnings is historically bullish (green-rate >=55%, avg>0) -> LONG edge, do NOT skip. If bearish (<=45%) -> consider SHORT or LONG with reduced size. Adjust hold time (exit 1 day before earnings), but never reject the trade. See `memory/strategy_v9.md § Why Rule 21` for the HIMS/HOOD/RKLB post-mortem.
 
 ```bash
-python3 earnings_pattern.py {{SYMBOL}}
+python3 scripts/earnings_pattern.py {{SYMBOL}}
 # If earnings ≤ 15 days AND a LONG/SHORT setup is being considered, ALSO:
-python3 earnings_pattern.py {{SYMBOL}} --trade-entry <T-N> --trade-exit <T-M> --same-month
+python3 scripts/earnings_pattern.py {{SYMBOL}} --trade-entry <T-N> --trade-exit <T-M> --same-month
 #   T-N = today's distance in trading days to earnings (entry day)
 #   T-M = exit distance = typically 1-3 (one to three days before earnings)
 #   --same-month highlights historical quarters in the same calendar month
@@ -308,7 +308,7 @@ Does the event RESOLVE uncertainty (catalyst) or CREATE new uncertainty (risk-of
 **2. What does the data say?**
 
 ```bash
-python3 event_impact.py {{SYMBOL}}
+python3 scripts/event_impact.py {{SYMBOL}}
 ```
 
 Lists big moves (>3%) of the last 6 months with next-day reaction and bounce rate after drops.

@@ -78,7 +78,7 @@ def test_db(tmp_path, monkeypatch):
     conn.close()
 
     # Patch DB_FILE in prediction_db and risk_audit
-    monkeypatch.setattr('prediction_db.DB_FILE', db_path)
+    monkeypatch.setattr('scripts.prediction_db.DB_FILE', db_path)
 
     return db_path
 
@@ -88,7 +88,7 @@ class TestRiskAuditV5:
 
     def test_portfolio_value_includes_invested(self, test_db):
         """Portfolio value must be cash + invested, not just cash."""
-        from risk_audit import parse_portfolio_summary
+        from lib.risk_audit import parse_portfolio_summary
 
         summary = parse_portfolio_summary()
 
@@ -106,7 +106,7 @@ class TestRiskAuditV5:
         conn.commit()
         conn.close()
 
-        from risk_audit import parse_portfolio_summary, risk_audit
+        from lib.risk_audit import parse_portfolio_summary, risk_audit
 
         summary = parse_portfolio_summary()
         # -1200 on 5600 portfolio = -21.4%
@@ -129,7 +129,7 @@ class TestRiskAuditV5:
         conn.commit()
         conn.close()
 
-        from risk_audit import parse_portfolio_summary, risk_audit
+        from lib.risk_audit import parse_portfolio_summary, risk_audit
 
         summary = parse_portfolio_summary()
         # -200 on 5600 = -3.6%
@@ -158,7 +158,7 @@ class TestRiskAuditV5:
         conn.commit()
         conn.close()
 
-        from risk_audit import parse_portfolio_summary, risk_audit
+        from lib.risk_audit import parse_portfolio_summary, risk_audit
         summary = parse_portfolio_summary()
 
         approved, vetoes, warnings = risk_audit(

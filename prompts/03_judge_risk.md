@@ -103,8 +103,8 @@ Strongest support (LONG) or resistance (SHORT) from Step 1 § 1.4, + 0.5-1% buff
 ## Optimal Entry (Rule 18 + Rule 22, script-driven)
 
 ```bash
-python3 reversion_guard.py {{SYMBOL}} --direction <LONG|SHORT>   # already pulled in Step 2
-python3 entry_calibration.py {{SYMBOL}}                          # intraday-dip statistics + buy range
+python3 scripts/reversion_guard.py {{SYMBOL}} --direction <LONG|SHORT>   # already pulled in Step 2
+python3 scripts/entry_calibration.py {{SYMBOL}}                          # intraday-dip statistics + buy range
 ```
 
 ### Verdict logic

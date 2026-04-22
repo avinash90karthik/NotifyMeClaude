@@ -44,21 +44,21 @@ Portfolio state lives in `memory/predictions.db` (SQLite — auto-created on fir
 
 ```
 You (Claude Code)
-├── "Analysiere SYMBOL"           → pre-flight + 4-step analysis → terminal trading card
-├── python3 prediction_db.py portfolio   → View positions, cash, slots
-└── python3 collect_data.py SYMBOL       → Quick technical snapshot
+├── "Analysiere SYMBOL"                       → pre-flight + 4-step analysis → terminal trading card
+├── python3 scripts/prediction_db.py portfolio  → View positions, cash, slots
+└── python3 scripts/collect_data.py SYMBOL      → Quick technical snapshot
 
 Local State
-└── memory/predictions.db                 → Open positions, stops, P&L, analysis log (SQLite)
+└── memory/predictions.db                       → Open positions, stops, P&L, analysis log (SQLite)
 ```
 
 ## Analysis Pipeline
 
-Tell Claude Code: **"Analysiere SYMBOL"** (or "Analyze SYMBOL"). The pipeline starts with a pre-flight check (`preflight_check.py`) and runs all four steps below — no shortcuts, no mini-versions.
+Tell Claude Code: **"Analysiere SYMBOL"** (or "Analyze SYMBOL"). The pipeline starts with a pre-flight check (`scripts/preflight_check.py`) and runs all four steps below — no shortcuts, no mini-versions.
 
 | Step | What Happens |
 |------|-------------|
-| 0. Pre-Flight | `preflight_check.py` — real date/weekday/market-status, yfinance news (7d), mandatory Trump/Reddit/day-news/event searches, echo-back checklist. |
+| 0. Pre-Flight | `scripts/preflight_check.py` — real date/weekday/market-status, yfinance news (7d), mandatory Trump/Reddit/day-news/event searches, echo-back checklist. |
 | 1. Data Collection | yfinance prices, RSI, MACD, SMAs, ATR, short interest, news, correlation check, event calendar. Futures (SI=F, GC=F) use ETF proxy for RSI to avoid rollover distortion. |
 | 2. Investment Debate | Bull vs Bear - 2 full rounds + LONG vs SHORT scorecard (6 criteria, /60) |
 | 3. Judge & Risk | Verdict + confidence %, 3-step KO (ATR + chart + take further), position sizing in % of portfolio, time-stops |
@@ -66,15 +66,19 @@ Tell Claude Code: **"Analysiere SYMBOL"** (or "Analyze SYMBOL"). The pipeline st
 
 ## Scripts
 
+All CLI tools live under `scripts/`. Shared library code (indicators, scoring, risk audit, wavelet utilities) lives under `lib/` and is imported by the scripts — not invoked directly.
+
 | Script | Purpose |
 |--------|---------|
-| `collect_data.py` | Full technical snapshot (price, RSI, MACD, ATR, SMAs, S/R, events) |
-| `prediction_db.py` | Portfolio state + trade log + analysis record (SQLite) |
-| `preopen_check.py` | Pre-open verdict: buy NOW or WAIT? Pattern-based |
-| `preopen_backtest.py` | Backtest pre-open patterns on historical data |
-| `backtest.py` | Validate v5 scoring against historical data |
-| `reflect.py` | Generate weekly trade statistics and reflection report |
-| `morning_screener.py` | Pre-market LONG/SHORT screener |
+| `scripts/collect_data.py` | Full technical snapshot (price, RSI, MACD, ATR, SMAs, S/R, events) |
+| `scripts/prediction_db.py` | Portfolio state + trade log + analysis record (SQLite) |
+| `scripts/preopen_check.py` | Pre-open verdict: buy NOW or WAIT? Pattern-based |
+| `scripts/preopen_backtest.py` | Backtest pre-open patterns on historical data |
+| `scripts/backtest.py` | Validate v5 scoring against historical data |
+| `scripts/preflight_check.py` | Date/market status + mandatory search-query banner |
+| `scripts/indicator_context.py` | Per-stock RSI/BB/DistHigh band statistics + sigmoid adjust |
+| `scripts/earnings_pattern.py` | Per-stock earnings-window historical behavior |
+| `scripts/reversion_guard.py` | Per-stock LONG/SHORT reversion-edge check |
 
 ## Environment
 

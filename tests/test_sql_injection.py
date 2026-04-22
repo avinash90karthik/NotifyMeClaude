@@ -20,7 +20,7 @@ class TestSQLInjectionPrevention:
         """prediction_db.py must not have f-string SQL with user input."""
         src_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            'prediction_db.py'
+            'scripts', 'prediction_db.py'
         )
         with open(src_path) as f:
             source = f.read()
@@ -53,7 +53,7 @@ class TestSQLInjectionPrevention:
         """list_predictions must not interpolate status_filter directly into SQL."""
         src_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            'prediction_db.py'
+            'scripts', 'prediction_db.py'
         )
         with open(src_path) as f:
             source = f.read()

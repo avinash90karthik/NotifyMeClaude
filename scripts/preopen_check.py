@@ -15,12 +15,15 @@ import sys
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PATTERNS_FILE = os.path.join(SCRIPT_DIR, 'memory', 'preopen_patterns.json')
+# Allow `from lib.X` and `from scripts.Y` when invoked as `python3 scripts/preopen_check.py`
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PATTERNS_FILE = os.path.join(PROJECT_ROOT, 'memory', 'preopen_patterns.json')
 ET = ZoneInfo('America/New_York')
 
 
-ENTRY_TIMING_CACHE = os.path.join(SCRIPT_DIR, 'memory', 'entry_timing_cache.json')
+ENTRY_TIMING_CACHE = os.path.join(PROJECT_ROOT, 'memory', 'entry_timing_cache.json')
 
 
 def load_patterns():
@@ -183,9 +186,9 @@ def check_symbol(sym, patterns_db, entry_timing=False, force_timing=False):
     If entry_timing=True, also runs analyze_entry_timing().
     """
     import yfinance as yf
-    from indicators import calc_technicals
-    from morning_screener import score_long, score_short
-    from preopen_backtest import tag_patterns
+    from lib.indicators import calc_technicals
+    from lib.scoring import score_long, score_short
+    from scripts.preopen_backtest import tag_patterns
 
     # Daily data up to now (pre-open = yesterday's close is latest)
     daily = yf.download(sym, period='2y', progress=False)

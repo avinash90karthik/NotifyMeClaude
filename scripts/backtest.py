@@ -16,13 +16,16 @@ from datetime import datetime, timezone
 
 import numpy as np
 
+# Allow `from lib.X` and `from scripts.Y` when invoked as `python3 scripts/backtest.py`
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 SCORE_THRESHOLD = 40
 MIN_HISTORY_DAYS = 300  # Need ~1y+ of history
 
 
 def parse_watchlist_symbols():
     """Load symbols from the watchlist table in predictions.db."""
-    from prediction_db import get_watchlist_symbols
+    from scripts.prediction_db import get_watchlist_symbols
     return [s['symbol'] for s in get_watchlist_symbols()]
 
 
@@ -37,8 +40,8 @@ def backtest_symbol(symbol, period='2y', forward_days=None, capture_components=F
     Returns (analysis_dict, records) if capture_components else analysis_dict.
     """
     import yfinance as yf
-    from indicators import calc_technicals
-    from morning_screener import score_long, score_short
+    from lib.indicators import calc_technicals
+    from lib.scoring import score_long, score_short
 
     if forward_days is None:
         forward_days = [1, 5, 20]
@@ -186,7 +189,8 @@ def analyze_feature_importance(records, forward_days=None):
 
 def generate_weight_report(symbol, feature_results):
     """Generate memory/backtest_results.md with feature importance data."""
-    report_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory', 'backtest_results.md')
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    report_file = os.path.join(project_root, 'memory', 'backtest_results.md')
 
     lines = [
         '# Backtest Feature Importance',

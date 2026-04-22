@@ -18,10 +18,13 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 
-from indicators import calc_adx, calc_bollinger, detect_regime
+# Allow `from lib.X` when invoked as `python3 scripts/collect_data.py`
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from lib.indicators import calc_adx, calc_bollinger, detect_regime
 
 try:
-    from wavelet_utils import wavelet_denoise
+    from lib.wavelet_utils import wavelet_denoise
     HAS_WAVELET = True
 except ImportError:
     HAS_WAVELET = False

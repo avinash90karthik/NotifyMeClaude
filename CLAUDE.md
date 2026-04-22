@@ -24,7 +24,7 @@ the single source of truth for positions, cash, and analysis history.
 When the user asks to analyze a stock (e.g. "Analysiere PLTR",
 "PLTR anschauen", "Analyze ENR.DE"):
 
-1. Run `python3 preflight_check.py SYMBOL` FIRST. Its date/market output
+1. Run `python3 scripts/preflight_check.py SYMBOL` FIRST. Its date/market output
    is ground truth.
 2. Echo back the pre-flight checklist verbatim with your answers filled in
    before Step 1.

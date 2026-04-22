@@ -7,7 +7,7 @@ Any single VETO blocks the trade candidate from appearing as recommended."""
 def parse_portfolio_summary():
     """Load portfolio state from predictions.db (single source of truth)."""
     try:
-        from prediction_db import get_db
+        from scripts.prediction_db import get_db
         conn = get_db()
 
         # Open positions

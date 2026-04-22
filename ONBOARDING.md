@@ -40,31 +40,24 @@ The `.env` file is optional — only fill in the paths if you use a dedicated Py
 ```bash
 # Install dependencies
 pip3 install yfinance numpy
-
-# Seed the watchlist with stocks
-python3 admin_stocks.py seed
 ```
+
+The watchlist is stored in `memory/predictions.db` (SQLite). It is created on first use; manage entries directly via SQL when you need to (see "Manage Your Watchlist" below).
 
 ---
 
 ## Step 4: Test Everything
 
 ```bash
-# Test 1: Show watchlist
-python3 browse_stocks.py
-# -> Shows the watchlist (no prices yet)
+# Test 1: Show portfolio + slot count
+python3 scripts/prediction_db.py portfolio
 
-# Test 2: Update prices
-python3 update_stocks.py
-# -> Fetches current prices, RSI, SMAs
-
-# Test 3: Show watchlist again
-python3 browse_stocks.py
-# -> Now with prices, RSI, ratings!
-
-# Test 4: Quick technical snapshot
-python3 collect_data.py AAPL
+# Test 2: Quick technical snapshot for a symbol
+python3 scripts/collect_data.py AAPL
 # -> Full data dump for Apple
+
+# Test 3: Pre-flight check (what claude runs first on every analysis)
+python3 scripts/preflight_check.py AAPL
 ```
 
 ---
@@ -83,7 +76,7 @@ This launches a 4-step analysis:
 3. Verdict + risk analysis
 4. Trading card in terminal + `memory/predictions.db` updated
 
-Check `python3 browse_stocks.py` to see what's on the watchlist, or analyze any symbol you want.
+You can analyze any symbol — the watchlist is just a convenience for tracking.
 
 ---
 
@@ -102,16 +95,20 @@ This will make all analysis output appear in English.
 
 ## Manage Your Watchlist
 
+The watchlist lives in the `watchlist` table inside `memory/predictions.db`. Add or remove entries with sqlite3 directly:
+
 ```bash
+# Show what's on the watchlist
+sqlite3 memory/predictions.db "SELECT symbol, name, sector FROM watchlist ORDER BY symbol;"
+
 # Add a stock
-python3 admin_stocks.py add SYMBOL "Name" Sector
+sqlite3 memory/predictions.db "INSERT INTO watchlist(symbol, name, sector) VALUES('AAPL', 'Apple Inc.', 'Technology');"
 
 # Remove a stock
-python3 admin_stocks.py remove SYMBOL
-
-# Show all
-python3 admin_stocks.py list
+sqlite3 memory/predictions.db "DELETE FROM watchlist WHERE symbol='AAPL';"
 ```
+
+You don't have to use the watchlist — every analysis works on any symbol you pass to it.
 
 ---
 
@@ -121,16 +118,16 @@ Your portfolio state lives in `memory/predictions.db` (SQLite).
 
 ```bash
 # Show current state
-python3 prediction_db.py portfolio
+python3 scripts/prediction_db.py portfolio
 
 # Set your cash balance
-python3 prediction_db.py cash 10000
+python3 scripts/prediction_db.py cash 10000
 
 # After a trade is opened
-python3 prediction_db.py open ID --shares 50 --cert-price 2.50
+python3 scripts/prediction_db.py open ID --shares 50 --cert-price 2.50
 
 # Close a position
-python3 prediction_db.py close ID --exit-price 3.10 --reason target
+python3 scripts/prediction_db.py close ID --exit-price 3.10 --reason target
 ```
 
 ---
@@ -147,7 +144,7 @@ No. Everything is local — your own SQLite file, no cloud, no tracking.
 No! You just need to open Terminal and run the commands above.
 
 **Can I add my own stocks to the watchlist?**
-Yes! `python3 admin_stocks.py add SYMBOL "Name" "Sector"` — you are the admin of your own watchlist.
+Yes! Use sqlite3 directly: `sqlite3 memory/predictions.db "INSERT INTO watchlist(symbol, name, sector) VALUES('SYMBOL', 'Name', 'Sector');"`. You are the admin of your own watchlist. Or skip the watchlist entirely — every analysis works on any symbol you pass.
 
 **How do I update the code?**
 ```bash

@@ -36,7 +36,11 @@ from datetime import date
 import numpy as np
 import yfinance as yf
 
-from indicators import sigmoid_adjust
+# Allow `from lib.X` when invoked as `python3 scripts/indicator_context.py`
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from lib.indicators import sigmoid_adjust
 
 
 SOLID_N = 30
