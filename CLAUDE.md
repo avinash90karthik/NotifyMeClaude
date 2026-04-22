@@ -17,7 +17,7 @@ the single source of truth for positions, cash, and analysis history.
   This document is reference-only, not auto-loaded; prompts link to it for
   post-mortems and backtest justifications.
 - **Portfolio + analysis history:** `prediction_db.py` CLI + `memory/predictions.db`.
-- **Setup / onboarding:** `ONBOARDING.md` + `.env.template`.
+- **Setup / onboarding:** `README.md` + `.env.template`.
 
 ## How to invoke an analysis
 
