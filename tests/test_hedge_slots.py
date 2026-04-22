@@ -1,7 +1,7 @@
 """Test that hedge positions are NOT counted as regular slots.
 
-The bug: dashboard API counted len(positions) for slots_used,
-but hedges should be excluded per strategy rules.
+Hedges are tracked with cert_type='hedge' and must not consume the
+3-slot cap defined in the strategy.
 """
 
 import os
@@ -27,23 +27,6 @@ class TestHedgeSlotCounting:
         # Find slots calculation in show_portfolio
         assert "!= 'hedge'" in source, \
             "prediction_db.py must exclude hedges from slot count"
-
-    def test_server_excludes_hedges_from_slots(self):
-        """server.py /api/portfolio must exclude hedges from slots_used."""
-        src_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            'dashboard', 'backend', 'server.py'
-        )
-        with open(src_path) as f:
-            source = f.read()
-
-        # slots_used must NOT be just len(positions)
-        assert "slots_used': len(positions)" not in source, \
-            "server.py must not use len(positions) for slots_used"
-
-        # Must filter out hedges
-        assert "'hedge'" in source and 'slots_used' in source, \
-            "server.py must filter hedges from slots_used"
 
     def test_hedge_slot_logic_correct(self):
         """Verify the slot counting logic with test data."""

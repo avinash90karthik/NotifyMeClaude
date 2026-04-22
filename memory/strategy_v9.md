@@ -261,5 +261,5 @@ regime confirmation.
   ruleset.
 - DB: implement `pivot` CLI command properly (currently still manual
   `cert_type` flip).
-- Track-Record: separate hedge P&L from directional-trade P&L in dashboard
-  (deferred to PR-B / PR-C).
+- Track-Record reporting: a future surface to separate hedge P&L from
+  directional-trade P&L (deferred — no consumer right now).

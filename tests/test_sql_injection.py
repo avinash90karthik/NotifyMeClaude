@@ -78,29 +78,3 @@ class TestSQLInjectionPrevention:
         # Must use parameterized query with ? placeholder
         assert 'WHERE status=?' in func_source, \
             "list_predictions should use ? placeholder for status filter"
-
-    def test_server_predictions_uses_parameterized_query(self):
-        """server.py /api/predictions must use parameterized queries."""
-        src_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            'dashboard', 'backend', 'server.py'
-        )
-        with open(src_path) as f:
-            source = f.read()
-
-        # Find the predictions() function
-        in_func = False
-        func_lines = []
-        for line in source.split('\n'):
-            if 'def predictions(' in line:
-                in_func = True
-            elif in_func and line and not line[0].isspace() and 'def ' in line:
-                break
-            elif in_func:
-                func_lines.append(line)
-
-        func_source = '\n'.join(func_lines)
-
-        # Server already uses parameterized queries — verify it stays that way
-        assert '(status,)' in func_source or '?' in func_source, \
-            "server.py predictions endpoint must use parameterized query"

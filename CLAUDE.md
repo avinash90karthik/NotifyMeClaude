@@ -63,8 +63,3 @@ CHART_OUTPUT_DIR=...    # Optional: chart output directory
 
 - `prediction_fill.yml` — 22:15 CET on weekdays — fills real outcomes
   into the predictions DB and analyzes prediction quality.
-
-## Dashboard
-
-`dashboard/` — local web dashboard (Flask API + Vite React). Removal is
-planned in a follow-up PR; current state is documented in `dashboard/start.sh`.

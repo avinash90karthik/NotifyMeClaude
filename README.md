@@ -11,7 +11,6 @@ AI-powered trading analysis built with Claude Code and yfinance.
 - **Portfolio Tracking:** `memory/predictions.db` (SQLite) as single source of truth — updated after every analysis and trade
 - **Correlation Check:** Reads open positions from `memory/predictions.db` before every new trade
 - **Time-Stops:** Halve after 3 days without +5%, close after 5 days sideways, secure 50% before earnings
-- **Local Dashboard:** Flask API + Vite React frontend for portfolio overview, scanner, charts, track record
 
 ## Quick Start
 
@@ -48,9 +47,6 @@ You (Claude Code)
 ├── "Analysiere SYMBOL"           → pre-flight + 4-step analysis → terminal trading card
 ├── python3 prediction_db.py portfolio   → View positions, cash, slots
 └── python3 collect_data.py SYMBOL       → Quick technical snapshot
-
-Local Dashboard (optional)
-└── bash dashboard/start.sh              → http://localhost:5173
 
 Local State
 └── memory/predictions.db                 → Open positions, stops, P&L, analysis log (SQLite)
