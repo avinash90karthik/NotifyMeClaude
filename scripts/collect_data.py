@@ -25,9 +25,21 @@ from lib.indicators import calc_adx, calc_bollinger, detect_regime
 
 try:
     from lib.wavelet_utils import wavelet_denoise
-    HAS_WAVELET = True
+    _PYWT_AVAILABLE = True
 except ImportError:
-    HAS_WAVELET = False
+    _PYWT_AVAILABLE = False
+
+# 2026-04-27 -- Wavelet denoise disabled in v10 production after diagnosis
+# of look-ahead leakage in lib/wavelet_utils.wavelet_denoise (pywt.wavedec
+# operates over the full series, sigma threshold is a global statistic,
+# cycle-spinning rolls end-to-end). End-to-end decision-class flip rate
+# on 17-symbol watchlist had a bimodal distribution with 4 symbols in the
+# operational range (>=30%) and median +12 RSI-point systematic upward
+# correction over 5 bars. See plan.md Deviations 2026-04-27 and
+# scripts/wavelet_drift_today.py / wavelet_decision_drift_e2e.py for the
+# full diagnostic. Code path retained but gated; flip the flag back on
+# only after replacing wavelet_denoise with a causal implementation.
+HAS_WAVELET = False
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 

@@ -48,3 +48,4 @@ watcher_state.json
 
 # Trade Republic exports
 all_events.json
+account_transactions.csv
