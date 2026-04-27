@@ -28,8 +28,10 @@ Execute sequentially. Each step builds on the previous. No step may be skipped.
 - **yfinance = truth** for all price data. Never use web search for prices.
 - **Pre-/Post-Market with yfinance:** When the US market is closed, `preflight_check.py` only returns the last regular close. For extended-hours live prices use `yf.Ticker(SYMBOL).info` (fields `preMarketPrice`, `preMarketChangePercent`, `postMarketPrice`) or `yf.Ticker(SYMBOL).history(period='1d', interval='5m', prepost=True)`. Twelvedata Basic plan does NOT support pre-/post-market - don't waste time on it.
 - **Every trade** needs: entry, stop, KO, exits, time-stop.
-- **Horizon 1-5 days only.** No multi-week setups. "No edge today" is valid; "come back in 3 weeks" is forbidden.
+- **Horizon 1-3 days primary, up to 5d if structurally justified.** Empirical v10 observation 2026-04-28: trades almost never reached full 5d — limit or stop triggered earlier (median hold time 1-3d). No multi-week setups. "No edge today" is valid; "come back in 3 weeks" is forbidden.
 - **English everywhere in step output.** Cards, reasoning, ratings, bullet summaries - English. The user-facing conversation around the analysis stays German; the analysis artifacts themselves are English.
+
+**v11 status (2026-04-29):** v11 Posterior-B research branch (`refactor/v11-stochastic`) reached pre-registered falsification on 2026-04-28. No live integration. v9 pipeline remains live. Wavelet denoising disabled in collect_data.py since 2026-04-27 (look-ahead leakage, see plan.md deviations 2026-04-27). Trade horizon updated 2026-04-28 to "1-3 days primary, up to 5d if structurally justified" reflecting v10 empirical observation.
 
 ## Quality Gate
 

@@ -56,7 +56,7 @@ This documentation is copied verbatim into the Step-3 card AND the Step-4 tradin
 
 ### Horizon
 
-**1-5 days only.** Medium-/long-term setups are NOT scored. If 1-5d shows no edge -> signal = NO-TRADE.
+**1-3 days primary, up to 5d if structurally justified.** Empirical v10 observation 2026-04-28: trades almost never reached full 5d — limit or stop triggered earlier (median hold time 1-3d). Day+1 to Day+3 is the primary signal, Day+4 to Day+5 is secondary. Medium-/long-term setups are NOT scored. If the 1-3d window shows no edge -> signal = NO-TRADE.
 
 Forbidden: "setup active from date X", "come back in Y weeks", "wait for T-7 pre-earnings". These patterns are RISK warnings or watchlist triggers, never trade triggers.
 

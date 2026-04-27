@@ -266,7 +266,7 @@ python3 scripts/earnings_pattern.py {{SYMBOL}} --trade-entry <T-N> --trade-exit 
 
 Script logic (two modes):
 - **Backward mode** (without --trade-entry): T-X→T0 returns, answers "how far away was the price X days before earnings?". Useful for rough phase categorization, **but does NOT measure the trade window.**
-- **Trade-window mode** (with --trade-entry/--trade-exit): interval return T-N→T-M, answers "if I enter today and exit the day before earnings - what happened historically?". This is the **primary metric for our 1-5d trade horizon.**
+- **Trade-window mode** (with --trade-entry/--trade-exit): interval return T-N→T-M, answers "if I enter today and exit the day before earnings - what happened historically?". This is the **primary metric for our 1-3d primary trade horizon (up to 5d if structurally justified).**
 
 Other:
 - Earnings > 30 days: skip with note (standard day pattern from § 1.8 is sufficient)
@@ -284,7 +284,7 @@ The script's sigmoid uses earnings-specific thresholds (SOLID n≥8, WEAK 4-7, T
 
 Backward-mode WARNING is **secondary signal only** (context, no auto-penalty) when Trade-Window stats are available.
 
-**Why this v9 design:** The original rule used T-5d→T0 backward returns and pulled -5% across the board on weak "phase". But that measures **drift toward earnings day**, not the **return over the held trade interval**. For HOOD (T-8): backward stats showed 30% green T-5d→T0, actual held interval T-8→T-3 showed 80% green + Ø +1.57%. The two metrics can give opposite signals - the trade-window metric is the correct one for our 1-5d horizon.
+**Why this v9 design:** The original rule used T-5d→T0 backward returns and pulled -5% across the board on weak "phase". But that measures **drift toward earnings day**, not the **return over the held trade interval**. For HOOD (T-8): backward stats showed 30% green T-5d→T0, actual held interval T-8→T-3 showed 80% green + Ø +1.57%. The two metrics can give opposite signals - the trade-window metric is the correct one for our 1-3d primary horizon (up to 5d if structurally justified).
 
 Earnings pattern overrides the standard day pattern when earnings are near.
 

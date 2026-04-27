@@ -20,13 +20,13 @@
 3. **News/Catalysts:** NSI, concrete headlines with date, retail flag
 4. **Macro:** VIX, F&G, Fed - only if relevant within <7d for the trade
 
-Bull target: $XX.XX (+XX%) | Confidence: XX% | Horizon: 1-5d
+Bull target: $XX.XX (+XX%) | Confidence: XX% | Horizon: 1-3d primary (up to 5d)
 
 ## Round 1: BEAR (4-6 sentences, must rebut Bull)
 
 Same structure, against Bull. Weaknesses in the Step-1 data, not gut feel.
 
-Bear target: $XX.XX (-XX%) | Confidence: XX% | Horizon: 1-5d
+Bear target: $XX.XX (-XX%) | Confidence: XX% | Horizon: 1-3d primary (up to 5d)
 
 ## Round 2: Rebuttals (3-4 sentences)
 
