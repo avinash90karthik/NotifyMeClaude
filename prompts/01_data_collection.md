@@ -251,6 +251,40 @@ Pattern Timeline: <Mode1-Fwd5 +X.X% green X% / Mode2-Fwd5 +Y.Y% green Y% [n=Z]>
                   Entry corridor tomorrow: ±1σ [ -X.X% .. +X.X% ] from close
 ```
 
+## 1.8c Cross-Source Convergence (MANDATORY)
+
+```bash
+python3 scripts/convergence_check.py {{SYMBOL}}
+```
+
+Three independent fwd-5d green-rate estimates from different conditional types are compared side by side:
+
+1. **Indicator Context strongest-axis** (RSI/BB/DistHigh — narrow per-stock conditional, **same value as Rating-1-input**)
+2. **Pattern Timeline Mode 1** (disjoint return-bucket conditional)
+3. **Pattern Timeline Mode 2** (analog window match: corr ≥0.7 + RSI±7 + ATR-regime 0.7-1.4)
+
+**Output is descriptive, not capping.** No automatic confidence penalty applies. The Reading-line must be cited explicitly in Step 2/3 when the spread is HIGH (≥20 pp) or when the script flags an asymmetry.
+
+**Verdict thresholds (script-emitted):**
+- **TIGHT** (<10 pp): sources converge, fwd-5d signal robust across conditional types
+- **MODERATE SPREAD** (10-20 pp): mention in Step 2/3 if it materially affects Bull/Bear case
+- **HIGH SPREAD** (≥20 pp): regime-conditional signal — works only while the regime holds; cite the asymmetry in Step 2/3 reasoning
+
+**SKIP / THIN cases:**
+- **Mode 2 SKIP** (analogs <10): script falls back to a 2-source diagnosis, Reading explicitly notes "analog SKIPPED" — proceed without panicking, just lower the confidence claim about cross-source robustness
+- **Mode 2 THIN** (n=10..14): third source is shown but flagged THIN; Reading says "directional hint; weight SOLID sources higher in synthesis" — convergence between SOLID sources is the real signal, THIN-Mode-2 is corroboration only, never a primary driver
+
+**Forbidden:**
+- Quote a per-stock RSI green-rate from indicator_context as Bull-argument *without* citing convergence_check's spread (you must show whether the broad conditionals agree or disagree).
+- Treat HIGH SPREAD as inconsistency requiring abstain — it is *information* about regime-conditionality, not a NO-TRADE trigger.
+
+**Output for Step 1 bullet summary:**
+```
+Convergence: <strongest-axis green X% / Mode1 green Y% / Mode2 green Z% [tag]>
+             Spread = N pp [TIGHT | MODERATE | HIGH SPREAD]
+             Reading: <one-line takeaway from script>
+```
+
 ## 1.8b Earnings Window Pattern (MANDATORY)
 
 > **Hard Rule (21): Earnings proximity is NEVER a skip reason.** Forbidden phrases: "earnings in X days, too close", "window closed", "hold time too limited". Mandatory: run earnings_pattern.py and use the **per-stock pre-earnings green-rate as a confidence adjustment** (sigmoid output, ~±5%), not as a gate. If pre-earnings is historically bullish (green-rate >=55%, avg>0) -> LONG edge, do NOT skip. If bearish (<=45%) -> consider SHORT or LONG with reduced size. Adjust hold time (exit 1 day before earnings), but never reject the trade. See `memory/strategy_v9.md § Why Rule 21` for the HIMS/HOOD/RKLB post-mortem.
@@ -341,6 +375,7 @@ Step 1:
 - Correlation: <sector concentration, portfolio clash flag>
 - Day Pattern: <similar-day Fwd5 green-rate + key insight>
 - Pattern Timeline: <Mode1/Mode2 Fwd5 + AGREEMENT/DIVERGE + entry corridor>
+- Convergence: <strongest-axis green / Mode1 green / Mode2 green [or SKIP] + spread + verdict + reading takeaway>
 - Earnings Window: <skip / phase / WARNING / edge + trade-window adjust if applicable>
 - Events: <main event, clarity/uncertainty, trade decision>
 ```
@@ -407,6 +442,7 @@ Exactly one line (max 2 sentences) per subsection. This is the compact recap the
 1.7 Correlation:         <clash YES/NO>
 1.8 Day Pattern:         <Fwd5 green-rate>
 1.8a Pattern Timeline:   <Mode1 fwd5 + AGREEMENT YES/NO>
+1.8c Convergence:        <spread pp + verdict TIGHT|MODERATE|HIGH + Mode2 SKIP|THIN|SOLID>
 1.8b Earnings Window:    <skip / phase / trade-window adjust if applied>
 1.9 Events:              <main event + decision>
 ```

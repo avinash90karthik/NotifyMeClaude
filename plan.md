@@ -13,7 +13,56 @@ deviations are recorded here.
 > date + reason. Reviewer-relevant: this is the audit trail for
 > "did you change methodology mid-implementation?".
 
-### 2026-04-28 — v11 Posterior-B branch: pre-registered falsification, no live integration
+### 2026-04-27 — Cross-Source Convergence (Step 1.8c): new diagnostic, lib refactor
+
+A new Step 1 sub-section `convergence_check.py` was added to surface
+cross-source disagreement on fwd-5d green-rate estimates. Three
+independent conditional types are now compared:
+
+  1. Indicator Context strongest-axis (RSI/BB/DistHigh — narrow per-stock)
+  2. Pattern Timeline Mode 1 (disjoint return-bucket)
+  3. Pattern Timeline Mode 2 (analog window match: corr + RSI + ATR-regime)
+
+Output is **descriptive, not capping**. The LLM must cite the spread
+and reading explicitly when synthesising Bull/Bear in Step 2/3 — no
+automatic confidence penalty. HIGH SPREAD threshold = 20pp, MODERATE
+= 10-20pp, TIGHT = <10pp.
+
+**Lib refactor (sample-base parity):** Inline green-rate logic from
+`indicator_context.py`, `pattern_timeline.py`, `day_pattern.py` was
+canonicalised in `lib/conditional_stats.py`. The disjoint return-bucket
+logic from `pattern_timeline.py` is now canonical; `day_pattern.py`
+previously used overlapping bands (>= +3 was a subset of >= +1) — this
+shifts numbers slightly at bucket edges (e.g. NVDA `>= +3%` n went
+75→76 on 2026-04-27). Both `indicator_context.py` and
+`convergence_check.py` now share the same `prepare_indicator_history`
+sample base, so the strongest-axis green-rate cited by Convergence is
+**identical** to the one Rating-1 uses.
+
+**Two follow-up notes documented for future work, not addressed today:**
+
+1. **Strongest-axis tie-breaking.** ENR.DE 2026-04-27 showed the RSI
+   axis at adjust=+2.59% and BB at adjust=+2.59% — an effective tie
+   resolved by floating-point noise on the 3rd decimal. Currently
+   `max(...)` is order-dependent in Python and produces different
+   strongest-axis selection across runs when adjusts are near-equal.
+   Future: add tie-breaking rule (e.g. "if |adjust|-difference < 0.10pp
+   among multiple axes, prefer RSI > BB > DistHigh"), document the
+   choice. Not a hot bug; in NVDA/MU the strongest is well-separated
+   so live decisions are unaffected. Action item, not blocker.
+
+2. **THIN Mode 2 reading convention.** Mode 2 SOLID/WEAK/THIN tagging
+   uses the standard 30/15/threshold from `conditional_stats.py`, but
+   the entry threshold for Mode 2 is `min_analogs=10`. Therefore Mode 2
+   can be "available" (n=10..14) but tagged THIN. The convention used:
+   THIN Mode 2 is shown as a fully valid third source in the table,
+   but the Reading line emits a directive — *"Mode 2 n=X THIN — analog
+   matching available but sample below robustness threshold (THIN<15).
+   Treat as directional hint; weight SOLID sources higher in synthesis."*
+   This keeps `min_analogs` (entry gate) and SOLID/WEAK/THIN (reliability
+   layer) as separate concerns — consistent with the per-stock band tagging.
+
+
 
 Tag 11 bucket EV analysis on Posterior B (P(Trade-Win | RSI-band,
 BB-pos, DistHigh)) triggered locked falsification rule (a) on both

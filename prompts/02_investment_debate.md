@@ -20,6 +20,16 @@
 > Bull/Bear argument MUST acknowledge the contradiction rather than restate
 > the textbook claim.
 
+> **Hard Rule (convergence citation): When § 1.8c convergence_check reports
+> HIGH SPREAD (≥20pp) OR emits an asymmetry directive in its Reading line,
+> the Bull and/or Bear argument that relies on the narrow per-stock conditional
+> MUST acknowledge the asymmetry. Example REQUIRED form: "RSI 71-81 green=80%
+> per indicator_context, but convergence_check shows broad return-bucket
+> conditional at 57% (HIGH SPREAD 23pp) — the bullish edge is regime-conditional,
+> works while the current RSI regime holds." Forbidden form: citing the 80%
+> per-stock figure as the Bull case without naming the broad conditional.
+> THIN Mode 2 is corroboration only — never quote it as if it were SOLID.
+
 - Use only data from Step 1. No new numbers, no web searches.
 - The four Step-1 ratings (Technical Green-Rate, Price-Action, News+Reddit, Event/Catalyst) are FIXED. The debate may cite, interpret, contextualize - but NOT change them. Anchoring on debate-confidence is the main mistake this structure prevents.
 - The debate produces only two NEW values: **Chart Structure** (qualitative, from chart analysis § 1.4) and **Reversion-Edge** (from reversion_guard.py, see below).
