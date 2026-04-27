@@ -24,10 +24,19 @@ Exit codes:
 """
 import sys
 import argparse
+import os
 from datetime import timedelta
 import numpy as np
 import pandas as pd
 import yfinance as yf
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from lib.conditional_stats import (
+    analog_match_green_rate,
+    fwd_distribution_per_day,
+    prepare_pattern_history,
+)
 
 
 LOOKBACK_YEARS = 3
@@ -40,20 +49,6 @@ WINDOW_DAYS = 7
 FWD_HORIZON = 5
 
 
-def calc_rsi(close: pd.Series, period: int = 14) -> pd.Series:
-    delta = close.diff()
-    gain = delta.where(delta > 0, 0).ewm(alpha=1 / period, min_periods=period).mean()
-    loss = (-delta.where(delta < 0, 0)).ewm(alpha=1 / period, min_periods=period).mean()
-    rs = gain / loss.replace(0, np.nan)
-    return 100 - (100 / (1 + rs))
-
-
-def calc_atr(high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) -> pd.Series:
-    prev_close = close.shift(1)
-    tr = pd.concat([high - low, (high - prev_close).abs(), (low - prev_close).abs()], axis=1).max(axis=1)
-    return tr.ewm(alpha=1.0 / period, min_periods=period).mean()
-
-
 def fetch(symbol: str) -> pd.DataFrame | None:
     try:
         t = yf.Ticker(symbol)
@@ -64,12 +59,7 @@ def fetch(symbol: str) -> pd.DataFrame | None:
     if h is None or len(h) < 60:
         print(f"ERROR: insufficient history for {symbol}", file=sys.stderr)
         return None
-    h = h.copy()
-    h["ret"] = h["Close"].pct_change() * 100
-    h["RSI"] = calc_rsi(h["Close"], 14)
-    h["ATR"] = calc_atr(h["High"], h["Low"], h["Close"], 14)
-    h["ATR_pct"] = h["ATR"] / h["Close"] * 100
-    return h
+    return prepare_pattern_history(h)
 
 
 def print_actuals(h: pd.DataFrame) -> None:
@@ -87,130 +77,33 @@ def print_actuals(h: pd.DataFrame) -> None:
     print()
 
 
-def similar_day_forecast(h: pd.DataFrame, ref_ret: float) -> dict:
-    """Classify ref_ret into a band and compute fwd-return distribution."""
-    if ref_ret >= 3:
-        band_label = ">= +3%"
-        mask = h["ret"] >= 3
-    elif ref_ret >= 1:
-        band_label = ">= +1%"
-        mask = h["ret"] >= 1
-    elif ref_ret > -1:
-        band_label = "flat (-1% to +1%)"
-        mask = (h["ret"] > -1) & (h["ret"] < 1)
-    elif ref_ret > -3:
-        band_label = "<= -1%"
-        mask = h["ret"] <= -1
-    else:
-        band_label = "<= -3%"
-        mask = h["ret"] <= -3
-
-    hist = h[mask]
-
-    out = {"band": band_label, "n": 0, "by_day": {}}
-    for day in range(1, FWD_HORIZON + 1):
-        fwd = h["Close"].pct_change(day).shift(-day) * 100
-        subset = fwd.loc[hist.index].dropna()
-        if len(subset) == 0:
-            continue
-        out["n"] = max(out["n"], len(subset))
-        out["by_day"][day] = {
-            "n": len(subset),
-            "mean": float(subset.mean()),
-            "std": float(subset.std()),
-            "median": float(subset.median()),
-            "green": float((subset > 0).mean() * 100),
-        }
-    return out
-
-
 def mode1_forecast(h: pd.DataFrame) -> dict:
-    """Aggregate forecasts by asking: given today's return, what comes next?"""
+    """Aggregate forecasts by asking: given today's return, what comes next?
+
+    Delegates to lib.conditional_stats.fwd_distribution_per_day so the
+    bucketing logic is canonical across day_pattern, pattern_timeline,
+    and convergence_check.
+    """
     today_ret = float(h["ret"].iloc[-1])
-    return similar_day_forecast(h, today_ret)
+    result = fwd_distribution_per_day(h, today_ret, max_horizon=FWD_HORIZON)
+    by_day = result["by_day"]
+    n_max = max((v["n"] for v in by_day.values()), default=0)
+    return {"band": result["band"], "n": n_max, "by_day": by_day}
 
 
 def mode2_analog_match(h: pd.DataFrame) -> dict:
-    """Find historical 7-day windows that match today's state."""
-    if len(h) < WINDOW_DAYS + FWD_HORIZON + 30:
-        return {"ok": False, "reason": "insufficient history for analog search"}
-
-    today_window = h["ret"].iloc[-WINDOW_DAYS:].values
-    today_rsi = float(h["RSI"].iloc[-1])
-    today_atr = float(h["ATR_pct"].iloc[-1])
-
-    if np.isnan(today_rsi) or np.isnan(today_atr):
-        return {"ok": False, "reason": "today's RSI/ATR not computable"}
-
-    matches = []
-    for i in range(WINDOW_DAYS, len(h) - FWD_HORIZON - 1):
-        hist_window = h["ret"].iloc[i - WINDOW_DAYS : i].values
-        if len(hist_window) != WINDOW_DAYS or np.isnan(hist_window).any():
-            continue
-        hist_rsi = h["RSI"].iloc[i - 1]
-        hist_atr = h["ATR_pct"].iloc[i - 1]
-        if np.isnan(hist_rsi) or np.isnan(hist_atr):
-            continue
-
-        if abs(hist_rsi - today_rsi) > RSI_WINDOW:
-            continue
-        atr_ratio = hist_atr / today_atr if today_atr > 0 else 0
-        if atr_ratio < ATR_RATIO_LOW or atr_ratio > ATR_RATIO_HIGH:
-            continue
-
-        if np.std(hist_window) < 0.01 or np.std(today_window) < 0.01:
-            continue
-        corr = float(np.corrcoef(hist_window, today_window)[0, 1])
-        if np.isnan(corr) or corr < CORR_THRESHOLD:
-            continue
-
-        base_close = float(h["Close"].iloc[i - 1])
-        fwd_returns = {}
-        for d in range(1, FWD_HORIZON + 1):
-            if i - 1 + d >= len(h):
-                break
-            fwd_close = float(h["Close"].iloc[i - 1 + d])
-            fwd_returns[d] = (fwd_close / base_close - 1) * 100
-
-        if len(fwd_returns) < FWD_HORIZON:
-            continue
-
-        matches.append({
-            "date": h.index[i - 1].date(),
-            "corr": corr,
-            "rsi_diff": hist_rsi - today_rsi,
-            "atr_ratio": atr_ratio,
-            "fwd": fwd_returns,
-        })
-
-    if len(matches) < MIN_ANALOG_COUNT:
-        return {
-            "ok": False,
-            "reason": f"only {len(matches)} qualified analogs (need >= {MIN_ANALOG_COUNT})",
-            "best_corr": max((m["corr"] for m in matches), default=0.0),
-        }
-
-    by_day = {}
-    for d in range(1, FWD_HORIZON + 1):
-        vals = np.array([m["fwd"][d] for m in matches if d in m["fwd"]])
-        if len(vals) == 0:
-            continue
-        by_day[d] = {
-            "n": len(vals),
-            "mean": float(vals.mean()),
-            "std": float(vals.std()),
-            "median": float(np.median(vals)),
-            "green": float((vals > 0).mean() * 100),
-        }
-
-    top_matches = sorted(matches, key=lambda m: -m["corr"])[:5]
-
-    return {
-        "ok": True,
-        "n": len(matches),
-        "by_day": by_day,
-        "top_matches": top_matches,
-    }
+    """Delegate to lib.conditional_stats.analog_match_green_rate so the
+    same logic is shared with convergence_check.py."""
+    return analog_match_green_rate(
+        h,
+        lookback_window=WINDOW_DAYS,
+        fwd_horizon=FWD_HORIZON,
+        min_analogs=MIN_ANALOG_COUNT,
+        corr_threshold=CORR_THRESHOLD,
+        rsi_window=RSI_WINDOW,
+        atr_ratio_low=ATR_RATIO_LOW,
+        atr_ratio_high=ATR_RATIO_HIGH,
+    )
 
 
 def fmt_day_row(day: int, forecast_entry: dict | None) -> str:

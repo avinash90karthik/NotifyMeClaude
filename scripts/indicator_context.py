@@ -41,18 +41,12 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from lib.indicators import sigmoid_adjust
-
-
-SOLID_N = 30
-WEAK_N = 15
-
-
-def sample_tag(n: int) -> str:
-    if n >= SOLID_N:
-        return "SOLID"
-    if n >= WEAK_N:
-        return "WEAK"
-    return "THIN"
+from lib.conditional_stats import (
+    SOLID_N,
+    WEAK_N,
+    prepare_indicator_history,
+    sample_tag,
+)
 
 
 def report(name: str, subset, total: int) -> dict | None:
@@ -199,20 +193,11 @@ def main():
     print(f"Sanity OK: latest history date {last_date}, close {last_close:.2f}")
     print()
 
-    delta = h["Close"].diff()
-    gain = delta.where(delta > 0, 0).ewm(alpha=1 / 14, min_periods=14).mean()
-    loss = (-delta.where(delta < 0, 0)).ewm(alpha=1 / 14, min_periods=14).mean()
-    h["RSI"] = 100 - (100 / (1 + gain / loss))
-
-    h["SMA20"] = h["Close"].rolling(20).mean()
-    h["STD20"] = h["Close"].rolling(20).std()
-    h["BB_POS"] = (h["Close"] - (h["SMA20"] - 2 * h["STD20"])) / (4 * h["STD20"]) * 100
-
-    h["high_3m"] = h["Close"].rolling(60).max()
-    h["dist_high"] = (h["Close"] / h["high_3m"] - 1) * 100
-
-    for d in [1, 3, 5, 10]:
-        h[f"fwd_{d}d"] = h["Close"].pct_change(d).shift(-d) * 100
+    h = prepare_indicator_history(h)
+    if "fwd_1d" not in h.columns:
+        h["fwd_1d"] = h["Close"].pct_change(1).shift(-1) * 100
+    if "fwd_3d" not in h.columns:
+        h["fwd_3d"] = h["Close"].pct_change(3).shift(-3) * 100
 
     now = h.iloc[-1].copy()
     h_hist = h.dropna(subset=["RSI", "BB_POS", "dist_high", "fwd_5d", "fwd_10d"])

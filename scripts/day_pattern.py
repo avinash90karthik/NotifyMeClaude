@@ -14,8 +14,13 @@ Exit codes:
     1 = symbol or data fetch error
 """
 import sys
+import os
 import argparse
 import yfinance as yf
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from lib.conditional_stats import fwd_distribution_per_day
 
 
 def main():
@@ -55,27 +60,17 @@ def main():
     print(f"\nCurrent red streak: {streak} days")
 
     last_ret = float(h["ret"].iloc[-1])
-    if last_ret < -3:
-        similar = h[h["ret"] <= -3].dropna(subset=["next_1d", "next_3d", "next_5d"])
-        label = "<= -3%"
-    elif last_ret < -1:
-        similar = h[h["ret"] <= -1].dropna(subset=["next_1d", "next_3d", "next_5d"])
-        label = "<= -1%"
-    elif last_ret > 3:
-        similar = h[h["ret"] >= 3].dropna(subset=["next_1d", "next_3d", "next_5d"])
-        label = ">= +3%"
-    elif last_ret > 1:
-        similar = h[h["ret"] >= 1].dropna(subset=["next_1d", "next_3d", "next_5d"])
-        label = ">= +1%"
-    else:
-        similar = h[(h["ret"] > -1) & (h["ret"] < 1)].dropna(subset=["next_1d", "next_3d", "next_5d"])
-        label = "flat (-1% to +1%)"
+    dist = fwd_distribution_per_day(h, last_ret, max_horizon=5)
+    label = dist["band"]
+    by_day = dist["by_day"]
+    n_max = max((v["n"] for v in by_day.values()), default=0)
 
-    print(f"\n=== AFTER DAYS WITH {label} (n={len(similar)}) ===")
-    if len(similar) > 0:
-        print(f"Next day:  avg {similar['next_1d'].mean():+.2f}% | green {(similar['next_1d']>0).mean()*100:.0f}%")
-        print(f"After 3d:  avg {similar['next_3d'].mean():+.2f}% | green {(similar['next_3d']>0).mean()*100:.0f}%")
-        print(f"After 5d:  avg {similar['next_5d'].mean():+.2f}% | green {(similar['next_5d']>0).mean()*100:.0f}%")
+    print(f"\n=== AFTER DAYS WITH {label} (n={n_max}) ===")
+    for d_label, d_key in [("Next day", 1), ("After 3d", 3), ("After 5d", 5)]:
+        entry = by_day.get(d_key)
+        if entry is None:
+            continue
+        print(f"{d_label}:  avg {entry['mean']:+.2f}% | green {entry['green']:.0f}%")
 
     if streak >= 2:
         h["red"] = h["ret"] < 0
