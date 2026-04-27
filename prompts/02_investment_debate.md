@@ -9,6 +9,17 @@
 
 > **Hard Rule (6): The 6-axis scorecard is filled for BOTH directions** in every analysis. SHORT is not optional even when the bull thesis looks obvious - if SHORT-Total >= LONG-Total, that's the setup, regardless of preconceived direction. The mirror test in Step 3 catches asymmetric scoring. See `memory/strategy_v9.md § Why Rule 6` for the rationale.
 
+> **Hard Rule (technical citation): Every technical claim about RSI, BB-position,
+> or distance-to-3M-high in the Bull/Bear arguments MUST cite the per-stock
+> green-rate from Step 1's indicator_context output. Example REQUIRED form:
+> "RSI 76 -- but this stock's own green-rate at RSI 70-80 is 72% (n=42 SOLID),
+> contradicting textbook overbought." Forbidden form: "RSI 76 is overbought."
+> If the green-rate is THIN (n<15), state that explicitly and treat the signal
+> as inconclusive rather than defaulting to textbook interpretation. When the
+> indicator_context output's "Textbook CONTRADICTED" verdict applies, the
+> Bull/Bear argument MUST acknowledge the contradiction rather than restate
+> the textbook claim.
+
 - Use only data from Step 1. No new numbers, no web searches.
 - The four Step-1 ratings (Technical Green-Rate, Price-Action, News+Reddit, Event/Catalyst) are FIXED. The debate may cite, interpret, contextualize - but NOT change them. Anchoring on debate-confidence is the main mistake this structure prevents.
 - The debate produces only two NEW values: **Chart Structure** (qualitative, from chart analysis § 1.4) and **Reversion-Edge** (from reversion_guard.py, see below).

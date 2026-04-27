@@ -91,17 +91,19 @@ def report(name: str, subset, total: int) -> dict | None:
 
 
 def print_aggregation(axes: list[dict | None]) -> None:
-    """Print the AGGREGATION block. Strongest axis (max |adjust|) is the Rating-1 input."""
+    """Print the AGGREGATION block with disagreement diagnosis and LLM directive."""
     print("== 6. AGGREGATION (Rating 1 input) ==")
     valid = [a for a in axes if a is not None]
     if not valid:
         print("  No usable axis - Rating 1 defaults to neutral (5/5).")
         return
+
     for a in valid:
         print(
             f"  {a['name']:38s}  green={a['green_rate']:.0f}% n={a['n']} {a['tag']}  "
             f"adjust={a['adjust']:+.2f}%"
         )
+
     strongest = max(valid, key=lambda a: abs(a["adjust"]))
     direction = "LONG bullish" if strongest["adjust"] > 0 else (
         "LONG bearish" if strongest["adjust"] < 0 else "neutral"
@@ -111,10 +113,47 @@ def print_aggregation(axes: list[dict | None]) -> None:
         f"  STRONGEST AXIS: {strongest['name']}  "
         f"adjust={strongest['adjust']:+.2f}%  ({direction})"
     )
+
+    bullish = [a for a in valid if a["adjust"] > 0.5]
+    bearish = [a for a in valid if a["adjust"] < -0.5]
+    neutral = [a for a in valid if -0.5 <= a["adjust"] <= 0.5]
+    n_bull, n_bear, n_neut = len(bullish), len(bearish), len(neutral)
+
+    if n_bull > 0 and n_bear > 0:
+        agreement_note = (
+            f"  AGREEMENT: DIVERGE  ({n_bull} bullish, {n_bear} bearish, {n_neut} neutral) "
+            f"-> per-stock signals contradict each other; treat strongest with caution"
+        )
+    elif n_bull >= 2 and n_bear == 0:
+        agreement_note = f"  AGREEMENT: CONVERGE bullish  ({n_bull} axes positive, no bearish) -> high-conviction LONG signal"
+    elif n_bear >= 2 and n_bull == 0:
+        agreement_note = f"  AGREEMENT: CONVERGE bearish  ({n_bear} axes negative, no bullish) -> high-conviction SHORT signal"
+    elif n_bull == 1 and n_bear == 0:
+        agreement_note = f"  AGREEMENT: WEAK bullish  (1 axis positive, {n_neut} neutral) -> low-conviction signal"
+    elif n_bear == 1 and n_bull == 0:
+        agreement_note = f"  AGREEMENT: WEAK bearish  (1 axis negative, {n_neut} neutral) -> low-conviction signal"
+    else:
+        agreement_note = f"  AGREEMENT: NEUTRAL  (all axes within +/-0.5%) -> no per-stock edge"
+    print(agreement_note)
+
     print(
-        "  -> Use ONLY this single adjust as Rating 1 input. "
-        "Do NOT sum across axes (they are correlated for trend stocks)."
+        "  -> Use ONLY the STRONGEST adjust as Rating 1 input. "
+        "Do NOT sum across axes (they are correlated for trend stocks). "
+        "Cite AGREEMENT in Step 2/3 reasoning when convergence/divergence affects confidence."
     )
+
+    print()
+    print("== 7. LLM DIRECTIVE (mandatory) ==")
+    print("  The numbers above are this stock's OWN historical conditional probabilities.")
+    print("  Textbook RSI/BB/DistHigh interpretations (e.g. 'RSI >70 = overbought = bearish')")
+    print("  are CROSS-ASSET PRIORS averaged over thousands of stocks - they do NOT apply")
+    print("  to this stock if its own history shows otherwise.")
+    print("  Forbidden in Step 2/3 reasoning:")
+    print("    - 'RSI X is overbought' without citing this stock's green-rate at that level")
+    print("    - 'BB above upper band suggests fade' without citing the per-stock fwd-5d data")
+    print("    - 'Stock near 3M-high is overextended' without citing the break-rate above")
+    print("  Required: every technical interpretation must cite the green-rate from this output.")
+    print("  When this output disagrees with textbook expectation, the per-stock empiricism wins.")
 
 
 def main():
@@ -194,9 +233,45 @@ def main():
     rsi_axis = report(f"RSI {rsi_now-5:.0f}-{rsi_now+5:.0f}", band, total)
     axes.append(rsi_axis)
     if rsi_now >= 60:
-        report("RSI >70 (textbook overbought)", h_hist[h_hist["RSI"] > 70], total)
+        textbook = h_hist[h_hist["RSI"] > 70]
+        textbook_axis = report("RSI >70 (textbook overbought)", textbook, total)
+        if textbook_axis is not None and rsi_axis is not None:
+            delta = rsi_axis["green_rate"] - textbook_axis["green_rate"]
+            per_stock_says = (
+                "bullish (continuation dominates)" if rsi_axis["green_rate"] >= 55
+                else "bearish (matches textbook)" if rsi_axis["green_rate"] <= 45
+                else "neutral"
+            )
+            if abs(delta) >= 10:
+                verdict = "TEXTBOOK CONTRADICTED -- per-stock empiricism wins"
+            elif abs(delta) >= 5:
+                verdict = "TEXTBOOK PARTIALLY CONTRADICTED -- weight per-stock higher"
+            else:
+                verdict = "TEXTBOOK CONFIRMED for this stock"
+            print()
+            print(f"  -> Textbook says: bearish (overbought = fade expected)")
+            print(f"     This stock says: {per_stock_says} (green={rsi_axis['green_rate']:.0f}% vs textbook {textbook_axis['green_rate']:.0f}%, delta {delta:+.0f}pp)")
+            print(f"     Verdict: {verdict}")
     if rsi_now <= 40:
-        report("RSI <30 (textbook oversold)", h_hist[h_hist["RSI"] < 30], total)
+        textbook = h_hist[h_hist["RSI"] < 30]
+        textbook_axis = report("RSI <30 (textbook oversold)", textbook, total)
+        if textbook_axis is not None and rsi_axis is not None:
+            delta = rsi_axis["green_rate"] - textbook_axis["green_rate"]
+            per_stock_says = (
+                "bullish (matches textbook)" if rsi_axis["green_rate"] >= 55
+                else "bearish (continuation down dominates)" if rsi_axis["green_rate"] <= 45
+                else "neutral"
+            )
+            if abs(delta) >= 10:
+                verdict = "TEXTBOOK CONTRADICTED -- per-stock empiricism wins"
+            elif abs(delta) >= 5:
+                verdict = "TEXTBOOK PARTIALLY CONTRADICTED -- weight per-stock higher"
+            else:
+                verdict = "TEXTBOOK CONFIRMED for this stock"
+            print()
+            print(f"  -> Textbook says: bullish (oversold = bounce expected)")
+            print(f"     This stock says: {per_stock_says} (green={rsi_axis['green_rate']:.0f}% vs textbook {textbook_axis['green_rate']:.0f}%, delta {delta:+.0f}pp)")
+            print(f"     Verdict: {verdict}")
     print()
 
     print("== 2. BOLLINGER POSITION ==")
@@ -211,6 +286,24 @@ def main():
     else:
         bb_axis = report("BB 30-70% (middle)", h_hist[(h_hist["BB_POS"] >= 30) & (h_hist["BB_POS"] <= 70)], total)
     axes.append(bb_axis)
+    if bb_axis is not None and (bb_now > 100 or bb_now < 0):
+        textbook_says = "bearish (above upper band = fade likely)" if bb_now > 100 else "bullish (below lower band = bounce likely)"
+        per_stock_says = (
+            "bullish (continuation dominates)" if bb_axis["green_rate"] >= 55
+            else "bearish (matches textbook fade)" if bb_axis["green_rate"] <= 45 and bb_now > 100
+            else "bearish (continuation down dominates)" if bb_axis["green_rate"] <= 45 and bb_now < 0
+            else "neutral"
+        )
+        if (bb_now > 100 and bb_axis["green_rate"] >= 55) or (bb_now < 0 and bb_axis["green_rate"] <= 45):
+            verdict = "TEXTBOOK CONTRADICTED -- per-stock empiricism wins"
+        elif bb_axis["green_rate"] >= 45 and bb_axis["green_rate"] <= 55:
+            verdict = "TEXTBOOK INCONCLUSIVE for this stock"
+        else:
+            verdict = "TEXTBOOK CONFIRMED for this stock"
+        print()
+        print(f"  -> Textbook says: {textbook_says}")
+        print(f"     This stock says: {per_stock_says} (green={bb_axis['green_rate']:.0f}%)")
+        print(f"     Verdict: {verdict}")
     print()
 
     print("== 3. DISTANCE TO 3M-HIGH ==")
@@ -229,6 +322,23 @@ def main():
             br = broken / n_checked * 100
             tag = sample_tag(n_checked)
             print(f"  Break-rate 3M-high in 10d: {br:.0f}% (n={n_checked}) [{tag}]")
+        if dist_axis is not None:
+            textbook_says = "bearish (near highs = overextended, mean reversion likely)"
+            per_stock_says = (
+                "bullish (breakout-continuation dominates)" if dist_axis["green_rate"] >= 55
+                else "bearish (matches textbook reversion)" if dist_axis["green_rate"] <= 45
+                else "neutral"
+            )
+            if dist_axis["green_rate"] >= 55:
+                verdict = "TEXTBOOK CONTRADICTED -- per-stock empiricism wins"
+            elif dist_axis["green_rate"] <= 45:
+                verdict = "TEXTBOOK CONFIRMED for this stock"
+            else:
+                verdict = "TEXTBOOK INCONCLUSIVE for this stock"
+            print()
+            print(f"  -> Textbook says: {textbook_says}")
+            print(f"     This stock says: {per_stock_says} (green={dist_axis['green_rate']:.0f}%)")
+            print(f"     Verdict: {verdict}")
     elif d_now < -15:
         far = h_hist[h_hist["dist_high"] < -15]
         dist_axis = report("More than -15% from 3M-high (deep drawdown)", far, total)
