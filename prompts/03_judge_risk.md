@@ -216,6 +216,49 @@ The cert-side translation of this range (cert primary/fallback levels in EUR), t
 
 > **Hard Rule (8): All position recommendations are in % of portfolio**, never in absolute EUR. Reason: portfolio value changes, ratios are stable. The cert count in EUR comes only at the end of Step 4 (`Scout EUR / cert ask price`).
 
+### Sizing Pre-Flight Gate (Rule 25, MANDATORY before EUR-Empfehlung)
+
+Before ANY EUR sizing number is written, this block MUST appear in Step 3
+output, each check with explicit source citation:
+
+```
+SIZING PRE-FLIGHT:
+[ ] 1. Confidence-Bias-Check:
+       - indicator_context.py Strongest-Axis-Adjust = ±X.XX%
+       - My Rating 1 assigned = X/10
+       - Consistency check: If adjust > 0 AND Rating 1 < 6/10 → BIAS FLAG,
+         reconsider Rating. If adjust < 0 AND Rating 1 > 5/10 → BIAS FLAG.
+       - Forbidden words in Rating-1 reasoning: "überkauft", "overbought",
+         "exhaustion", "blowoff-reflex" WITHOUT a cited green-rate.
+       Status: PASS / FLAG
+
+[ ] 2. W2-Cluster-Check:
+       - prediction_db.py portfolio output quoted verbatim
+       - Cross-reference against user's LATEST portfolio screenshot in chat
+       - Rule: If DB shows position X as open, but screenshot does not →
+         DB is stale → W2 NOT applied. Ask user to confirm before halving.
+       Status: PASS / W2-ACTIVE / USER-CONFIRMATION-NEEDED
+
+[ ] 3. Portfolio-Total-Basis:
+       - Cash (from latest user screenshot): XXX EUR
+       - Open positions (confirmed): XXX EUR
+       - Incoming cash within 2 trading days (user stated): XXX EUR
+       - Portfolio-Base for sizing = XXX EUR
+       Status: PASS / AMBIGUOUS
+```
+
+**Hard:** If any check is FLAG / USER-CONFIRMATION-NEEDED / AMBIGUOUS →
+STOP. Do not print the Risk-per-Trade table. Return to user for
+clarification. Never guess.
+
+**Why Rule 25 exists:** Post-mortem 2026-04-24 AMD #125 — three sizing
+hammers compounded incorrectly (RSI-bias Rating 1 too low + W2 applied
+despite MRVL already closed + stale DB). Correct chain would have been
+Total 808 EUR / Scout 485 EUR. Actual applied: 162 EUR Scout. User missed
+~104 EUR gain on +22.27% exit purely from sizing chain errors. The
+pre-flight gate forces the error surface to become visible before EUR
+numbers are committed.
+
 **Rule 20:** At Confidence 60-65% the Scout is **smaller** than the Confirmation (40/60 instead of 60/40). From ≥65% the classic split (60/40).
 
 | Confidence | Total (% portfolio) | Scout % of Total | Confirmation % of Total | Scout (% portfolio) | Confirmation (% portfolio) |

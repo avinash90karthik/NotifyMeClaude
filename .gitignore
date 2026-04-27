@@ -45,3 +45,6 @@ local_monitor.py
 position_watcher.py
 watcher*.log
 watcher_state.json
+
+# Trade Republic exports
+all_events.json
