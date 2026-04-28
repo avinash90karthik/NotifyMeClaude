@@ -18,6 +18,18 @@ the single source of truth for positions, cash, and analysis history.
   post-mortems and backtest justifications.
 - **Portfolio + analysis history:** `prediction_db.py` CLI + `memory/predictions.db`.
 - **Setup / onboarding:** `README.md` + `.env.template`.
+- **Live broker access (pytr — already authenticated):**
+  - `scripts/tr/list_orders.py` — read open orders + price alarms
+  - `scripts/tr/place_exits.py --isin <X> --buy <P> --shares <N>` —
+    auto Tier-2/3 stops + TP alarm after a fill (use `--exchange SGL`
+    for SocGen FE-certs, defaults to TUB for HSBC HM-certs)
+  - `scripts/tr/cancel_all.py` — cancel orders/alarms on an ISIN
+  - Direct API: `from pytr.api import TradeRepublicApi; tr.resume_websession()`
+    for ad-hoc reads (portfolio, ticker, instrument_details)
+  - `pytr portfolio` (CLI) — official portfolio + cash, requires fresh 2FA
+    occasionally; if it asks for a code, the user must enter it
+  - **Notifications:** `osascript` → iMessage to `abdullah.karatas@icloud.com`
+    when a trigger needs the user's attention away from terminal
 
 ## How to invoke an analysis
 
