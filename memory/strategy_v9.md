@@ -244,14 +244,38 @@ on how clearly the scorecard separates the two sides.
 
 ## 7. Position Sizing Reference
 
+> Updated 2026-04-28 (v10): see § 9.A v10 Sizing Update for deltas vs v9.
+
 | Confidence | Total (% portfolio) | Scout % of total | Confirmation % of total |
 |------------|---------------------|------------------|-------------------------|
-| 60–65% | 15% | **40%** (inverted, v9 Rule 20) | **60%** |
-| 65–70% | 20% | 60% (classic) | 40% |
-| 70%+ | 25% | 60% (classic) | 40% |
+| 60–65% | 10% | **40%** (inverted, Rule 20) | **60%** |
+| 65%+ | 20% | **50%** | **50%** |
 
 Confirmation trigger is unchanged from v7: Scout +5% in profit OR clear
 regime confirmation.
+
+### 9.A v10 Sizing Update (2026-04-28)
+
+Three changes vs v9:
+
+1. **70%+ bracket dropped.** Replaced with single 65%+ bracket. April 2026
+   live data: trades >€1.500 (the v9 70%+ bucket) had 25% win-rate and
+   −€1.771 cumulative P&L vs 100% win-rate for €1.000-1.500 trades.
+   Correlation between position size and P&L% on losing trades: −0,66.
+   Backtest 2026-04-16 already showed 65-70% as the sweet spot
+   (avg move +8,22% vs 70%+ at +6,83%).
+2. **65%+ Total dropped 25% → 20%.** Conservative reset — the data does not
+   support sizing above 20% even at high confidence in the current regime.
+3. **65%+ split changed 60/40 → 50/50.** At 60-65% accuracy in the live
+   sample, a smaller scout limits damage on Wrong-Confirm-trigger cases
+   (~17% less initial exposure vs 60/40, no downside if Confirm fires).
+
+The 60-65% Total drops from 15% to 10% as well, since the same April-2026
+finding showed the lowest-confidence bracket tilting negative per-trade.
+
+Re-evaluate after 30 additional trades under v10. If the retired 70%+ bracket
+shows consistently better risk-adjusted return in fresh data,
+re-introduce a higher tier. Not before.
 
 ## 8. Open Questions
 
@@ -263,3 +287,217 @@ regime confirmation.
   `cert_type` flip).
 - Track-Record reporting: a future surface to separate hedge P&L from
   directional-trade P&L (deferred — no consumer right now).
+
+## 9. Rule 26 — Tiered Stop Strategy (added 2026-04-28)
+
+**Rule statement:** Loss exits are tiered, not single-shot. Reference
+unit is cert-% (not underlying-%) because the user trades leveraged
+turbo-certs.
+
+```
+Tier 1: cert −10%  →  4h watch; sell 50% if no recovery to −5%
+Tier 2: cert −15%  →  HARD sell 50% immediately
+Tier 3: cert −25%  →  HARD sell 100% + Rule 27 re-entry cooldown
+```
+
+**Empirical basis (n=271 closed trades, 2026-04 sample):**
+
+Outcome distribution buckets (`account_transactions.csv` reconstruction):
+
+| Final P&L bucket | n | % |
+|------------------|---|---|
+| ≤ −50% | 11 | 4.1% |
+| −50% to −40% | 13 | 4.8% |
+| −40% to −30% | 18 | 6.6% |
+| −30% to −20% | 21 | 7.7% |
+| −20% to −15% | 16 | 5.9% |
+| −15% to −10% | 20 | 7.4% |
+| −10% to 0% | 58 | 21.4% |
+| 0% to +20% | 71 | 26.2% |
+| +20% to +30% | 22 | 8.1% |
+| +30%+ | 21 | 7.7% |
+
+**Tail-loss findings:**
+
+| Threshold | Frequency | Avg final outcome |
+|-----------|-----------|-------------------|
+| Trades that ended ≤ −15% | 79/271 = 29.2% | **−33.3%** |
+| Trades that ended ≤ −25% | 52/271 = 19.2% | (worse) |
+| Trades that ended ≤ −35% | 28/271 = 10.3% | (worst) |
+
+**Damage attribution:**
+- Total loss% sum (all losing trades): −3141%
+- Loss% sum from ≤−15% tail: **−2631% = 84% of total damage**
+
+**Why this matters:** A position at −15% has a 16% probability of
+recovering to BE; the modal outcome is to continue to −33% (median),
+because the cert leverage compounds against you. Disciplined exit at
+Tier 2 caps the loss at −15% on 50% of position vs. waiting and
+losing −33%+ on the full position. EV-positive by ~18 pp per trade.
+
+**Why tier 3 at −25%, not −20% or −30%:**
+- −20% is too tight: catches normal-volatility cert noise (1× ATR ≈
+  20% cert move on 5× leverage = false positives)
+- −30% is too late: by then we're in the −33% empirical mean already
+- −25% is the inflection point where "noise" becomes "thesis broken"
+  for our 1-3d horizon, validated by the 19.2% ≤−25% bucket
+
+**Forbidden patterns (auto-veto in Step 3 reasoning):**
+- "Hold to KO and re-enter" — KO is a backstop for runaway gaps,
+  not a managed exit
+- "Hedge with opposite cert at −20%" — negative-EV due to spread
+  + dual leverage decay
+- "Stop calculation in underlying-%" — wrong unit for cert trades
+- Any "tighten stop by 2%" once −25% breached
+
+## 10. Rule 27 — Re-Entry Cooldown (added 2026-04-28)
+
+**Rule statement:** After ANY exit (stop-tier or take-profit), 24h
+absolute cooldown on the symbol. Re-entry requires:
+- +10pp confidence vs. closed trade
+- ≥1 new catalyst not present in original plan
+- Full 4-step re-analysis with fresh data
+- If criteria not met: extend cooldown 48h
+
+**Why this rule exists — AMD #130 post-mortem:**
+
+```
+2026-04-24 13:15  Scout buy 40 cert @ €4.34   (entry confidence ~67%)
+2026-04-24 15:59  Take-profit 72 cert @ €5.44 (+25%, hit TP-1)
+2026-04-27 10:13  RE-ENTRY 179 cert @ €5.49   ← no cooldown
+2026-04-27 10:45  ADD 114 cert @ €5.70         ← same session double-down
+2026-04-28 08:33  Mark-to-market: cert €3.57   = −36% / −€603 unrealized
+```
+
+The 27.04 re-entry was made during a market gap-down (S&P −2.1%, AMD
+underlying −5.4%) using the same thesis as the 24.04 trade. No new
+catalyst was cited. The trade was triggered by recency-bias: "the
+thesis worked yesterday." Within 90 minutes the position was −20%
+cert; by 27.04 close it was −35% cert; by 28.04 morning it remained
+near −36% with stop very close.
+
+**The damage was preventable.** Had Rule 27 existed, the 24h cooldown
+would have forced a 28.04 re-analysis with the gap-down already
+priced in. The new analysis would either have produced higher
+confidence with new catalyst (legitimate re-entry) or no edge (skip).
+
+**Why 10pp confidence delta:** A re-entry at the same confidence is
+mathematically the same trade with a worse fill price (the underlying
+moved against you between exits). To justify deploying capital again,
+the analysis must produce a structurally stronger setup, not the same
+setup at a worse price.
+
+**Why 1 new catalyst:** Without a new fact, the re-analysis just
+re-rationalizes the original thesis with the user's preferred
+direction baked in. New catalyst forces the analysis to update on
+real new information.
+
+## 11. Rule 28 — Trader-Day Circuit-Breaker (added 2026-04-28, v10)
+
+**Rule statement:** After any Rule 26 Tier-2 exit on a symbol today, NEW
+symbol entries are blocked until 22:00 CET. After any Rule 26 Tier-3 exit
+(or Support-Override), blocked today AND the next trading day. Existing
+positions can still be managed. Override: explicit "Rule-28-override:
+<reason>" with a NEW catalyst not present at the time of the stop.
+
+Enforcement: `scripts/preflight_check.py::check_rule_28(symbol)` queries
+`close_events.reason` via free-text regex match (Tier-2 / Tier-3 /
+Support-Override patterns) in the trailing 32-hour window. If matched AND
+the candidate symbol is NOT already in `predictions` with `status='open'`,
+preflight prints a `[RULE 28 VETO]` message to stderr and exits with code 2.
+The analysis pipeline aborts.
+
+### Why Rule 28 — April 2026 data
+
+Trade-after-loss / trade-after-win behavior across the 31 April trades:
+
+| Cohort | n | Avg P&L | Win-rate |
+|--------|---|---------|----------|
+| Trade after a LOSS | 12 | −€136 | 33% |
+| Trade after a WIN  | 13 | +€82  | 78% |
+| Baseline (all)     | 31 | −€22  | 58% |
+
+Tilt is the dominant failure mode after a stop. The next-trade after a
+loss is **6 percentage points worse on win-rate** than baseline and
+**9× larger negative P&L** than baseline. After a win, the next trade
+performs +20pp better — confirming directionality is real, not noise.
+
+**Specific case study — ENR 2026-04-28:**
+- 11:12 CET: Tier 2 (€1,60) trigger, 193 shares closed at −€55.
+- 11:29 CET: Tier 3 (€1,46) trigger, 192 shares closed at −€97.
+- The whole position completed loss in **17 minutes**.
+- Within hours, NVDA Scout opened (102 shares @ €1,96, €200 deployed).
+- No system layer paused trading after the back-to-back stops.
+- Rule 28 with free-text matching on close_events.reason would have
+  blocked the NVDA scout entry on the same day.
+
+### Why free-text matching, not a schema column
+
+The `predictions` table has a free-text `reason` column written via
+`prediction_db.py close --reason`. The `close_events.reason` column carries
+free-text values like *"Both Tier 2 (€1.60) + Tier 3 (€1.41) triggered
+within 17 min..."*. A schema migration to add `exit_reason TEXT` was
+considered but rejected: it would require backfill of historical trades
+and discipline on every future close call. Free-text regex on a closed
+vocabulary ({tier 2, tier 3, support-override}) is robust enough — these
+strings already appear in close-reason text by convention.
+
+### Why 32-hour trailing window
+
+A Tier-2 stop on a Wednesday at 11:00 CET should block until 22:00 CET
+the same day = 11h. A Tier-3 stop on Thursday at 14:00 CET should block
+until Friday 22:00 CET = 32h. The window is sized to capture both cases
+in a single SQL query.
+
+## 12. v10 Concentration Tightening (added 2026-04-28)
+
+Three parameter changes to existing concentration limits, no new rule numbers
+needed beyond V6 (which slot was free):
+
+**V3:** slot cap 3 → 2 turbo positions. Hedges (cert_type='hedge') excluded
+from the count, consistent with existing § 3 hedge logic.
+
+**V4:** sector cap 60% → 40%, with AI-semi grouping rule. The grouped
+basket is `{NVDA, AMD, AVGO, MRVL, TSM, ASML}`, treated as ONE effective
+sector regardless of yfinance label. Implementation in
+`lib/risk_audit.py::get_effective_sector(symbol)`.
+
+**V6 (was W2):** correlation halve-size → hard veto at 60-day daily-return
+correlation ≥ 0,7. Implementation in
+`lib/risk_audit.py::compute_correlation(sym_a, sym_b)`. If either symbol
+has < 60d yfinance history, V6 returns indeterminate → soft warning
+"V6 inconclusive, n<60" without auto-veto.
+
+### Rationale — April 2026 clustering
+
+April 2026 had four days with >€2.000 deployed across 3+ buys
+(2026-04-02: €3.404 / >50% portfolio across 4 buys). 2026-04-27 had AMD
+long + NVDA scout simultaneously — 60d correlation ~0,85, effectively a
+single AI-semi trade. When AMD broke down on 28.04, NVDA was unprotected
+(correlation contagion). The existing V3/V4/W2 settings were too loose to
+prevent this clustering:
+
+- V3=3 allowed three simultaneous turbos (no diversification benefit when
+  all three are leveraged on the same theme).
+- V4=60% allowed 2/3 of capital concentrated in a single sector — the very
+  definition of single-name beta dressed up as diversification.
+- W2 substring-matched ticker text ("AMD" matches "AMDA"), did NOT compute
+  actual correlation. Two near-identical positions (AMD + NVDA) registered
+  as W2 PASS, no halve.
+
+**v10 reset:** V3=2 ensures focused attention. V4=40% prevents single-sector
+blow-ups. V6 replaces soft W2 with a hard correlation veto at the level
+where two positions become effectively one trade (corr ≥ 0,7 = 49% shared
+variance).
+
+### V6 indeterminate fallback
+
+For symbols with < 60 trading days of history (recent IPOs, illiquid
+small-caps), correlation is unreliable. Falling back to a soft warning
+rather than vetoing avoids over-caution on cases where the rule has no
+empirical foundation.
+
+The 80% overlap rule (`if len(merged) < days * 0.8: return None`) catches
+mismatched trading-day calendars (e.g. ENR.DE vs NVDA — different
+holidays). When overlap is too thin, the correlation is statistically
+unreliable.

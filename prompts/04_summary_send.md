@@ -43,11 +43,22 @@ This step produces the final user-facing artifact. Order: **Trading Card -> Cert
 ║ Scout EUR:       XXX EUR                                     ║
 ║ Confirm EUR:     XXX EUR                                     ║
 ║                                                              ║
-║ ─ EXITS (v9) ────────────────────────────────────────        ║
+║ ─ PROFIT EXITS (v9) ─────────────────────────────────        ║
 ║ +20% cert:       80% out immediately                         ║
 ║ +30%+ cert:      rest with trail                             ║
 ║ Time stop:       3d <5% -> halve  |  5d sideways -> exit     ║
 ║ Overnight/Trump: all out                                     ║
+║                                                              ║
+║ ─ LOSS EXITS (Rule 26 - Tiered Stop, cert-% basis) ──        ║
+║ Tier 2 (-15%):   HARD: sell 50% immediately, no waiting      ║
+║ Tier 3 (-25%):   HARD: sell ALL, thesis falsified            ║
+║                  -> activate Rule 27 re-entry cooldown 24h   ║
+║ Support-Stop:    Underlying close < <LEVEL>  -> sell 50%     ║
+║                  even if cert hasn't hit -15% yet            ║
+║                                                              ║
+║ Re-entry rule:   24h cooldown after ANY exit (incl. TP).     ║
+║ (Rule 27)        Re-entry needs +10pp confidence AND ≥1 new  ║
+║                  catalyst. Else extend cooldown 48h.         ║
 ║                                                              ║
 ║ ─ CONTEXT ───────────────────────────────────────────        ║
 ║ Reversion-Guard: <Pullback-Pflicht @ X.XX | No-Edge |        ║
@@ -192,19 +203,43 @@ python3 scripts/prediction_db.py record {{SYMBOL}} \
 
 **Hard (Rule 18 + Rule 22):** `--entry` = limit/trigger CENTER level from Step 3 entry plan, NEVER the close. On Judge override, the override reason must appear in `--reason`.
 
-**After user confirms the trade:**
+**After user confirms the trade (DB + Rule 26 exit orders, both mandatory):**
 ```bash
+# 1. DB record
 python3 scripts/prediction_db.py open ID --shares XX --cert-price XX.XX [--cert-type turbo|warrant|stock]
+
+# 2. Rule 26 exit orders + TP alarm via pytr → TR
+python3 scripts/tr/place_exits.py --isin <CERT_ISIN> --buy <FILL_PRICE> --shares <XX>
 ```
+
+`place_exits.py` is generic (any cert ISIN, any exchange via --exchange).
+It places real sell orders into the TR order book, not just alerts:
+
+  - Tier 2 (-15% cert): stop-market sell, 50% of position
+  - Tier 3 (-25% cert): stop-market sell, remaining 50%
+  - TP-1 (+20% cert):   PRICE ALARM (push), not an order — TR reserves
+                        shares for any open sell order, so a TP limit
+                        would block the stops. Manual sell on alarm.
+
+The script always cancels existing sell orders on the ISIN first to avoid
+"not enough shares" rejections. Default exchange is TUB (HSBC turbos);
+use `--exchange LSX` for stocks/ETFs. Use `--dry-run` to preview the
+plan before mutating.
 
 ---
 
 ## 4. Wait for User Confirmation
 
 - The analysis is in the DB with status `analysis`. No trade yet.
-- User confirms trade -> `prediction_db.py open ID ...`
+- User confirms trade -> `prediction_db.py open ID ...` AND `set_loss_alarms.py`
 - User confirms v9 confirmation buy -> `prediction_db.py confirm ID ...`
+  AND re-run `set_loss_alarms.py` with the new blended buy price
 - Portfolio state updates automatically in the DB.
+
+**Notifications: pytr can SET price alarms (push to TR mobile app). It
+CANNOT send arbitrary notifications and CANNOT place buy/sell orders
+autonomously. Order execution stays manual in TR by user. Reason: blast
+radius — irreversible real-money action requires explicit user click.**
 
 ```
 [STEP 4 COMPLETE - ANALYSIS FINISHED]

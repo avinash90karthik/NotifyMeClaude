@@ -48,6 +48,41 @@ intent. The pre-flight script enforces the blindspot checks.
   "come back in 3 weeks" is forbidden as a trade recommendation.
 - **No price / ATR / RSI without yfinance source.** Web search is for
   news and macro context, never for prices.
+- **Loss exits are TIERED (Rule 26), never single-shot.** Cert −15%
+  = hard sell 50% immediately. Cert −25% = hard sell 100% + activate
+  Rule 27 re-entry cooldown. PLUS Support-Override: if underlying
+  closes below the strongest support level (Step 1 § 1.4), force
+  hard-exit 50% even if cert hasn't hit −15% yet. Reference unit is
+  **cert-%**, not underlying-%. Empirical basis: n=271 closed trades,
+  ≤−15% trades end on Ø −33%, 84% of total loss-damage came from
+  this tail. Full ruleset in `prompts/03_judge_risk.md` § Loss Exits.
+- **Re-entry after ANY exit needs 24h cooldown + +10pp confidence
+  + ≥1 new catalyst (Rule 27).** No same-thesis re-entry into a
+  falling market. Post-mortem: AMD #130 (2026-04-27).
+- **Rule 28 — Trader-Day Circuit-Breaker.** After any Tier-2 stop today,
+  no new SYMBOL entries until 22:00 CET. After any Tier-3 / Support-
+  Override stop, blocked today AND tomorrow. Existing positions can be
+  managed. Override: explicit `"Rule-28-override: <reason>"` with a NEW
+  catalyst. Enforced in `scripts/preflight_check.py` (free-text match
+  on `close_events.reason`). Post-mortem: ENR-then-NVDA tilt-trade
+  2026-04-28.
+- **v10 concentration limits (tightened 2026-04-28):** Slot cap **2** (was 3,
+  hedges excluded). Sector cap **40%** (was 60%) with AI-semi grouping
+  {NVDA, AMD, AVGO, MRVL, TSM, ASML} treated as ONE effective sector.
+  W2-correlation-halve upgraded to **V6** hard veto at 60d daily-return
+  correlation ≥ 0,7. Override: `"V6-override: <reason>"`. Enforced in
+  `lib/risk_audit.py`.
+- **After a fill, place Rule 26 exit orders via pytr (mandatory).**
+  `python3 scripts/tr/place_exits.py --isin <ISIN> --buy <FILL>
+  --shares <N>` — places real stop-market sell orders for Tier 2
+  and Tier 3 + a +20% price alarm. Re-run after v9 confirmation
+  buy (the script auto-cancels existing exits and re-places at the
+  blended buy price). Use `--dry-run` to preview.
+- **pytr CAN place orders.** It supports limit/market/stop-market
+  orders + cancel + alarms. The Rule 26 exits are placed automatically
+  via `place_exits.py`. For ad-hoc orders (manual entries, take-profits)
+  Claude WILL still ask for explicit confirmation — the rule is
+  "automatic for documented strategy actions, manual for one-offs".
 
 ## Environment
 

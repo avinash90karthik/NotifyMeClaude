@@ -25,6 +25,8 @@ Exit codes:
 import argparse
 import json
 import os
+import re
+import sqlite3
 import sys
 import urllib.parse
 import urllib.request
@@ -405,6 +407,139 @@ def print_banner(symbol, date_ctx, price_snap, price_err, news, news_err, querie
     print(bar)
 
 
+# ---------------------------------------------------------------------------
+# Rule 28 — Trader-Day Circuit-Breaker
+# ---------------------------------------------------------------------------
+# After Tier-2 stop today: block new symbol entries until 22:00 CET.
+# After Tier-3 / Support-Override: block today AND next trading day.
+# Existing positions can still be managed (rule does NOT block when the
+# candidate symbol already has an open position).
+#
+# Detection: free-text regex on close_events.reason. The reason field is
+# free-text written by prediction_db.py close --reason, but Tier-2/3 exits
+# follow conventional language ("Tier 2 ...", "-15%", "Support-Override").
+# A schema migration was rejected in favor of regex matching to avoid
+# backfilling historical rows.
+
+TIER2_PATTERNS = [r"tier\s*2", r"\-15\s*%", r"−15\s*%"]
+TIER3_PATTERNS = [r"tier\s*3", r"\-25\s*%", r"−25\s*%", r"support[\- ]?override"]
+
+
+def _resolve_db_path() -> Path:
+    """Locate predictions.db relative to the repo root, robust to cwd."""
+    repo_root = Path(__file__).resolve().parent.parent
+    return repo_root / "memory" / "predictions.db"
+
+
+def check_rule_28(symbol: str, db_path: Path | None = None,
+                  now_cet: datetime | None = None) -> tuple[bool, str]:
+    """Rule 28: Trader-Day Circuit-Breaker.
+
+    Returns (allowed, message). When allowed=False, caller MUST abort the
+    analysis (preflight exits with code 2; calling Claude session sees the
+    hard veto).
+
+    Arguments:
+        symbol: candidate ticker.
+        db_path: override for testing. Defaults to memory/predictions.db.
+        now_cet: override for testing. Defaults to live Berlin time.
+    """
+    if db_path is None:
+        db_path = _resolve_db_path()
+    if not db_path.exists():
+        return True, ""
+
+    berlin = pytz.timezone("Europe/Berlin")
+    if now_cet is None:
+        now_cet = datetime.now(berlin)
+    elif now_cet.tzinfo is None:
+        now_cet = berlin.localize(now_cet)
+
+    window_start = now_cet - timedelta(hours=32)
+
+    conn = sqlite3.connect(str(db_path))
+    cur = conn.cursor()
+
+    # Existing-position carve-out: managing an already-open position
+    # is always allowed regardless of recent stops.
+    open_row = cur.execute(
+        "SELECT 1 FROM predictions WHERE symbol = ? AND status = 'open' LIMIT 1",
+        (symbol,),
+    ).fetchone()
+    if open_row:
+        conn.close()
+        return True, ""
+
+    # Find recent close events. closed_at is stored as
+    # "YYYY-MM-DD HH:MM:SS" via SQLite datetime('now') (UTC).
+    rows = cur.execute(
+        """
+        SELECT p.symbol, ce.reason, ce.closed_at
+        FROM close_events ce
+        JOIN predictions p ON p.id = ce.prediction_id
+        WHERE ce.closed_at >= ?
+        ORDER BY ce.closed_at DESC
+        """,
+        (window_start.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),),
+    ).fetchall()
+    conn.close()
+
+    if not rows:
+        return True, ""
+
+    # We only care about the most recent qualifying stop event. Earlier
+    # ones either already triggered a block that's still live, or were
+    # superseded by the most recent one.
+    for sym, reason, closed_at_str in rows:
+        reason_lower = (reason or "").lower()
+        is_tier3 = any(re.search(p, reason_lower) for p in TIER3_PATTERNS)
+        is_tier2 = any(re.search(p, reason_lower) for p in TIER2_PATTERNS)
+        if not (is_tier2 or is_tier3):
+            continue
+
+        # closed_at stored as UTC naive. Localize → Berlin.
+        try:
+            closed_naive = datetime.strptime(closed_at_str, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            # Fallback for ISO format with microseconds
+            closed_naive = datetime.fromisoformat(closed_at_str.replace("Z", ""))
+        closed_utc = closed_naive.replace(tzinfo=timezone.utc)
+        closed_cet = closed_utc.astimezone(berlin)
+
+        if is_tier3:
+            # Block until end of next trading day (22:00 CET, skip Sat/Sun)
+            next_day = closed_cet + timedelta(days=1)
+            while next_day.weekday() >= 5:
+                next_day += timedelta(days=1)
+            unblock = next_day.replace(hour=22, minute=0, second=0, microsecond=0)
+            if now_cet < unblock:
+                return False, (
+                    f"[RULE 28 VETO] Tier-3 / Support-Override stop on {sym} "
+                    f"at {closed_cet.strftime('%Y-%m-%d %H:%M CET')}. "
+                    f"New entries blocked until {unblock.strftime('%Y-%m-%d 22:00 CET')}. "
+                    "Manage existing positions only. "
+                    "Override: 'Rule-28-override: <reason citing new catalyst>'."
+                )
+
+        if is_tier2 and closed_cet.date() == now_cet.date():
+            unblock = closed_cet.replace(hour=22, minute=0, second=0, microsecond=0)
+            if now_cet < unblock:
+                return False, (
+                    f"[RULE 28 VETO] Tier-2 stop on {sym} "
+                    f"at {closed_cet.strftime('%H:%M CET')}. "
+                    f"New entries blocked until {unblock.strftime('%Y-%m-%d 22:00 CET')}. "
+                    "Manage existing positions only. "
+                    "Override: 'Rule-28-override: <reason citing new catalyst>'."
+                )
+
+        # First qualifying event was checked; nothing more to do.
+        # If it didn't trigger a block (e.g. Tier-2 from yesterday → expired),
+        # don't keep scanning older rows — they're older than this one.
+        break
+
+    return True, ""
+
+
 def main():
     parser = argparse.ArgumentParser(description="Silver Hawk pre-flight check")
     parser.add_argument("symbol", help="Ticker symbol (e.g. PLTR, ENR.DE)")
@@ -413,6 +548,12 @@ def main():
     args = parser.parse_args()
 
     symbol = args.symbol.upper()
+
+    # Rule 28 — Trader-Day Circuit-Breaker. Hard veto BEFORE any work.
+    allowed, veto_msg = check_rule_28(symbol)
+    if not allowed:
+        print(veto_msg, file=sys.stderr)
+        sys.exit(2)
 
     date_ctx = get_date_context()
     price_snap, price_err = fetch_price_snapshot(symbol)

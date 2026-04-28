@@ -170,10 +170,109 @@ The cert-side translation of this range (cert primary/fallback levels in EUR), t
 
 **Entry (limit center):** XX.XX  |  **KO:** XX.XX  |  **Stop (mental, above KO):** XX.XX
 
-**Exits (v9, replaces v5/v8):**
+**Profit Exits (v9, replaces v5/v8):**
 - 80% SELL at +20% cert gain - immediately
 - Rest max +30%, then trail
 - Trump event / overnight event -> all out
+
+**Loss Exits (Rule 26 — Tiered Stop-Strategy, MANDATORY, replaces single-stop):**
+
+Reference unit is **CERT-%**, not underlying-%, because user trades leveraged certs.
+
+> **Hard Rule (26): Stops are tiered, not single-shot.** A single stop-loss waiting for
+> KO is the dominant capital-leak in the post-mortem 2026-04-21..27 (n=271 closed
+> trades): trades that fell to ≤−15% cert ended on average at **−33%**, and **84%
+> of total loss-damage came from the ≤−15% tail**. Disciplined tier-exits would have
+> capped the tail at −15% to −25% instead of −35% to −50%.
+>
+> Rationale and full statistics: `memory/strategy_v9.md § Rule 26 — Tiered Stop`.
+
+```
+TIER 2: Cert −15%  →  HARD-EXIT 50% (no discussion, no waiting)
+  - Sell 50% IMMEDIATELY
+  - Remaining 50% gets new mental stop at cert −25%
+  - Empirical: ≤−15% cert trades end on Ø −33%; only 16% recover to BE
+  - Forbidden: "I think it'll bounce" — bias, not data
+
+TIER 3: Cert −25%  →  HARD-EXIT 100% (no exception)
+  - Sell ALL, regardless of how nice the chart looks
+  - Thesis is empirically falsified
+  - Activate Rule 27 Re-Entry-Cooldown
+  - Empirical: 84% of historical loss-damage (n=271) came from positions
+    that breached this threshold without exit-discipline
+
+SUPPORT-OVERRIDE (technical breakdown trumps tier waits):
+  If the UNDERLYING closes below the strongest support level identified
+  in Step 1 § 1.4 (typical: SMA50, prior swing low, or 3M-low):
+  - Force HARD-EXIT 50% even if cert hasn't hit −15% yet
+  - Reason: the technical thesis (uptrend / level holds) is broken;
+    waiting for −15% cert is letting more capital follow a dead thesis
+  - Document the support level in Step 3 trade plan as "Support-Stop"
+    alongside KO and tier levels
+  - Cite the level explicitly in the trading card so the user knows
+    which underlying close triggers a 50% exit
+```
+
+**Why no Tier-1 (−10% watch):** The 4h-watch was operationally unrealistic
+for a non-fulltime trader. A rule that can't be executed reliably is worse
+than no rule — it generates inconsistent behavior. Tier 2 / Tier 3 / Support
+override are the three hard triggers. Removed 2026-04-28 after one full
+trading day under the rule showed the watch was never actually used.
+
+**Forbidden patterns (auto-veto in Step-3 reasoning):**
+- "Hold to KO and re-enter" — KO is a backstop for runaway gaps, not a managed exit
+- "Hedge with opposite cert at −20%" — negative-EV due to spread + dual leverage decay
+- "Tighten stop to −2% more" once −25% breached — disciplined exit, not tweak
+- Any stop calculation in **underlying-%** for cert-trades — must be cert-%
+
+**Rule 27 — Re-Entry Cooldown (MANDATORY after every cert exit, Tier 2 or 3 OR full +20% take-profit):**
+
+```
+After ANY exit on symbol X (stop-tier or take-profit):
+  1. 24h absolute cooldown — no new position in symbol X
+  2. Full 4-step re-analysis with FRESH data after cooldown
+  3. Re-entry confidence MUST be ≥10pp HIGHER than the closed-trade confidence
+  4. Re-analysis MUST cite ≥1 NEW bullish/bearish catalyst not present in
+     the original plan (otherwise it's the same trade with worse odds)
+  5. If criteria not met: extend cooldown by 48h
+
+Reason: AMD #130 re-entry on 2026-04-27 (10:13 + 10:45) into a falling
+market — same thesis as 2026-04-24, no cooldown, same confidence band —
+generated −€603 unrealized loss in 1 trading session. Recency bias on
+"the trade worked yesterday" is the dominant mechanism in repeated-symbol
+losses across the 2026-04 sample.
+```
+
+**Rule 28 — Trader-Day Circuit-Breaker (MANDATORY, enforced in preflight):**
+
+```
+After ANY Rule 26 Tier-2 exit (cert −15%) on any symbol today (CET):
+  → NEW symbol entries blocked for the rest of the trading day (CET).
+  → Existing positions can still be managed (sells, confirms, hedges OK).
+  → Override: explicit user override "Rule-28-override: <reason>" required,
+     citing a NEW catalyst not present at the time of the stop.
+
+After ANY Rule 26 Tier-3 exit (cert −25%) or Support-Override on any symbol today:
+  → NEW symbol entries blocked TODAY AND TOMORROW (next trading day).
+  → Existing positions can still be managed.
+  → Tomorrow's first analysis MUST include a written reflection
+     ("what triggered yesterday's stop") before any new analysis runs.
+  → Override: explicit user override "Rule-28-override: <reason>" required,
+     citing a NEW catalyst not present at the time of the stop.
+
+Enforcement: scripts/preflight_check.py queries close_events.reason via
+free-text match (TIER2_PATTERNS / TIER3_PATTERNS) for tier 2/3 / support-
+override exits in the trailing 32h window. If a match exists AND the
+candidate symbol is NOT already open in the DB, preflight emits a
+[RULE 28 VETO] message to stderr and exits with code 2 → analysis aborts.
+
+Rationale: April 2026 data showed P&L on next-trade after a loss averaging
+−€136 (33% win-rate, n=12) vs +€82 (78% win-rate) after a win. ENR
+2026-04-28: Tier-2 + Tier-3 in 17 minutes, then NVDA scout opened
+immediately — exactly the failure mode this rule prevents. Rule 27
+protects against same-symbol re-entry; Rule 28 protects against
+fresh-symbol entry on a tilt day.
+```
 
 **Time stops:** 3 days < 5% profit -> halve | 5 days sideways -> exit | Earnings < 2 days -> 50% off
 
@@ -189,18 +288,31 @@ The cert-side translation of this range (cert primary/fallback levels in EUR), t
 |---|------|-------|--------|
 | V1 | ATR > 7%? (warrants/options instead of KO) | ATR=X.X% | PASS/VETO |
 | V2 | CHOPPY + Score < 50? | Regime=X, Score=X | PASS/VETO |
-| V3 | ≥ 3 open positions? | X/3 | PASS/VETO |
-| V4 | Sector > 60%? | Sector: X% | PASS/VETO |
+| V3 | ≥ 2 open turbo positions? (hedges excluded) | X/2 | PASS/VETO |
+| V4 | Sector > 40%? (AI-semis grouped: NVDA/AMD/AVGO/MRVL/TSM/ASML treated as ONE sector) | Sector: X% | PASS/VETO |
 | V5 | Monthly drawdown > 20%? | P&L: X% | PASS/VETO |
+| V6 | 60d daily-return correlation to ANY open position ≥ 0,7? | corr=X.XX vs <SYM> | PASS/VETO |
 
 ### W Warnings (modify trade-plan ONLY, no confidence penalty)
 
 | # | Rule | Effect when active | Status |
 |---|------|--------------------|--------|
 | W1 | Earnings < 5 days | KO multiplier +0.5 | PASS/WARN |
-| W2 | Correlation to open position | Halve size | PASS/WARN |
 | W3 | KO < 2× ATR (too tight) | Push KO out, raise multiplier | PASS/WARN |
 | W5 | Overnight event < 24h (FOMC/CPI/NFP/Trump/Earnings) | Overnight rule (below) | PASS/WARN |
+
+> **v10 note (2026-04-28):** V3 tightened from 3→2 open turbo positions (hedges
+> excluded). V4 sector cap tightened from 60%→40% with AI-semi grouping.
+> W2 (correlation halve-size) was upgraded to **V6** hard veto at 60d daily-
+> return correlation ≥ 0,7. April 2026 had two days where AMD-turbo + NVDA-scout
+> were simultaneously open with effective 60d-corr ~0,85 — under v9 W2 this
+> only halved size; under v10 V6 it would have been a hard veto.
+>
+> **V6 override:** explicit `"V6-override: <reason>"` citing why correlation
+> breakdown is expected (e.g. divergent earnings, sector-rotation thesis).
+>
+> **V6 indeterminate:** if either symbol has < 60 days of yfinance history,
+> V6 returns soft warning ("V6 inconclusive, n<60") and does NOT auto-veto.
 
 **W5 Overnight Protection** (from `memory/strategy_v9.md` § Overnight Event Rule):
 - Position ≥ +10% -> stop to BE (mandatory)
@@ -259,15 +371,22 @@ Total 808 EUR / Scout 485 EUR. Actual applied: 162 EUR Scout. User missed
 pre-flight gate forces the error surface to become visible before EUR
 numbers are committed.
 
-**Rule 20:** At Confidence 60-65% the Scout is **smaller** than the Confirmation (40/60 instead of 60/40). From ≥65% the classic split (60/40).
+**Rule 20 (v10):** 60-65% Confidence keeps inverted Scout 40/60. From 65%+ flat 20% Total / 50/50 split. The 70%+ tier is **dropped** after April 2026 review.
 
 | Confidence | Total (% portfolio) | Scout % of Total | Confirmation % of Total | Scout (% portfolio) | Confirmation (% portfolio) |
 |------------|---------------------|------------------|-------------------------|---------------------|----------------------------|
-| 60-65% | 15% | **40% (inverted)** | **60%** | 6% | 9% |
-| 65-70% | 20% | 60% | 40% | 12% | 8% |
-| 70%+ | 25% | 60% | 40% | 15% | 10% |
+| 60-65% | 10% | **40% (inverted)** | **60%** | 4% | 6% |
+| 65%+ | 20% | **50%** | **50%** | 10% | 10% |
 
-**Rationale (from backtest 2026-04-16):** the 60-65% confidence bracket has only 56% accuracy and +0.33% avg move (coin-flip). Inverted Scout reduces damage on a wrong signal; Confirmation buy after confirmation (Scout at least +5% in profit) deploys the main size only on real trend confirmation.
+**Rationale (v10, post-April-2026 review):**
+
+The v9 backtest 2026-04-16 showed 65-70% confidence with avg move +8.22% vs 70%+ at +6.83% — risk-adjusted, the 65-70% bracket is the sweet spot. April 2026 live data (n=31) confirmed: trades in the 70%+ size bracket (>€1.500 absolute) had a 25% win-rate and −€1.771 cumulative P&L; trades €1000-1500 had 100% win-rate. Correlation between position size and P&L% on losing trades: −0,66.
+
+The v10 curve drops the 70%+ bracket entirely (single threshold at 65%) and flattens to 20% from there. Scout/Confirm 50/50 above 65% replaces the v9 60/40 split: at 60% accuracy a smaller scout limits damage when Confirm never triggers (~17% less Wrong-Trade exposure vs 60/40). The 60-65% inverted-Scout pattern (Rule 20 original) is unchanged.
+
+The 60-65% bracket Total drops from 15% to 10%, in line with the same April-2026 finding that the smallest confidence bucket also tilted negative on a per-trade basis when coin-flip met an unlucky day.
+
+Re-evaluate after 30 additional trades. If the (now retired) 70%+ bracket shows consistently better risk-adjusted return, re-introduce a higher tier. Not before.
 
 **Compute:**
 - Portfolio value from `prediction_db.py portfolio`

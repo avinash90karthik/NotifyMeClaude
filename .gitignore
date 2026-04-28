@@ -28,6 +28,7 @@ memory/entry_timing_cache.json
 memory/preopen_patterns.json
 memory/watchlist.json
 memory/predictions.db
+memory/predictions.db.bak-*
 memory/predictions_export.csv
 memory/portfolio.md
 memory/monitor_state.json

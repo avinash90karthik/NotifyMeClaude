@@ -1,20 +1,96 @@
 #!/usr/bin/env python3
 """Silver Hawk Trading - Risk Audit / Veto Layer.
 Independent risk check with veto power. Runs after scoring, before output.
-Any single VETO blocks the trade candidate from appearing as recommended."""
+Any single VETO blocks the trade candidate from appearing as recommended.
+
+v10 (2026-04-28):
+  V3 tightened 3 → 2 open turbo positions (hedges excluded).
+  V4 tightened 60% → 40% with AI-semi grouping rule.
+  V6 replaces W2: hard veto at 60d daily-return correlation ≥ 0,7.
+"""
+
+# AI-semi basket — treated as ONE effective sector regardless of yfinance label.
+# Adding/removing a ticker here is the only knob to tune the v10 sector
+# grouping; sector data flows through get_effective_sector() everywhere.
+AI_SEMI_GROUP = {'NVDA', 'AMD', 'AVGO', 'MRVL', 'TSM', 'ASML'}
+
+
+def get_effective_sector(symbol: str) -> str:
+    """Resolve a symbol's effective sector for V4 concentration check.
+
+    AI-semis are grouped because they trade as a single beta in practice
+    (60d-corr typically 0,7-0,9 within the basket). yfinance labels them
+    as 'Technology' but that bucket also contains MSFT, GOOGL, etc — not
+    relevant for the AI-capex co-movement we care about.
+
+    For non-AI-semi symbols, fall back to yfinance Ticker.info['sector'].
+    On any yfinance failure, return 'Unknown' (V4 will not match anything).
+    """
+    if symbol.upper() in AI_SEMI_GROUP:
+        return "AI-Semi-Group"
+    try:
+        import yfinance as yf
+        info = yf.Ticker(symbol).info
+        return info.get('sector', 'Unknown') or 'Unknown'
+    except Exception:
+        return 'Unknown'
+
+
+def compute_correlation(sym_a: str, sym_b: str, days: int = 60) -> float | None:
+    """60-day daily-return correlation between two symbols.
+
+    Returns None when:
+      - yfinance fetch fails for either symbol
+      - either symbol has < `days` of history
+      - merged calendar has < 80% overlap (different holidays / listings)
+
+    The 80% overlap rule guards against mismatched trading-day calendars
+    (ENR.DE/NVDA differ by ~3 weeks/year of US-only or DE-only holidays).
+    A correlation computed on << 60 aligned days is statistically too thin
+    to be a hard veto basis.
+    """
+    try:
+        import yfinance as yf
+        import pandas as pd
+        a_hist = yf.Ticker(sym_a).history(period=f"{days + 10}d")['Close']
+        b_hist = yf.Ticker(sym_b).history(period=f"{days + 10}d")['Close']
+        if len(a_hist) < days or len(b_hist) < days:
+            return None
+        a_ret = a_hist.pct_change().dropna().tail(days)
+        b_ret = b_hist.pct_change().dropna().tail(days)
+        merged = pd.concat([a_ret, b_ret], axis=1, join='inner')
+        if len(merged) < days * 0.8:
+            return None
+        return float(merged.iloc[:, 0].corr(merged.iloc[:, 1]))
+    except Exception:
+        return None
 
 
 def parse_portfolio_summary():
-    """Load portfolio state from predictions.db (single source of truth)."""
+    """Load portfolio state from predictions.db (single source of truth).
+
+    v10 enrichment: each position dict now carries `sector` (resolved via
+    get_effective_sector) and `cert_type` for V3/V4 logic. yfinance is
+    queried per-position; sector lookups are not cached here — risk_audit
+    runs once per analysis, so the ~200ms latency is acceptable.
+    """
     try:
         from scripts.prediction_db import get_db
         conn = get_db()
 
-        # Open positions
+        # Open positions — include cert_type so V3 can exclude hedges.
         rows = conn.execute(
-            "SELECT symbol, direction FROM predictions WHERE status='open'"
+            "SELECT symbol, direction, cert_type FROM predictions WHERE status='open'"
         ).fetchall()
-        positions = [{'symbol': r['symbol'], 'direction': r['direction']} for r in rows]
+        positions = [
+            {
+                'symbol': r['symbol'],
+                'direction': r['direction'],
+                'cert_type': r['cert_type'] or 'turbo',
+                'sector': get_effective_sector(r['symbol']),
+            }
+            for r in rows
+        ]
 
         # Cash
         cash_row = conn.execute(
@@ -57,12 +133,18 @@ def risk_audit(symbol, data_dict, portfolio_state=None, sector=None):
         symbol: Ticker symbol
         data_dict: Technical data from calc_technicals() + enrichment
         portfolio_state: From parse_portfolio_summary() (auto-parsed if None)
-        sector: Sector of the candidate
+        sector: Sector of the candidate. If None, resolved via
+            get_effective_sector(symbol). Pass explicit value for testing.
 
     Returns: (approved: bool, vetoes: list[str], warnings: list[str])
     """
     if portfolio_state is None:
         portfolio_state = parse_portfolio_summary()
+
+    # Resolve candidate sector if not provided. Tests pass an explicit
+    # value to avoid yfinance round-trips.
+    if sector is None:
+        sector = get_effective_sector(symbol)
 
     vetoes = []
     warnings = []
@@ -84,20 +166,46 @@ def risk_audit(symbol, data_dict, portfolio_state=None, sector=None):
     if regime == 'CHOPPY' and best_score < 50:
         vetoes.append(f'V2: CHOPPY Regime + Score {best_score} < 50')
 
-    # V3: Slot limit (max 3 active positions)
-    active_count = len(positions)
-    if active_count >= 3:
-        vetoes.append(f'V3: {active_count}/3 Slots belegt')
+    # V3 (v10): Slot limit — max 2 active TURBO positions. Hedges excluded.
+    turbo_positions = [p for p in positions if p.get('cert_type') != 'hedge']
+    turbo_count = len(turbo_positions)
+    if turbo_count >= 2:
+        vetoes.append(f'V3: {turbo_count}/2 Turbo-Slots belegt')
 
-    # V4: Sector concentration > 60%
-    if sector and positions:
-        same_sector = sum(1 for p in positions if p.get('sector', '').lower() == sector.lower())
-        if active_count > 0 and (same_sector + 1) / (active_count + 1) > 0.60:
-            vetoes.append(f'V4: Sektor {sector} wäre >60%')
+    # V4 (v10): Sector concentration > 40% (AI-semis grouped via get_effective_sector).
+    if sector and sector != 'Unknown' and turbo_positions:
+        same_sector = sum(
+            1 for p in turbo_positions
+            if (p.get('sector') or '').lower() == sector.lower()
+        )
+        # New-trade exposure: (same-sector positions + this candidate) / (total + 1)
+        new_total = turbo_count + 1
+        new_same = same_sector + 1
+        if new_same / new_total > 0.40:
+            vetoes.append(
+                f'V4: Sektor {sector} wäre {new_same}/{new_total} '
+                f'({new_same/new_total*100:.0f}%) > 40%'
+            )
 
     # V5: Monthly drawdown > 20%
     if pnl_pct <= -20:
         vetoes.append(f'V5: Monats-Drawdown {pnl_pct:.1f}% — 24h Pause!')
+
+    # V6 (v10): 60-day daily-return correlation ≥ 0,7 with ANY open position.
+    # On indeterminate (n<60 history), emit soft warning instead of veto.
+    for p in turbo_positions:
+        corr = compute_correlation(symbol, p['symbol'])
+        if corr is None:
+            warnings.append(
+                f'V6 inconclusive: corr {symbol}/{p["symbol"]} n<60 '
+                '(soft warning, no veto)'
+            )
+            continue
+        if abs(corr) >= 0.7:
+            vetoes.append(
+                f'V6: {symbol}/{p["symbol"]} 60d-corr={corr:+.2f} '
+                "(Override: 'V6-override: <reason>')"
+            )
 
     # --- WARNING RULES ---
 
@@ -106,10 +214,7 @@ def risk_audit(symbol, data_dict, portfolio_state=None, sector=None):
     if earnings:
         warnings.append(f'W1: Earnings {earnings}')
 
-    # W2: Correlation with existing position
-    for p in positions:
-        if p['symbol'] in symbol or symbol in p['symbol']:
-            warnings.append(f'W2: Korrelation mit {p["symbol"]} ({p["direction"]})')
+    # W2 was upgraded to V6 in v10 — see veto block above.
 
     # W3: KO distance check (conceptual — no KO data in screener)
     # Skipped in screener context, applied in analysis prompts
