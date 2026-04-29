@@ -24,7 +24,7 @@ Collects: price, RSI (delta/divergence/slope), MACD, ATR, ADX, regime, SMA50/200
 
 Review output. Flag anomalies (elevated ATR, divergence, regime shift).
 
-> **Hard Rule (7): EUR/USD is always live from yfinance.** Never hardcode an exchange rate (e.g. "1.10" as fallback). `collect_data.py` already pulls live FX. If yfinance fails for FX, the analysis aborts - no hardcoded substitute.
+> **V3 — Prices and FX from APIs only.** Never hardcode an exchange rate (e.g. "1.10" as fallback). `collect_data.py` already pulls live FX. If all APIs fail for FX, the analysis aborts — no web-search substitute. Full text: `RULES.md § V3`.
 
 ## 1.3 Pre-Open Pattern Check
 
@@ -48,7 +48,7 @@ if [ -n "$SCRIPT" ]; then ${YFINANCE_VENV:-python3} $SCRIPT {{SYMBOL}}; fi
 
 Fill the chart table: trend, SMA 50/200 (golden/death cross), RSI + divergence, volume, pattern, support, resistance.
 
-### Price-Action Reality Check (Rule 14, MANDATORY)
+### Price-Action Reality Check (W2, MANDATORY)
 
 ```bash
 python3 scripts/price_action_check.py {{SYMBOL}}
@@ -60,7 +60,7 @@ The script returns 5/10/20-day trend + green-day count + verdict. Rules:
 - 5-day trend ≤ 0 despite positive MACD = stabilization, not bounce. PREP phase, no LONG trigger.
 - Note relative weakness vs S&P on the latest day (index up, symbol down) as a warning.
 
-### Indicator Context Check (Rule 16, MANDATORY)
+### Indicator Context Check (W3, MANDATORY)
 
 ```bash
 python3 scripts/indicator_context.py {{SYMBOL}} --expected-price <Close from 1.2> --expected-date <last trading day>
@@ -97,7 +97,7 @@ Negative green-rates mirror symmetrically (35% -> -2.69%, 25% -> -3.81%, etc.). 
 
 **Aggregation rule:** Take the **strongest single axis** as Rating 1 input. Reasoning: RSI / BB / DistHigh are positively correlated for trend stocks (a stock near 3M-high tends to have BB high and RSI elevated). Naive summing would double-count. The script already prints `STRONGEST AXIS: <name>  adjust=±X.X%` - use that single number.
 
-### v9 Extreme-Oversold Bonus (Rule 19, MANDATORY)
+### v9 Extreme-Oversold Bonus (W5, MANDATORY)
 
 When the current RSI band from the script output meets the conditions below, **explicitly add** the oversold bonus to LONG confidence. It overrides regime penalties.
 
@@ -151,7 +151,7 @@ Red flags:
 - Suddenly viral on an unknown ticker -> pump risk
 - Silence on fundamental news -> institutional dominance
 
-### Quality Check (Rule 15, read the arguments)
+### Quality Check (SW1, read the arguments)
 
 Democracy != analysis. 70% bullish on a -30% stock is always there (dip-buying psychology). What matters is the quality of the minority arguments. Document for every analysis:
 
@@ -287,7 +287,7 @@ Convergence: <strongest-axis green X% / Mode1 green Y% / Mode2 green Z% [tag]>
 
 ## 1.8b Earnings Window Pattern (MANDATORY)
 
-> **Hard Rule (21): Earnings proximity is NEVER a skip reason.** Forbidden phrases: "earnings in X days, too close", "window closed", "hold time too limited". Mandatory: run earnings_pattern.py and use the **per-stock pre-earnings green-rate as a confidence adjustment** (sigmoid output, ~±5%), not as a gate. If pre-earnings is historically bullish (green-rate >=55%, avg>0) -> LONG edge, do NOT skip. If bearish (<=45%) -> consider SHORT or LONG with reduced size. Adjust hold time (exit 1 day before earnings), but never reject the trade. See `memory/strategy_v9.md § Why Rule 21` for the HIMS/HOOD/RKLB post-mortem.
+> **W7 — Earnings proximity is NEVER a skip reason.** Forbidden phrases: "earnings in X days, too close", "window closed", "hold time too limited". Mandatory: run earnings_pattern.py and use the **per-stock pre-earnings green-rate as a confidence adjustment** (sigmoid output, ~±5%), not as a gate. If pre-earnings is historically bullish (green-rate >=55%, avg>0) -> LONG edge, do NOT skip. If bearish (<=45%) -> consider SHORT or LONG with reduced size. Adjust hold time (exit 1 day before earnings), but never reject the trade. Full text: `RULES.md § W7`.
 
 ```bash
 python3 scripts/earnings_pattern.py {{SYMBOL}}

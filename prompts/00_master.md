@@ -23,7 +23,7 @@ Execute sequentially. Each step builds on the previous. No step may be skipped.
 ## Rules
 
 - **Primary ruleset:** `CLAUDE.md` Hard Rules (Gate, Exits, KO, Position Sizing, Rules 1-24). Re-read before each analysis in case rules changed.
-- **Strategy:** `memory/strategy_v9.md` (v9 is the single current source of truth - supersedes v5/v6/v7/v8).
+- **Rules:** `RULES.md` (single registry).
 - **Portfolio state:** `python3 scripts/prediction_db.py portfolio` - run BEFORE Step 1.
 - **yfinance = truth** for all price data. Never use web search for prices.
 - **Pre-/Post-Market with yfinance:** When the US market is closed, `preflight_check.py` only returns the last regular close. For extended-hours live prices use `yf.Ticker(SYMBOL).info` (fields `preMarketPrice`, `preMarketChangePercent`, `postMarketPrice`) or `yf.Ticker(SYMBOL).history(period='1d', interval='5m', prepost=True)`. Twelvedata Basic plan does NOT support pre-/post-market - don't waste time on it.
@@ -44,4 +44,4 @@ python3 scripts/prediction_db.py record {{SYMBOL}} \
   --reason "..."
 ```
 
-`--entry` MUST be the limit/trigger center level (Rule 18 + Rule 22), NOT the current close.
+`--entry` MUST be the limit/trigger center level (W4), NOT the current close.

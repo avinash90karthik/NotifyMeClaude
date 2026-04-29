@@ -7,9 +7,9 @@
 
 ## Rules for the debate
 
-> **Hard Rule (6): The 6-axis scorecard is filled for BOTH directions** in every analysis. SHORT is not optional even when the bull thesis looks obvious - if SHORT-Total >= LONG-Total, that's the setup, regardless of preconceived direction. The mirror test in Step 3 catches asymmetric scoring. See `memory/strategy_v9.md § Why Rule 6` for the rationale.
+> **V2 — The 6-axis scorecard is filled for BOTH directions** in every analysis. SHORT is not optional even when the bull thesis looks obvious — if SHORT-Total >= LONG-Total, that's the setup, regardless of preconceived direction. The mirror test in Step 3 catches asymmetric scoring. Full text: `RULES.md § V2`.
 
-> **Hard Rule (technical citation): Every technical claim about RSI, BB-position,
+> **Citation rule (technical): Every technical claim about RSI, BB-position,
 > or distance-to-3M-high in the Bull/Bear arguments MUST cite the per-stock
 > green-rate from Step 1's indicator_context output. Example REQUIRED form:
 > "RSI 76 -- but this stock's own green-rate at RSI 70-80 is 72% (n=42 SOLID),
@@ -20,7 +20,7 @@
 > Bull/Bear argument MUST acknowledge the contradiction rather than restate
 > the textbook claim.
 
-> **Hard Rule (convergence citation): When § 1.8c convergence_check reports
+> **Citation rule (convergence): When § 1.8c convergence_check reports
 > HIGH SPREAD (≥20pp) OR emits an asymmetry directive in its Reading line,
 > the Bull and/or Bear argument that relies on the narrow per-stock conditional
 > MUST acknowledge the asymmetry. Example REQUIRED form: "RSI 71-81 green=80%

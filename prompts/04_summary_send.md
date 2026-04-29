@@ -49,15 +49,15 @@ This step produces the final user-facing artifact. Order: **Trading Card -> Cert
 ║ Time stop:       3d <5% -> halve  |  5d sideways -> exit     ║
 ║ Overnight/Trump: all out                                     ║
 ║                                                              ║
-║ ─ LOSS EXITS (Rule 26 - Tiered Stop, cert-% basis) ──        ║
+║ ─ LOSS EXITS (W9 - Tiered Stop, cert-% basis) ──             ║
 ║ Tier 2 (-15%):   HARD: sell 50% immediately, no waiting      ║
 ║ Tier 3 (-25%):   HARD: sell ALL, thesis falsified            ║
-║                  -> activate Rule 27 re-entry cooldown 24h   ║
+║                  -> activate SW2 re-entry cooldown 24h       ║
 ║ Support-Stop:    Underlying close < <LEVEL>  -> sell 50%     ║
 ║                  even if cert hasn't hit -15% yet            ║
 ║                                                              ║
 ║ Re-entry rule:   24h cooldown from exit_ts. After 24h:       ║
-║ (Rule 27)        normal pipeline run, normal trade possible  ║
+║ (SW2)            normal pipeline run, normal trade possible  ║
 ║                  if signal. Pipeline IS the criterion.       ║
 ║                                                              ║
 ║ ─ CONTEXT ───────────────────────────────────────────        ║
@@ -71,8 +71,8 @@ This step produces the final user-facing artifact. Order: **Trading Card -> Cert
 ║ Time window:     XX:XX Berlin - [OK | after 22:00: limits    ║
 ║                  for tomorrow, no trade today]               ║
 ║                                                              ║
-║ V-Vetos active:  none | V1/V3/...                            ║
-║ W-Warnings:      none | W1/W5/...  -> trade-plan mods        ║
+║ Vetos active:    none | V4/V5/SV1/SV2/SV3                    ║
+║ Warnings:        none | W10/W11/W12  -> trade-plan mods      ║
 ║ Approved:        YES | NO                                    ║
 ║                                                              ║
 ║ Reasoning:       <2-3 sentences from Step 3 - core thesis>   ║
@@ -87,7 +87,7 @@ Field rationale:
 
 ---
 
-## 1a. Trading Card variant — Rule 27 Cooldown active (NO-TRADE Output Clamp)
+## 1a. Trading Card variant — SW2 Cooldown active (NO-TRADE Output Clamp)
 
 When `now < exit_ts + 24h` for the symbol, the standard Trading Card
 above MUST NOT be emitted. Use this clamped variant instead. The omitted
@@ -97,9 +97,9 @@ ambient temptation in the next stress moment.
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║ {{SYMBOL}} — FINAL  (Rule 27 Cooldown active)               ║
+║ {{SYMBOL}} — FINAL  (SW2 Cooldown active)                    ║
 ╠══════════════════════════════════════════════════════════════╣
-║ Signal:          NO-TRADE  (Rule 27 cooldown clamp)          ║
+║ Signal:          NO-TRADE  (SW2 cooldown clamp)              ║
 ║ Confidence:      XX%   (Scorecard: LONG XX / SHORT XX)       ║
 ║ Price:           $XX.XX  (EUR XX.XX)                         ║
 ║ Regime:          TRENDING | RANGE | CHOPPY | TRANSITIONAL    ║
@@ -116,9 +116,9 @@ ambient temptation in the next stress moment.
 ║ Convergence:     <spread + verdict>                          ║
 ║ Reversion-Guard: <verdict>                                   ║
 ║                                                              ║
-║ V-Vetos active:  none | V1/V3/...                            ║
-║ W-Warnings:      none | W1/W5/...                            ║
-║ Rule 27:         COOLDOWN active — see eligible_at above     ║
+║ Vetos active:    none | V4/V5/SV1/SV2/SV3                    ║
+║ Warnings:        none | W10/W11/W12                          ║
+║ SW2:             COOLDOWN active — see eligible_at above     ║
 ║ Approved:        NO  (cooldown clamp)                        ║
 ║                                                              ║
 ║ Reasoning:       <why setup remains compelling but blocked>  ║
@@ -133,7 +133,7 @@ python3 scripts/prediction_db.py record {{SYMBOL}} \
   --confidence [XX] \
   --regime [...] \
   --atr-pct [X.X] \
-  --reason "Rule 27 cooldown clamp. eligible_at=YYYY-MM-DD HH:MM CET. <statistical setup summary>."
+  --reason "SW2 cooldown clamp. eligible_at=YYYY-MM-DD HH:MM CET. <statistical setup summary>."
 ```
 
 `--entry`, `--stop`, `--target`, `--ko` are omitted (the schema accepts
@@ -147,7 +147,7 @@ fields signals "cooldown-clamped, not actioned."
 
 The cert request always follows the trading card, even on NO-TRADE. The format depends on the signal strength.
 
-**Exception:** When `Rule 27 cooldown_active = True` (clamped variant § 1a),
+**Exception:** When `SW2 cooldown_active = True` (clamped variant § 1a),
 the cert request is NOT emitted. No leverage formula table, no KO range, no
 stand-by request. The clamp is intentional — the cooldown is meant to
 prevent ambient-temptation handles, not to provide them.
@@ -262,14 +262,14 @@ python3 scripts/prediction_db.py record {{SYMBOL}} \
   --reason "Brief thesis summary (1-2 sentences from Step 3 reasoning)"
 ```
 
-**Hard (Rule 18 + Rule 22):** `--entry` = limit/trigger CENTER level from Step 3 entry plan, NEVER the close. On Judge override, the override reason must appear in `--reason`.
+**Hard (W4):** `--entry` = limit/trigger CENTER level from Step 3 entry plan, NEVER the close. On Judge override, the override reason must appear in `--reason`.
 
-**After user confirms the trade (DB + Rule 26 exit orders, both mandatory):**
+**After user confirms the trade (DB + W9 exit orders, both mandatory):**
 ```bash
 # 1. DB record
 python3 scripts/prediction_db.py open ID --shares XX --cert-price XX.XX [--cert-type turbo|warrant|stock]
 
-# 2. Rule 26 exit orders + TP alarm via pytr → TR
+# 2. W9 exit orders + TP alarm via pytr → TR
 python3 scripts/tr/place_exits.py --isin <CERT_ISIN> --buy <FILL_PRICE> --shares <XX>
 ```
 
