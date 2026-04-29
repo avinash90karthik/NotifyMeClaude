@@ -56,7 +56,7 @@ intent. The pre-flight script enforces the blindspot checks.
 - **Hard rules live where they are enforced** — re-read the relevant
   prompt for the current ruleset; do not rely on memory of older rule
   versions. The full rule rationale is in `memory/strategy_v9.md`.
-- **Trade horizon is 1-5 days only.** "No edge today" is a valid answer;
+- **Trade horizon is 1-3 days primary, up to 5d if structurally justified.** "No edge today" is a valid answer;
   "come back in 3 weeks" is forbidden as a trade recommendation.
 - **No price / ATR / RSI without yfinance source.** Web search is for
   news and macro context, never for prices.

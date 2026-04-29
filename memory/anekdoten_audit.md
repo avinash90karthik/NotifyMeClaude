@@ -18,7 +18,7 @@ trigger fires.
 
 | Rule | Anekdote | Source File(s) | Falsification trigger | Tracking infrastructure |
 |---|---|---|---|---|
-| Rule 27 — Re-Entry Cooldown | n=1 (AMD #130, 2026-04-27) | `strategy_v9.md` § 10, `prompts/03_judge_risk.md`, `CLAUDE.md` | Win-Rate of executed re-entries within ±5pp of baseline at n≥10 attempts | **Active**: `v10_log.md` § Same-Symbol Re-Entry Attempts |
+| Rule 27 — Re-Entry Cooldown | n=1 (AMD #130, 2026-04-27) | `strategy_v9.md` § 10, `prompts/03_judge_risk.md`, `CLAUDE.md` | Operational discipline (24h cooldown). No falsification trigger — the rule is no longer outcome-evaluated. | **Retired** 2026-04-29 (rule simplified to flat 24h cooldown; pipeline is the re-eval criterion — no separate tracking needed) |
 | Rule 21 — Earnings is never a skip reason | HIMS / HOOD / RKLB on 2026-04-20 | `strategy_v9.md` § Why Rule 21, `prompts/01_data_collection.md` § 1.8b | Trade-Window-pattern green-rate < 50% across n≥30 earnings-window trades | **Active** (implicit): each `earnings_pattern.py` run is logged in DB; aggregation script TBD |
 | Rule 18 — Entry = Center, never Close | HDD.DE #82 | `prompts/03_judge_risk.md` § Optimal Entry | Center-fill performance not better than Close-fill at n≥30 entries | **Tracking infrastructure required before re-evaluation** — DB has no `entry_method` field; deferred |
 | Rule 5 — KO computed, never estimated | Unspecified "post-mortem" reference | `prompts/03_judge_risk.md` § KO Level | Estimated-KO outcomes not worse than computed-KO at n≥20 | **Tracking infrastructure required before re-evaluation** — DB has no `ko_method` field; deferred |
@@ -41,6 +41,5 @@ not hidden in the falsification-trigger column.
 
 Re-pass scheduled for 2026-05-29 alongside the Rule 28 evaluation.
 
-If any tracking trigger reaches its n threshold earlier (Rule 27 most
-likely, given the active tracking), the rule is processed out-of-band
-without waiting for the calendar date.
+If any tracking trigger reaches its n threshold earlier, the rule is
+processed out-of-band without waiting for the calendar date.
