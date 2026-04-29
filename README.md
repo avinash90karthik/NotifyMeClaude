@@ -142,10 +142,6 @@ python3 scripts/prediction_db.py confirm ID --shares 30 --cert-price 2.65
 
 # Close (full or partial)
 python3 scripts/prediction_db.py close ID --exit-price 3.10 --reason target
-
-# Daily backtest fill (also runs from GitHub Actions at 22:15 CET)
-python3 scripts/prediction_db.py fill
-python3 scripts/prediction_db.py analyze
 ```
 
 ## Repository Layout
@@ -155,13 +151,11 @@ NotifyMeClaude/
 ├── CLAUDE.md                  # onboarding index for Claude
 ├── README.md                  # this file
 ├── .env.template              # optional config (gitignored .env)
-├── .github/workflows/         # prediction_fill, tests
 ├── prompts/                   # 5 prompt files (00_master + 01-04)
-├── scripts/                   # 14 CLI tools
-├── lib/                       # 4 shared library modules
-├── tests/                     # pytest suite (16 tests)
-├── memory/                    # local state (predictions.db, patterns)
-└── paper/                     # separate paper-trading test suite
+├── scripts/                   # CLI tools
+├── lib/                       # shared library modules
+├── tests/                     # pytest suite
+└── memory/                    # local state (predictions.db, patterns)
 ```
 
 ## Scripts
@@ -191,14 +185,14 @@ and is imported by the scripts — never invoked directly.
 | `scripts/prediction_db.py` | Portfolio state + trade log + analysis record (SQLite CLI) |
 | `scripts/preopen_check.py` | Pre-open verdict: buy NOW or WAIT? Pattern-based |
 | `scripts/preopen_backtest.py` | Backtest pre-open patterns on historical data |
-| `scripts/backtest.py` | Validate scoring + feature importance against historical data |
+| `scripts/backtest.py` | Rolling-window validation of `lib/scoring.py` weights + per-component feature-importance decomposition (falsification loop for `score_long`/`score_short`) |
 
 ### Library modules (imported, not invoked)
 
 | Module | Purpose |
 |--------|---------|
 | `lib/indicators.py` | `calc_technicals`, `sigmoid_adjust`, `calc_adx`, `calc_bollinger`, `detect_regime`, `detect_rsi_divergence` |
-| `lib/scoring.py` | `score_long`, `score_short` — used by `preopen_check`, `preopen_backtest`, `backtest` |
+| `lib/scoring.py` | `score_long`, `score_short` — used by `preopen_check`, `preopen_backtest` and `backtest` (validation) |
 | `lib/risk_audit.py` | V-veto layer (V1 ATR, V2 CHOPPY+score, V3 slots, V4 sector, V5 drawdown) |
 | `lib/wavelet_utils.py` | Wavelet denoising for OHLCV inputs |
 
@@ -211,13 +205,6 @@ YFINANCE_VENV=...      # path to python3 in a dedicated venv
 CHART_SCRIPT=...        # external chart-generation script
 CHART_OUTPUT_DIR=...    # chart output directory
 ```
-
-## GitHub Actions
-
-| Workflow | File | Schedule | Purpose |
-|----------|------|----------|---------|
-| Prediction Fill | `prediction_fill.yml` | 22:15 CET (weekdays) | Fill real outcomes into predictions DB, analyze prediction quality |
-| Tests | `tests.yml` | on push | pytest suite for critical regressions |
 
 ## Documentation
 

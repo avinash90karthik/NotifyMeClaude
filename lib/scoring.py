@@ -6,7 +6,8 @@ signals. They are used by:
 
   - scripts/preopen_check.py
   - scripts/preopen_backtest.py
-  - scripts/backtest.py
+  - scripts/backtest.py (rolling-window validation + feature-importance
+    decomposition; the only falsification loop for the weights below)
 
 Both functions are pure: they only inspect the input dict and an optional
 regime-weight multiplier. No external state, no I/O, no other imports

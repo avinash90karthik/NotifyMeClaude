@@ -78,8 +78,3 @@ YFINANCE_VENV=...      # Optional: path to python3 in a dedicated venv
 CHART_SCRIPT=...        # Optional: external chart generation script
 CHART_OUTPUT_DIR=...    # Optional: chart output directory
 ```
-
-## GitHub Actions
-
-- `prediction_fill.yml` — 22:15 CET on weekdays — fills real outcomes
-  into the predictions DB and analyzes prediction quality.
