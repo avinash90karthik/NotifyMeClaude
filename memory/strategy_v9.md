@@ -350,47 +350,77 @@ losing −33%+ on the full position. EV-positive by ~18 pp per trade.
 - "Stop calculation in underlying-%" — wrong unit for cert trades
 - Any "tighten stop by 2%" once −25% breached
 
-## 10. Rule 27 — Re-Entry Cooldown (added 2026-04-28)
+## 10. Rule 27 — Re-Entry Cooldown (added 2026-04-28, clarified 2026-04-29)
 
-**Rule statement:** After ANY exit (stop-tier or take-profit), 24h
-absolute cooldown on the symbol. Re-entry requires:
-- +10pp confidence vs. closed trade
-- ≥1 new catalyst not present in original plan
-- Full 4-step re-analysis with fresh data
-- If criteria not met: extend cooldown 48h
+**Rule statement:** After ANY exit on symbol X (Tier-2/3 stop or full +20%
+take-profit), a structured cooldown protocol governs re-entry. Re-evaluation
+is always allowed; trade-plan output is hard-clamped while the cooldown is
+active. Full mechanics in `prompts/03_judge_risk.md` § Rule 27 (Decision
+tree Cases A/B/C + NO-TRADE Output Clamp).
 
-**Why this rule exists — AMD #130 post-mortem:**
+### Why Rule 27 — Evidence Base
 
-```
-2026-04-24 13:15  Scout buy 40 cert @ €4.34   (entry confidence ~67%)
-2026-04-24 15:59  Take-profit 72 cert @ €5.44 (+25%, hit TP-1)
-2026-04-27 10:13  RE-ENTRY 179 cert @ €5.49   ← no cooldown
-2026-04-27 10:45  ADD 114 cert @ €5.70         ← same session double-down
-2026-04-28 08:33  Mark-to-market: cert €3.57   = −36% / −€603 unrealized
-```
+This rule has **insufficient statistical evidence for inference** (n=1
+documented same-symbol re-entry-after-exit incident in the trade history at
+the time of introduction). It is retained as **operational discipline**,
+not statistical inference, on three explicit grounds:
 
-The 27.04 re-entry was made during a market gap-down (S&P −2.1%, AMD
-underlying −5.4%) using the same thesis as the 24.04 trade. No new
-catalyst was cited. The trade was triggered by recency-bias: "the
-thesis worked yesterday." Within 90 minutes the position was −20%
-cert; by 27.04 close it was −35% cert; by 28.04 morning it remained
-near −36% with stop very close.
+1. **Asymmetric downside.** The cost of a wrong "block re-entry" decision
+   is foregone profit on a setup that may have been valid. The cost of a
+   wrong "allow re-entry" decision after a stop is compounded loss plus
+   cumulative tilt risk on subsequent trades. The downside tail is
+   structurally larger than the upside tail, which justifies asymmetric
+   defensive bias even without n≥30 evidence.
 
-**The damage was preventable.** Had Rule 27 existed, the 24h cooldown
-would have forced a 28.04 re-analysis with the gap-down already
-priced in. The new analysis would either have produced higher
-confidence with new catalyst (legitimate re-entry) or no edge (skip).
+2. **Operational discipline > statistical inference at small n.** Trading
+   literature treats post-loss re-entry as a known behavioural failure mode
+   independent of any individual trader's history. A rule that mechanically
+   prevents this pattern reduces decision-load in stress moments, where
+   discretion historically performs worst.
 
-**Why 10pp confidence delta:** A re-entry at the same confidence is
-mathematically the same trade with a worse fill price (the underlying
-moved against you between exits). To justify deploying capital again,
-the analysis must produce a structurally stronger setup, not the same
-setup at a worse price.
+3. **Explicit insufficient evidence.** The rule does NOT claim "n=1 proves
+   the pattern." It claims "n=1 is consistent with the literature pattern,
+   and the asymmetric-downside structure justifies retention until the
+   tracking trigger fires."
 
-**Why 1 new catalyst:** Without a new fact, the re-analysis just
-re-rationalizes the original thesis with the user's preferred
-direction baked in. New catalyst forces the analysis to update on
-real new information.
+### Tracking trigger (n ≥ 10 same-symbol re-entry attempts)
+
+Logged in `memory/v10_log.md` § Same-Symbol Re-Entry Attempts alongside the
+Rule 28 tracking block. Per attempt the log captures: exit timestamp, exit
+reason (Tier/TP), re-eval timestamp, criteria pass/fail (C2/C3/C4
+individually), trade executed Y/N, and P&L if executed.
+
+Re-evaluation at n ≥ 10:
+
+- If Win-Rate of executed re-entries trails the baseline Win-Rate by ≥15pp:
+  rule confirmed by data, retain as hard.
+- If Win-Rate of executed re-entries is within ±5pp of baseline: the
+  asymmetric-downside argument no longer holds, demote to Pending or drop.
+- If criteria pass rarely (<20% of re-eval attempts) and no asymmetry is
+  detectable: the rule may be over-restrictive, recalibrate the +10pp /
+  NEW-catalyst thresholds.
+
+Status: HARD active, evidence-base disclosed, tracking armed.
+
+### Decision-tree clarification (2026-04-29)
+
+The original wording "If criteria not met: extend cooldown by 48h" was
+ambiguous about when the criteria are checked and when the +48h anchor
+starts. Three textually defensible readings (cooldown extends from exit,
+from re-eval attempt, or only post-24h) collapse into a single mechanic
+in `prompts/03_judge_risk.md` § Rule 27. Pre-24h re-evals that pass
+criteria are informative only — there is no override path; pre-24h passes
+are logged as data, not as trade triggers.
+
+### Output clamp (2026-04-29)
+
+When the cooldown is active, Step 3 / Step 4 output omits Entry Plan, KO
+Computation, Stop levels, Position Sizing, and Cert-Request blocks. The
+DB record stores `--direction` and `--confidence` for tracking but writes
+NULL into `entry_price`, `stop_price`, `target_price`, `ko_level`. This
+required a schema migration on those columns from NOT NULL to NULL-allowed
+(2026-04-29). Rationale: handleable levels in a NO-TRADE card become
+ambient temptation in the next stress moment.
 
 ## 11. Rule 28 — Trader-Day Circuit-Breaker (PENDING, re-evaluate 2026-05-29)
 

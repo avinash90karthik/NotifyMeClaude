@@ -225,23 +225,68 @@ trading day under the rule showed the watch was never actually used.
 - "Tighten stop to −2% more" once −25% breached — disciplined exit, not tweak
 - Any stop calculation in **underlying-%** for cert-trades — must be cert-%
 
-**Rule 27 — Re-Entry Cooldown (MANDATORY after every cert exit, Tier 2 or 3 OR full +20% take-profit):**
+**Rule 27 — Re-Entry Cooldown (MANDATORY after every cert exit, Tier 2/3 or +20% take-profit):**
+
+Re-evaluation is always allowed (information gathering is free). Trade-plan
+output is HARD-CLAMPED while cooldown is active — see § "NO-TRADE Output
+Clamp" below.
+
+**Re-entry criteria (all three must hold to lift cooldown):**
 
 ```
-After ANY exit on symbol X (stop-tier or take-profit):
-  1. 24h absolute cooldown — no new position in symbol X
-  2. Full 4-step re-analysis with FRESH data after cooldown
-  3. Re-entry confidence MUST be ≥10pp HIGHER than the closed-trade confidence
-  4. Re-analysis MUST cite ≥1 NEW bullish/bearish catalyst not present in
-     the original plan (otherwise it's the same trade with worse odds)
-  5. If criteria not met: extend cooldown by 48h
-
-Reason: AMD #130 re-entry on 2026-04-27 (10:13 + 10:45) into a falling
-market — same thesis as 2026-04-24, no cooldown, same confidence band —
-generated −€603 unrealized loss in 1 trading session. Recency bias on
-"the trade worked yesterday" is the dominant mechanism in repeated-symbol
-losses across the 2026-04 sample.
+C2: Full 4-step re-analysis with FRESH data
+C3: Confidence ≥10pp higher than the closed-trade confidence
+C4: ≥1 NEW catalyst not present in the original plan
 ```
+
+**Decision tree (anchor: exit_ts = stop-tier or TP timestamp):**
+
+```
+Case A: no re-eval attempted yet
+  cooldown_active = (now < exit_ts + 24h)
+  eligible_at     = exit_ts + 24h
+
+Case B: re-eval attempted with reeval_ts < exit_ts + 24h  (pre-24h)
+  if criteria pass:
+    cooldown_active = True               # base 24h holds; pre-24h pass is informative only
+    eligible_at     = exit_ts + 24h      # re-test then; no override path
+  if criteria fail:
+    cooldown_active = (now < exit_ts + 72h)
+    eligible_at     = exit_ts + 72h
+
+Case C: re-eval attempted with reeval_ts ≥ exit_ts + 24h  (post-24h)
+  if criteria pass:
+    cooldown_active = False              # trade allowed
+    eligible_at     = reeval_ts
+  if criteria fail:
+    cooldown_active = (now < reeval_ts + 48h)
+    eligible_at     = reeval_ts + 48h
+```
+
+Pre-24h re-evals that pass criteria do NOT unlock the trade. They are logged
+in `memory/v10_log.md` § Same-Symbol Re-Entry as informative data points.
+There is no override path. Edge cases get logged as data, not bypassed.
+
+**NO-TRADE Output Clamp (mandatory when cooldown_active = True):**
+
+When the cooldown is active, Step 3 + Step 4 output MUST omit handleable
+trade-plan fields. Rationale: actionable levels in a NO-TRADE card become
+ambient temptation in the next stress moment.
+
+| Field | Allowed under cooldown? |
+|---|---|
+| Signal (clamped to NO-TRADE) | yes, MANDATORY |
+| Confidence + 6-axis Scorecard | yes (educational) |
+| Reversion-Guard verdict | yes (educational) |
+| Statistical Setup Strength block (Trade-Window pattern, Convergence, etc.) | yes (educational) |
+| Cooldown Status line + `eligible_at` timestamp | yes, MANDATORY |
+| **Entry Plan (Center / Primary / Fallback / NO-CHASE)** | **no** |
+| **KO Computation table (ATR-based / Chart-based / FINAL)** | **no** |
+| **Stop levels (Tier-2/3 cert pricing)** | **no** |
+| **Position Sizing table (EUR amounts)** | **no** |
+| **Cert-Request block** | **no** |
+| DB Record `--entry / --stop / --target / --ko` | omit (NULL) |
+| DB Record `--direction` and `--confidence` | yes, recorded for tracking |
 
 **Rule 28 — Trader-Day Circuit-Breaker (PENDING, re-evaluate 2026-05-29):**
 

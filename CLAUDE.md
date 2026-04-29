@@ -68,9 +68,16 @@ intent. The pre-flight script enforces the blindspot checks.
   **cert-%**, not underlying-%. Empirical basis: n=271 closed trades,
   ≤−15% trades end on Ø −33%, 84% of total loss-damage came from
   this tail. Full ruleset in `prompts/03_judge_risk.md` § Loss Exits.
-- **Re-entry after ANY exit needs 24h cooldown + +10pp confidence
-  + ≥1 new catalyst (Rule 27).** No same-thesis re-entry into a
-  falling market. Post-mortem: AMD #130 (2026-04-27).
+- **Rule 27 — Re-Entry Cooldown after ANY exit (Tier-2/3 stop or +20% TP).**
+  Anchored to `exit_ts`. Base cooldown 24h. Pre-24h re-eval: criteria-fail
+  extends to 72h from exit; criteria-pass is informative only (no override).
+  Post-24h re-eval: criteria-fail = +48h from re-eval attempt; criteria-pass
+  unlocks the trade. Criteria: full re-analysis + confidence ≥10pp higher
+  than closed trade + ≥1 new catalyst. Trade-plan output is hard-clamped
+  while cooldown is active — no KO / entry / sizing / cert request emitted;
+  DB record stores direction + confidence with NULL trade-plan fields. Full
+  decision tree in `prompts/03_judge_risk.md` § Rule 27. Evidence base and
+  tracking trigger (n ≥ 10) in `memory/strategy_v9.md` § 10.
 - **Rule 28 — Trader-Day Circuit-Breaker (PENDING, re-eval 2026-05-29).**
   Demoted from hard veto to soft warning + tracking on 2026-04-29: n=12
   April evidence cannot separate Tilt vs Market-confound vs Selection-bias.
@@ -78,7 +85,8 @@ intent. The pre-flight script enforces the blindspot checks.
   Tier-2/3 stop in trailing 32h **without exiting** — pipeline runs through.
   User MUST log each stop in `memory/v10_log.md` (template + locked decision
   schema there). Without log entries, the 2026-05-29 evaluation is blind.
-  Rule 27 (same-symbol cooldown, AMD #130) remains hard and unchanged.
+  Rule 27 (same-symbol cooldown) remains hard, with clarified decision tree
+  and NO-TRADE output clamp (2026-04-29).
 - **v10 concentration limits (tightened 2026-04-28):** Slot cap **2** (was 3,
   hedges excluded). Sector cap **40%** (was 60%) with AI-semi grouping
   {NVDA, AMD, AVGO, MRVL, TSM, ASML} treated as ONE effective sector.

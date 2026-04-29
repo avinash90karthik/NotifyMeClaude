@@ -87,9 +87,77 @@ Field rationale:
 
 ---
 
+## 1a. Trading Card variant — Rule 27 Cooldown active (NO-TRADE Output Clamp)
+
+When `prompts/03_judge_risk.md § Rule 27` reports `cooldown_active = True`,
+the standard Trading Card above MUST NOT be emitted. Use this clamped
+variant instead. The omitted blocks (Entry Plan, KO, Stop levels, Position
+Sizing, Cert Request) are intentionally absent — handleable levels in a
+NO-TRADE card become ambient temptation in the next stress moment.
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║ {{SYMBOL}} — FINAL  (Rule 27 Cooldown active)               ║
+╠══════════════════════════════════════════════════════════════╣
+║ Signal:          NO-TRADE  (Rule 27 cooldown clamp)          ║
+║ Confidence:      XX%   (Scorecard: LONG XX / SHORT XX)       ║
+║ Price:           $XX.XX  (EUR XX.XX)                         ║
+║ Regime:          TRENDING | RANGE | CHOPPY | TRANSITIONAL    ║
+║                                                              ║
+║ ─ COOLDOWN STATUS ──────────────────────────────────         ║
+║ Decision-tree case:  A (no re-eval) | B (pre-24h) | C (post) ║
+║ exit_ts:             YYYY-MM-DD HH:MM CET                    ║
+║ reeval_ts:           YYYY-MM-DD HH:MM CET                    ║
+║ Criteria check:      C2=PASS|FAIL  C3=±Xpp  C4=N catalysts   ║
+║ eligible_at:         YYYY-MM-DD HH:MM CET                    ║
+║                                                              ║
+║ ─ STATISTICAL SETUP STRENGTH (educational, no levels) ──     ║
+║ Strongest Bull:  <1-2 lines from Step 2>                     ║
+║ Strongest Bear:  <1-2 lines from Step 2>                     ║
+║ Indicator-Context: <strongest axis + green-rate + n>         ║
+║ Trade-Window:    <if applicable: avg/green/n + sigmoid>      ║
+║ Convergence:     <spread + verdict>                          ║
+║ Reversion-Guard: <verdict>                                   ║
+║                                                              ║
+║ V-Vetos active:  none | V1/V3/...                            ║
+║ W-Warnings:      none | W1/W5/...                            ║
+║ Rule 27:         COOLDOWN active — see eligible_at above     ║
+║ Approved:        NO  (cooldown clamp)                        ║
+║                                                              ║
+║ Reasoning:       <why setup remains compelling but blocked>  ║
+╚══════════════════════════════════════════════════════════════╝
+```
+
+DB record under cooldown clamp:
+
+```bash
+python3 scripts/prediction_db.py record {{SYMBOL}} \
+  --direction [LONG|SHORT] \
+  --confidence [XX] \
+  --regime [...] \
+  --atr-pct [X.X] \
+  --reason "Rule 27 cooldown clamp. Case <A|B|C>. eligible_at=YYYY-MM-DD HH:MM CET. C3=±Xpp, C4=<count>. <statistical setup summary>."
+```
+
+`--entry`, `--stop`, `--target`, `--ko` are omitted (the schema accepts
+NULL on these columns; migrated 2026-04-29). The DB row records the
+direction + confidence for tracking purposes; the absence of trade-plan
+fields signals "cooldown-clamped, not actioned."
+
+The cooldown clamp also requires a tracking entry in
+`memory/v10_log.md` § Same-Symbol Re-Entry Attempts before the
+session ends.
+
+---
+
 ## 2. Cert Request (MANDATORY - depends on signal)
 
 The cert request always follows the trading card, even on NO-TRADE. The format depends on the signal strength.
+
+**Exception:** When `Rule 27 cooldown_active = True` (clamped variant § 1a),
+the cert request is NOT emitted. No leverage formula table, no KO range, no
+stand-by request. The clamp is intentional — the cooldown is meant to
+prevent ambient-temptation handles, not to provide them.
 
 ### 2a. Leverage formula (target-based on +20% cert in 1-5 days)
 
