@@ -1,7 +1,7 @@
 """Test that hedge positions are NOT counted as regular slots.
 
 Hedges are tracked with cert_type='hedge' and must not consume the
-3-slot cap defined in the strategy.
+MAX_OPEN_TURBOS slot cap defined in the strategy (RULES.md V5).
 """
 
 import os

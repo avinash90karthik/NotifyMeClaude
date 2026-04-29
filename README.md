@@ -197,7 +197,7 @@ and is imported by the scripts — never invoked directly.
 |--------|---------|
 | `lib/indicators.py` | `calc_technicals`, `sigmoid_adjust`, `calc_adx`, `calc_bollinger`, `detect_regime`, `detect_rsi_divergence` |
 | `lib/scoring.py` | `score_long`, `score_short` — used by `preopen_check`, `preopen_backtest` and `backtest` (validation) |
-| `lib/risk_audit.py` | V-veto layer (V1 ATR, V2 CHOPPY+score, V3 slots, V4 sector, V5 drawdown) |
+| `lib/risk_audit.py` | Severity-aware risk audit (V4 ATR, V5 slots, SV1 CHOPPY, SV2 60d-corr, SV3 sector, W10 earnings ≤5d) — RULES.md aligned |
 | `lib/wavelet_utils.py` | Wavelet denoising for OHLCV inputs |
 
 ## Environment

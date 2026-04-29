@@ -52,6 +52,11 @@ from datetime import datetime, timedelta, timezone
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DB_FILE = os.path.join(PROJECT_ROOT, 'memory', 'predictions.db')
 
+# Allow `from lib.X` when invoked directly as `python3 scripts/ops/prediction_db.py`
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+from lib.risk_audit import MAX_OPEN_TURBOS
+
 
 # ─── Database ────────────────────────────────────────────────────────
 
@@ -349,7 +354,7 @@ def show_portfolio(args):
     hedges = sum(1 for p in positions if (p['cert_type'] or 'turbo') == 'hedge')
     hedge_str = f' + {hedges}H' if hedges else ''
     print(f'\n  Invested: {total_invested:,.2f} EUR | Cash: {cash:,.2f} EUR')
-    print(f'  Portfolio: ~{portfolio_total:,.0f} EUR | Slots: {slots}/2{hedge_str}')
+    print(f'  Portfolio: ~{portfolio_total:,.0f} EUR | Slots: {slots}/{MAX_OPEN_TURBOS}{hedge_str}')
 
     if closed:
         print(f'\nGESCHLOSSENE TRADES:')
