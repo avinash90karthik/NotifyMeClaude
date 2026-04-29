@@ -1,5 +1,0 @@
-data/*.parquet
-data/*.csv
-__pycache__/
-.pytest_cache/
-*.pyc
