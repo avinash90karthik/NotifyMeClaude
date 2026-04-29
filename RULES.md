@@ -31,8 +31,30 @@ Owner of the operational table for V4 / V5: [`prompts/03_judge_risk.md` § Risk 
 ## V1 — KO is computed, never estimated
 
 - **Severity:** Veto
-- **Owner (mechanics):** [`prompts/03_judge_risk.md` § KO Level](prompts/03_judge_risk.md)
+- **Owner (workflow):** [`prompts/03_judge_risk.md` § KO Level](prompts/03_judge_risk.md)
 - **One-line summary:** Both ATR-based and chart-based KO must be computed; the further-of-the-two is final. If calculation fails, the analysis aborts.
+- **Mechanics:**
+  - **A. ATR-based KO**
+
+    | Asset class | Multiplier | Criterion |
+    |---|---|---|
+    | Large Cap | 2.0× ATR | Market Cap > $50B |
+    | Mid/Small Cap | 2.5× ATR | Market Cap < $50B |
+    | Commodities | 3.0× ATR | Futures (=F suffix) |
+    | Crypto-related | 3.0× ATR | BTC/Crypto exposure |
+
+    Multiplier surcharges (push KO further):
+    - ATR5/ATR14 > 1.5 (vol spike) → +0.5
+    - Earnings < 5 days → +0.5
+
+    ```
+    ATR-KO (LONG)  = price − (ATR × multiplier)
+    ATR-KO (SHORT) = price + (ATR × multiplier)
+    ```
+
+  - **B. Chart-based KO** — strongest support (LONG) or resistance (SHORT) from § 1.4 Chart Analysis, plus 0.5–1% buffer.
+  - **C. Final KO** — the level **further** from the price (max distance) between ATR-based and Chart-based.
+  - If either calculation cannot complete (e.g. ATR unavailable), the trade is invalid and the analysis aborts.
 - **Rationale:** Estimated KO levels invariably end up "round-number friendly" (e.g. €150 because it looks clean) rather than data-derived. Round-number stops cluster with retail orders → liquidity sweeps that knock out positions for no fundamental reason. ATR-based + chart-based gives two independent anchors; the further-out value provides a buffer against single-method failure. If both methods fail to compute, the trade is invalid — not because we lack a number, but because we lack the information the calculation requires.
 - **Evidence base:** Operational.
 - **Falsification trigger:** Estimated-KO outcomes not worse than computed-KO at n≥20. Tracking infrastructure required (DB has no `ko_method` field); deferred until that exists.
@@ -149,8 +171,31 @@ violation.
 ## W3 — Indicator Context Check (strongest-axis aggregation)
 
 - **Severity:** Warning
-- **Owner (mechanics):** [`prompts/01_data_collection.md` § 1.4 Indicator Context Check](prompts/01_data_collection.md) and `scripts/indicator_context.py::print_aggregation`
+- **Owner (workflow):** [`prompts/01_data_collection.md` § 1.4 Indicator Context Check](prompts/01_data_collection.md) and `scripts/indicator_context.py::print_aggregation`
 - **One-line summary:** Use this stock's own historical conditional probabilities (per-stock RSI/BB/DistHigh green-rate) instead of textbook overbought/oversold priors; aggregate via the strongest single axis (max |adjust|), not by summing.
+- **Mechanics:**
+  - **Sigmoid-Adjust formula** (computed by `indicator_context.py`):
+    ```
+    adjust = 5.0 × tanh((green_rate − 0.5) × 4) × sample_weight
+    sample_weight: SOLID (n ≥ 30) = 1.0
+                   WEAK  (15 ≤ n < 30) = 0.5
+                   THIN  (n < 15) = 0.0
+    ```
+  - **Reference values (SOLID, max ±5%):**
+
+    | Green-Rate | Adjust |
+    |---|---|
+    | 50% | 0.00% |
+    | 55% | +0.99% |
+    | 60% | +1.90% |
+    | 65% | +2.69% |
+    | 70% | +3.32% |
+    | 75% | +3.81% |
+    | 80% | +4.17% |
+    | 85%+ | +4.43% to +4.61% |
+
+    Negative green-rates mirror symmetrically (35% → −2.69%, 25% → −3.81%, etc.). WEAK halves the adjust; THIN sets it to zero.
+  - **Aggregation rule:** take the **strongest single axis** (max |adjust|) as the Rating-1 input. Do NOT sum across axes — RSI / BB / DistHigh are positively correlated for trend stocks (a stock near 3M-high tends to also have elevated BB and elevated RSI), so summing double-counts the same underlying signal. The script prints `STRONGEST AXIS: <name>  adjust=±X.X%` — use that single number.
 - **Rationale:** Textbook rules ("RSI >70 is overbought") are cross-asset priors averaged over thousands of stocks. They do not apply to a stock whose own history disagrees. Naive sum across RSI/BB/DistHigh double-counts the same underlying signal because those axes are positively correlated for trend stocks (a stock near 3M-high tends to also have elevated BB and elevated RSI — adding the three adjusts conflates one signal as three). Strongest-axis is a conservative single estimate that avoids the double-count. The script computes per-stock green-rates fresh from the latest history on every run, so the rule adapts as the stock's regime evolves.
 - **Evidence base:** Operational.
 - **Falsification trigger:** Operational — no outcome falsification.
@@ -158,15 +203,30 @@ violation.
 ## W4 — Entry: Center for the DB, vol-derived range for the broker
 
 - **Severity:** Warning
-- **Owner (mechanics):** [`prompts/03_judge_risk.md` § Optimal Entry](prompts/03_judge_risk.md)
+- **Owner (workflow):** [`prompts/03_judge_risk.md` § Optimal Entry](prompts/03_judge_risk.md)
 - **One-line summary:** Entry has two artifacts — a single Center level (recorded in DB as `--entry`) and a range around it (Primary low / Fallback high, sent to the broker). Center is the mid expected fill; the range is the actual order. Never use the Close as Center; never use a single point limit as the broker order.
-- **Mechanics (mandatory format):**
-  - **Center** = `Close − 1×ATR` (Reversion-Pflicht) OR `Buy-range upper / P25 dip` (no Reversion-Edge) OR `trigger level` (real breakout). Per Reversion-Guard verdict.
+- **Mechanics:**
+  - **Center derivation** (per `reversion_guard.py` verdict):
+
+    | Reversion-Guard verdict | Center |
+    |---|---|
+    | LONG: Pullback-Pflicht | Center = Close − 1 × ATR |
+    | LONG: Kein Reversion-Edge | Center = Buy-range upper (P25 dip) |
+    | LONG: real breakout (R1 break, no reversion setup) | Center = trigger level |
+    | SHORT: valid | Center = Close + 1 × ATR OR extension-break level |
+    | SHORT: NO-TRADE | abort setup |
+
   - **Half-width** = `max(0.25 × ATR, 0.5% × Close, 0.10 €)`
-  - **Primary** = Center − half-width (range low, optimistic)
-  - **Fallback** = Center + half-width (range high, defensive, valid 60–90 min after Primary)
-  - **No-Chase** = Center + 2 × half-width — trade expires above this
-  - Step-3 card prints all four levels. DB record uses Center as `--entry`. Pre-commit check: the value passed to `--entry` MUST equal the Center value cited in the Step-3 card; if they differ, stop and reconcile before recording.
+    - `0.25 × ATR` reflects stock-specific intraday vol
+    - `0.5% × Close` is the floor for low-ATR names
+    - `0.10 €` is the absolute tick floor for warrants/turbos whose spread step exceeds the computed range
+  - **Four levels**:
+    - **Primary** = Center − half-width (range low, optimistic)
+    - **Fallback** = Center + half-width (range high, defensive)
+    - **No-Chase** = Center + 2 × half-width — trade expires above this
+    - **DB `--entry`** = Center (never Primary, Fallback, or Close)
+  - **Fallback validity:** valid 60–90 min after Primary order placement (US-open entry typically 11:00–11:30 NY / 17:00–17:30 CET). Do not raise the order before that window.
+  - **Pre-commit reconciliation:** the value passed to `--entry` MUST equal the Center value cited in the Step-3 card; if they differ, stop and reconcile before recording.
 - **Rationale:** Recording the Close as entry biases the backtest — the next analysis assumes a fill that was never realistic. A point limit ("exactly $89,00") systematically misses fills when the market only just touches the value. Center reflects the mid expected fill price after a normal intraday dip; the range absorbs intraday noise without overpaying. The half-width formula has three terms because each protects against a different failure: `0.25 × ATR` reflects stock-specific intraday vol, `0.5% × Close` is the floor for low-ATR names, `0.10 €` is the absolute tick floor for warrants/turbos whose spread step exceeds the computed range.
 - **Evidence base:** Operational.
 - **Falsification trigger:** Center-fill performance not better than Close-fill at n≥30 entries. Tracking infrastructure required (DB has no `entry_method` field); deferred until that exists.
@@ -174,8 +234,19 @@ violation.
 ## W5 — Extreme-Oversold Bonus
 
 - **Severity:** Warning
-- **Owner (mechanics):** [`prompts/01_data_collection.md` § 1.4 v9 Extreme-Oversold Bonus](prompts/01_data_collection.md) and [`prompts/03_judge_risk.md` § Signal + Confidence](prompts/03_judge_risk.md)
+- **Owner (workflow):** [`prompts/01_data_collection.md` § 1.4 v9 Extreme-Oversold Bonus](prompts/01_data_collection.md) and [`prompts/03_judge_risk.md` § Signal + Confidence](prompts/03_judge_risk.md)
 - **One-line summary:** RSI < 20 with stock's own fwd-5d green-rate ≥ 65% (n ≥ 20 SOLID) → +5% LONG; RSI < 15 with green-rate ≥ 70% → +8% (capitulation low). Bonus is added AFTER the differential penalty.
+- **Mechanics:**
+
+  | Current RSI band | Fwd-5d green-rate | Sample | LONG bonus |
+  |---|---|---|---|
+  | < 20 | ≥ 65% | n ≥ 20 [SOLID] | **+5%** |
+  | < 15 | ≥ 70% | n ≥ 20 [SOLID] | **+8%** (capitulation low) |
+
+  - Source: read RSI band, fwd-5d green-rate, and sample tag from `indicator_context.py` output.
+  - SHORT side: no bonus — this rule is LONG-only.
+  - Addition order: applied **after** the W6 differential penalty, so it can lift a setup back above the 60% gate that regime penalties pulled below it.
+  - Forbidden inverse: do not apply an "overbought penalty" without a per-stock green-rate citation. Sentences like "RSI 72 is overbought → −5%" are bias, not analysis (see W3).
 - **Rationale:** Extreme oversold setups in a TRENDING-down regime get penalised by the regime classifier, often pushing confidence below the 60% gate even when this stock's own forward distribution is bullish at that RSI level. Without the bonus, regime penalties override direct mean-reversion evidence; this controlled bonus lets stock-specific empiricism override regime penalties at the very deepest oversold readings, where the per-stock conditional is strongest.
 - **Evidence base:** Operational.
 - **Falsification trigger:** Bonus-triggered trades' fwd-5d green-rate < 60% at n≥20.
@@ -183,8 +254,44 @@ violation.
 ## W6 — Position Sizing (Scout / Confirmation)
 
 - **Severity:** Warning
-- **Owner (mechanics):** [`prompts/03_judge_risk.md` § Position Sizing](prompts/03_judge_risk.md) — numeric table lives there, this file does not duplicate it.
+- **Owner (workflow):** [`prompts/03_judge_risk.md` § Position Sizing](prompts/03_judge_risk.md)
 - **One-line summary:** Confidence 60–65% → Total 10% of available **Cash** with inverted Scout (40/60); Confidence 65%+ → Total 20% of Cash with classic 50/50 Scout/Confirmation. Confirmation fires only after Scout +5% in profit OR clear regime evidence.
+- **Mechanics:**
+  - **Confidence computation** (used by every signal pipeline):
+    ```
+    Direction      = LONG if Scorecard-LONG-Total > Scorecard-SHORT-Total, else SHORT
+    Raw Confidence = max(LONG-Total, SHORT-Total) / 60 × 100   (%)
+
+    Smooth differential penalty:
+      Diff = |LONG-Total − SHORT-Total|
+      penalty_factor = 1 − 0.15 × exp(−Diff / 4)
+
+      Diff = 0  → 0.85
+      Diff = 4  → 0.94
+      Diff = 10 → 0.987
+      Diff = 20 → 0.999
+
+      Confidence = Raw Confidence × penalty_factor
+
+    W5 Oversold Bonus (LONG only) — added AFTER the differential penalty.
+    ```
+    The 60% gate is automatically consistent: 36/60 Scorecard-Total = 60% Confidence (before Oversold Bonus).
+
+  - **Sizing brackets:**
+
+    | Confidence | Total (% Cash) | Scout % of Total | Confirmation % of Total | Scout (% Cash) | Confirmation (% Cash) |
+    |---|---|---|---|---|---|
+    | 60–65% | 10% | **40% (inverted)** | **60%** | 4% | 6% |
+    | 65%+ | 20% | **50%** | **50%** | 10% | 10% |
+
+  - **Compute steps:**
+    1. Pull live Cash from `pytr portfolio` (per W1).
+    2. Scout EUR = Cash × Scout-% → divide by cert ask price → cert count.
+    3. Confirmation EUR = Cash × Confirm-% → only deployed after Confirmation trigger fires.
+  - **Confirmation trigger** (one of):
+    - Scout position is +5% in profit (cert-%), OR
+    - Clear regime evidence (e.g. catalyst confirmed, breakout sustained).
+  - **Card requirement:** Step-3 and Step-4 must explicitly document whether scout-inversion is active (`scout-inverted` for 60–65% bracket, `scout-classic` for 65%+).
 - **Rationale:**
   - **Why inverted in 60–65%:** the bracket sits closest to a coin-flip on historical data, so the classic 60/40 Scout/Confirm split would put the larger initial size into the least-certain bucket. Inverting (40/60) places the smaller commitment first, larger Confirmation only after the trend confirms in profit.
   - **Why 50/50 above 65%:** at moderate-but-not-overwhelming hit-rates, a smaller initial Scout limits damage when Confirmation never triggers. 50/50 keeps the upside intact when Confirmation does fire.
@@ -196,8 +303,26 @@ violation.
 ## W7 — Earnings proximity is NEVER a skip reason
 
 - **Severity:** Warning
-- **Owner (mechanics):** [`prompts/01_data_collection.md` § 1.8b Earnings Window Pattern](prompts/01_data_collection.md)
+- **Owner (workflow):** [`prompts/01_data_collection.md` § 1.8b Earnings Window Pattern](prompts/01_data_collection.md)
 - **One-line summary:** Run `earnings_pattern.py`. Use the per-stock pre-earnings green-rate as a sigmoid confidence adjust (~±5%), not as a gate. Adjust hold time (typically exit one day before earnings) — never reject the trade itself.
+- **Mechanics:**
+  - **Two script modes:**
+    - **Backward mode** (run without `--trade-entry`): T-X→T0 returns. Answers "how far away was the price X days before earnings?". Useful for rough phase categorisation; does NOT measure the trade window.
+    - **Trade-window mode** (run with `--trade-entry <T-N>` and `--trade-exit <T-M>`, optional `--same-month`): interval return T-N→T-M. Answers "if I enter today and exit the day before earnings — what happened historically?". This is the **primary metric** for the 1–3d primary horizon (up to 5d if structurally justified).
+  - **Sample-size thresholds (earnings-specific, smaller than W3 because max ~10 quarters):**
+
+    | Tag | n |
+    |---|---|
+    | SOLID | n ≥ 8 |
+    | WEAK | 4 ≤ n < 8 |
+    | THIN | n < 4 |
+
+  - **When to run trade-window mode:** if earnings ≤ 15 days AND a LONG/SHORT setup is being considered.
+  - **When to skip entirely:** earnings > 30 days (use the standard day-pattern from § 1.8 instead) or no earnings (commodity/index).
+  - **Adjust source:** read the script's printed sigmoid adjust directly. Do NOT re-derive from buckets. Same sigmoid formula as W3, only the sample-weight thresholds differ.
+  - **Same-month hint:** if the script finds ≥ 3 quarters in the target month, treat as validation; if THIN (< 3), only as a directional hint.
+  - **Backward-mode warnings are secondary signal only** (context, no auto-penalty) when trade-window stats are available. The trade-window metric is the correct one for the live trade horizon.
+  - **Hold-time adjustment:** typically exit one trading day before earnings, regardless of how strong the per-stock pre-earnings drift is. The trade-window metric measures the held interval, not the held-through-earnings outcome.
 - **Rationale:** Each stock has its own pre-earnings behaviour — some drift bullishly into the print, some sell off, some are coin-flips. A blanket skip on "earnings too close" applies a textbook prior across stocks where the per-stock empiric disagrees. The script computes the conditional green-rate from this specific stock's history; that number is the right input, not a generic skip-rule. The trade-horizon adjustment (exit T-1) is real, but it is a hold-time constraint, not a setup veto.
 - **Evidence base:** Operational.
 - **Falsification trigger:** Per-stock pre-earnings green-rate < 50% across n≥30 earnings-window trades that the rule allowed in. Tracking is implicit (each `earnings_pattern.py` run logs to DB); a dedicated aggregation script is future work.
@@ -205,8 +330,26 @@ violation.
 ## W8 — Sizing Pre-Flight Gate
 
 - **Severity:** Warning
-- **Owner (mechanics):** [`prompts/03_judge_risk.md` § Sizing Pre-Flight Gate](prompts/03_judge_risk.md)
+- **Owner (workflow):** [`prompts/03_judge_risk.md` § Sizing Pre-Flight Gate](prompts/03_judge_risk.md)
 - **One-line summary:** Before any EUR sizing number is written, three checks must PASS: Confidence-Bias-Check, Correlation/Cluster-Check, Cash-Basis. Any FLAG / USER-CONFIRMATION-NEEDED / AMBIGUOUS → STOP and reconcile before continuing.
+- **Mechanics:**
+  - **Check 1 — Confidence-Bias-Check:**
+    - Source: `indicator_context.py` Strongest-Axis-Adjust value.
+    - Consistency: if adjust > 0 AND assigned Rating 1 < 6/10 → BIAS FLAG, reconsider Rating. If adjust < 0 AND Rating 1 > 5/10 → BIAS FLAG.
+    - Forbidden words in Rating-1 reasoning without a cited green-rate: "überkauft", "overbought", "exhaustion", "blowoff-reflex".
+    - Status: PASS / FLAG.
+  - **Check 2 — Correlation/Cluster-Check (SV2):**
+    - Source: live open positions from `pytr portfolio` (not stale DB).
+    - For each open position vs candidate symbol: compute 60d daily-return correlation per `lib/risk_audit.py::compute_correlation`.
+    - Rule: corr ≥ 0,7 → SV2 fires (NO-TRADE by default; override possible per SV2).
+    - If a position is recorded open in DB but not in live `pytr portfolio`: stale DB → recompute open list from `pytr` first; do not size off a stale snapshot.
+    - Status: PASS / SV2-ACTIVE / USER-CONFIRMATION-NEEDED.
+  - **Check 3 — Cash-Basis (W1):**
+    - Source: live Cash from `pytr portfolio`.
+    - Mark-to-market value of open positions is NOT included in the basis.
+    - Incoming cash within 2 trading days (if user-stated) is added.
+    - Status: PASS / AMBIGUOUS.
+  - **Hard stop:** if any check is FLAG / SV2-ACTIVE / USER-CONFIRMATION-NEEDED / AMBIGUOUS → STOP. Do not print the Risk-per-Trade table. Return to user for clarification. Never guess.
 - **Rationale:** Sizing errors compound silently. A bias in Rating 1, a stale portfolio snapshot, and a correlation rule applied against a position that is already closed each look like minor inputs in isolation — but their product is a wrong EUR number that the user will execute. The pre-flight gate forces each input to be re-cited from its primary source before the EUR figure is committed, making the error surface visible while it is still fixable.
 - **Evidence base:** Operational.
 - **Falsification trigger:** Operational — no outcome falsification.
@@ -214,8 +357,31 @@ violation.
 ## W9 — Tiered Stop Strategy
 
 - **Severity:** Warning
-- **Owner (mechanics):** [`prompts/03_judge_risk.md` § Loss Exits](prompts/03_judge_risk.md) and `scripts/tr/place_exits.py`
+- **Owner (workflow):** [`prompts/03_judge_risk.md` § Loss Exits](prompts/03_judge_risk.md) and `scripts/tr/place_exits.py`
 - **One-line summary:** Cert −15% → HARD sell 50% immediately (Tier 2); cert −25% → HARD sell 100% (Tier 3) and activate SW2 cooldown. Reference unit is cert-%, not underlying-%. Support-Override: if underlying closes below the strongest support level, force HARD sell 50% even if cert hasn't hit −15%.
+- **Mechanics:**
+  - **Reference unit is cert-%**, not underlying-% — the user trades leveraged turbo-certs.
+  - **Tier 2 — Cert −15% from blended buy-in price:**
+    - HARD-EXIT 50% of position immediately (no waiting, no re-eval).
+    - Remaining 50% gets a new mental stop at cert −25%.
+    - Forbidden reasoning: "I think it'll bounce" — that is bias, not data.
+  - **Tier 3 — Cert −25% from blended buy-in price:**
+    - HARD-EXIT 100% — sell ALL, regardless of how the chart looks.
+    - Thesis is empirically falsified at this level.
+    - **Activate SW2 24h re-entry cooldown** (see SW2).
+  - **Support-Override (technical breakdown trumps tier waits):**
+    - If the underlying closes below the strongest support level identified in Step 1 § 1.4 (typical: SMA50, prior swing low, or 3M-low):
+    - Force HARD-EXIT 50% even if cert hasn't hit −15% yet.
+    - Reason: the technical thesis (uptrend / level holds) is broken; waiting for −15% cert is letting more capital follow a dead thesis.
+    - Document the support level in Step 3 trade plan as "Support-Stop" alongside KO and tier levels.
+    - Cite the level explicitly in the trading card so the user knows which underlying close triggers the 50% exit.
+  - **Forbidden patterns (auto-veto in Step-3 reasoning):**
+    - "Hold to KO and re-enter" — KO is a backstop for runaway gaps, not a managed exit.
+    - "Hedge with opposite cert at −20%" — negative-EV due to spread + dual leverage decay.
+    - "Tighten stop to −2% more" once −25% breached — disciplined exit, not a tweak.
+    - Any stop calculation in **underlying-%** for cert-trades — must be cert-%.
+  - **No Tier-1 (−10% watch):** removed because a 4h-watch is operationally unrealistic for a non-fulltime trader. A rule that can't be executed reliably is worse than no rule.
+  - **Execution path:** after fill, run `scripts/tr/place_exits.py --isin <ISIN> --buy <FILL> --shares <N>` to place real Tier-2 / Tier-3 stop-market sell orders + a +20% TP price alarm. Re-run after a Confirmation buy to re-place exits at the blended buy price.
 - **Rationale:** A position at −15% has a ~16% probability of recovering to BE; the modal outcome is to continue to roughly −33% (median), because cert leverage compounds against you. Disciplined exit at Tier 2 caps the loss at −15% on 50% of position vs. waiting and losing −33%+ on the full position. Tier 3 at −25% is the inflection point where "noise" becomes "thesis broken" for the 1–3d horizon: −20% catches normal-vol cert noise as false positives, −30% is too late (already at the empirical mean). The Tier-1 (−10% watch) was removed because a 4h watch is operationally unrealistic for a non-fulltime trader; a rule that can't be executed reliably is worse than no rule.
 - **Evidence base:** Initial calibration on n=271 closed trades (April 2026 sample) showed roughly 29% of trades ended ≤ −15% with an average final outcome near −33%, and the ≤ −15% tail accounted for ~84% of total damage across all losing trades. The DB accumulates further closed trades on every exit; this initial calibration is the rule's starting point, not a frozen evidence base — re-derive against the live DB before challenging the parameters.
 - **Falsification trigger:** Re-run the tail analysis against the live DB. W9 should be reconsidered if the disciplined-Tier-2-exit cohort's average P&L is worse than the no-stop-hold cohort at n≥30 disciplined exits, or if the ≤ −15% tail's share of total damage drops materially below the original ~84%.
@@ -241,8 +407,19 @@ violation.
 ## W12 — Overnight event < 24h
 
 - **Severity:** Warning
-- **Owner (mechanics):** [`prompts/03_judge_risk.md` § Risk Audit / W Warnings](prompts/03_judge_risk.md)
+- **Owner (workflow):** [`prompts/03_judge_risk.md` § Risk Audit / W Warnings](prompts/03_judge_risk.md)
 - **One-line summary:** Position ≥ +10% → BE-stop mandatory; ≥ +15% → 50% partial exit or stop to +5%; < +10% → default = close, or document risk acceptance. Friday: always BE-stop before the weekend.
+- **Mechanics:**
+
+  | Position state | Required action |
+  |---|---|
+  | ≥ +10% (cert-%) | BE-stop mandatory (raise stop to entry price) |
+  | ≥ +15% (cert-%) | 50% partial exit OR raise stop to +5% |
+  | < +10% (cert-%) | Default: close before the event. If user explicitly wants to hold: document risk acceptance in the Step-3 card. |
+  | Friday close (regardless of event) | BE-stop mandatory before the weekend |
+
+  - **Trigger events:** FOMC, CPI, NFP, Trump speeches with market relevance, earnings on the held symbol, scheduled tariff deadlines.
+  - **Window:** rule fires when the next such event is within 24 hours of position close-time on the day.
 - **Rationale:** Trump speeches, FOMC, CPI, NFP, earnings — all are gap-risk events. An unprotected overnight position can lose more in 30 seconds than the entire trade gained over its hold. BE-stop at +10% locks in the work; partial exit at +15% takes profit while keeping a runner.
 - **Evidence base:** Operational.
 - **Falsification trigger:** Operational — no outcome falsification.
@@ -269,8 +446,32 @@ user accepts the trade-off in writing.
 ## SW2 — Re-Entry Cooldown
 
 - **Severity:** Soft Warning
-- **Owner (mechanics):** [`prompts/03_judge_risk.md` § Re-Entry Cooldown](prompts/03_judge_risk.md) and [`prompts/04_summary_send.md` § 1a Trading Card variant](prompts/04_summary_send.md)
+- **Owner (workflow):** [`prompts/03_judge_risk.md` § Re-Entry Cooldown](prompts/03_judge_risk.md) and [`prompts/04_summary_send.md` § 1a Trading Card variant](prompts/04_summary_send.md)
 - **One-line summary:** After ANY exit on symbol X (Tier-2/3 stop or +20% TP), a 24h cooldown applies from `exit_ts`. During cooldown the pipeline still runs but the output is NO-TRADE-clamped (no Entry Plan / KO / Stop / Sizing / Cert-Request); the user can override with explicit acknowledgement. After 24h: normal trade if the pipeline produces a signal.
+- **Mechanics:**
+  - **Trigger:** any exit on symbol X — Tier-2 stop, Tier-3 stop, Support-Override exit, or +20% take-profit.
+  - **Cooldown window:** 24h from `exit_ts` (the timestamp of the exit fill).
+  - **`eligible_at`** = `exit_ts + 24h`. Always cited in the Step-4 card under cooldown.
+  - **NO-TRADE Output Clamp** (mandatory when `now < eligible_at`):
+
+    | Field | Allowed under cooldown? |
+    |---|---|
+    | Signal (clamped to NO-TRADE) | yes, MANDATORY |
+    | Confidence + 6-axis Scorecard | yes (educational) |
+    | Reversion-Guard verdict | yes (educational) |
+    | Statistical Setup Strength block (Trade-Window pattern, Convergence, etc.) | yes (educational) |
+    | Cooldown Status line + `eligible_at` timestamp | yes, MANDATORY |
+    | Entry Plan (Center / Primary / Fallback / No-Chase) | **no** |
+    | KO Computation table (ATR-based / Chart-based / Final) | **no** |
+    | Stop levels (Tier-2/3 cert pricing) | **no** |
+    | Position Sizing table (EUR amounts) | **no** |
+    | Cert-Request block | **no** |
+    | DB record `--entry / --stop / --target / --ko` | omit (NULL) |
+    | DB record `--direction` and `--confidence` | yes, recorded for tracking |
+
+  - **Schema migration 2026-04-29** (`scripts/migrate_rule27_nullable.py`): `entry_price` / `stop_price` / `target_price` / `ko_level` columns made NULL-allowed for the clamped DB record path.
+  - **After 24h:** normal pipeline run. No re-eval criteria, no +10pp threshold, no NEW-catalyst gate. The pipeline IS the criterion.
+  - **Override:** user may override the clamp by writing `SW2-override: <reason>` in the Step-3 card. Output then unclamps but the override line stays in the DB record.
 - **Rationale:** A discipline rule, not an outcome-edge claim. There is no statistically meaningful evidence that re-entering within 24h underperforms — the rule rests on the behavioural argument that a forced pause between a loss-stress moment and the next decision is a cheap and reasonable default. Soft Warning matches the actual evidence quality: cooldown + output-clamp remain the default, but overriding is allowed if the user accepts the discipline trade-off in writing. The output-clamp specifically prevents handleable levels in a NO-TRADE card from becoming ambient temptation in the next stress moment; that property is preserved under the Soft-Warning status. Schema migration 2026-04-29 (`scripts/migrate_rule27_nullable.py`) made `entry_price` / `stop_price` / `target_price` / `ko_level` columns NULL-allowed for the clamped DB record path.
 - **Evidence base:** No statistically robust evidence base. The rule is a behavioural default backed by general tilt-mitigation reasoning, not by an outcome study on this account's data.
 - **Falsification trigger:** None — the rule is not outcome-evaluated. Reconsider only if the discipline argument itself stops applying (e.g. mechanical execution removes the trader's same-day re-entry decision entirely).

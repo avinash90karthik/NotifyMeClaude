@@ -5,34 +5,26 @@
 
 This step produces the **stock trade plan only** (signal, confidence, entry/stop/KO/target on the underlying, position sizing in EUR). Cert selection, leverage formula, and KO-range for the certificate live entirely in Step 4. Do not propose a cert here.
 
+> **All rule mechanics — V1–V5, SV1–SV3, W1–W12, SW1–SW2 — live in `RULES.md`.** This step references them; it does not duplicate them. When this prompt says "compute KO per V1", the table, surcharges, and final-selection rule live in `RULES.md § V1`. Same for every other rule.
+
 ---
 
 ## Judge Verdict
 
-### Signal + Confidence (formula, not free-form list)
+### Signal + Confidence
+
+Compute per `RULES.md § W6` (Mechanics → Confidence computation). Output:
 
 ```
-Direction      = LONG if Scorecard-LONG-Total > Scorecard-SHORT-Total, else SHORT
-Raw Confidence = max(LONG-Total, SHORT-Total) / 60 × 100   (%)
-
-Smooth differential penalty (replaces the old < 10 / >= 10 cliff):
-  Diff = |LONG-Total - SHORT-Total|
-  penalty_factor = 1 - 0.15 * exp(-Diff / 4)
-
-  Diff = 0  -> 0.85
-  Diff = 4  -> 0.94
-  Diff = 10 -> 0.987
-  Diff = 20 -> 0.999
-
-  Confidence = Raw Confidence × penalty_factor
-
-v9 Oversold Bonus (W5) - LONG only:
-  Indicator-Context RSI band <20 + Fwd5 green ≥ 65% + n ≥ 20  ->  +5% confidence
-  Indicator-Context RSI band <15 + Fwd5 green ≥ 70% + n ≥ 20  ->  +8% confidence (capitulation)
-  Bonus is added AFTER the differential penalty.
+Direction:        LONG | SHORT
+Raw Confidence:   XX%   (max(LONG-Total, SHORT-Total) / 60 × 100)
+Diff:             XX    (|LONG-Total − SHORT-Total|)
+Penalty factor:   X.XXX (1 − 0.15 × exp(−Diff / 4))
+Oversold bonus:   +0% | +5% | +8%   (per W5 conditions)
+Final Confidence: XX%
 ```
 
-The Gate is automatically consistent: 36/60 = 60% = trade gate (before oversold bonus).
+The 60% gate is automatically consistent: 36/60 Scorecard-Total = 60% Confidence (before W5 bonus).
 
 ### Judge Override (allowed, with mandatory documentation)
 
@@ -46,51 +38,25 @@ An override MUST be documented with:
 2. **Why** (one sentence with concrete source reference)
 3. **Impact**: scorecard said X, Judge decided Y
 
-This documentation is copied verbatim into the Step-3 card AND the Step-4 trading card - the user must see every override.
+This documentation is copied verbatim into the Step-3 card AND the Step-4 trading card — the user must see every override.
 
 ### Neutrality Check (hard, before final signal)
 
-- Mirror test: would I let through the **same** arguments at mirrored data (RSI 90 instead of 10, +17% instead of -17%)? Asymmetric = bias.
-- Gate is Confidence < 60% OR an active V-veto. Everything else ("entered too late", "R/R not perfect", "counter-trend uncomfortable") is a trade-plan adjustment (smaller size, tighter targets), not a signal veto.
-- NO-TRADE is a valid result, but only on a real gate violation - not from caution.
+- Mirror test: would I let through the **same** arguments at mirrored data (RSI 90 instead of 10, +17% instead of −17%)? Asymmetric = bias.
+- Gate is Confidence < 60% OR an active Veto / un-overridden Soft Veto. Everything else ("entered too late", "R/R not perfect", "counter-trend uncomfortable") is a trade-plan adjustment (smaller size, tighter targets), not a signal veto.
+- NO-TRADE is a valid result, but only on a real gate violation — not from caution.
 
 ### Horizon
 
-**1-3 days primary, up to 5d if structurally justified.** Empirical v10 observation 2026-04-28: trades almost never reached full 5d — limit or stop triggered earlier (median hold time 1-3d). Day+1 to Day+3 is the primary signal, Day+4 to Day+5 is secondary. Medium-/long-term setups are NOT scored. If the 1-3d window shows no edge -> signal = NO-TRADE.
+**1-3 days primary, up to 5d if structurally justified.** Day+1 to Day+3 is the primary signal, Day+4 to Day+5 is secondary. Medium-/long-term setups are NOT scored. If the 1-3d window shows no edge → signal = NO-TRADE.
 
 Forbidden: "setup active from date X", "come back in Y weeks", "wait for T-7 pre-earnings". These patterns are RISK warnings or watchlist triggers, never trade triggers.
 
 ---
 
-## KO Level (on the underlying)
+## KO Level
 
-> **V1 — KO is computed, never estimated.** Both methods (ATR-based + chart-based) MUST be calculated; the "further of the two" is the final KO. No gut-feel KO levels — if calculation fails (e.g. ATR unavailable), the trade is invalid, not "estimated". Full text: `RULES.md § V1`.
-
-KO = the level that is FARTHER from the price (ATR-based or chart-based).
-
-### A - ATR-based KO
-
-| Asset Class | Multiplier | Criterion |
-|-------------|------------|-----------|
-| Large Cap | 2.0× ATR | Market Cap > $50B |
-| Mid/Small Cap | 2.5× ATR | Market Cap < $50B |
-| Commodities | 3.0× ATR | Futures (=F suffix) |
-| Crypto-related | 3.0× ATR | BTC/Crypto exposure |
-
-Multiplier surcharges (push KO further):
-- ATR5/ATR14 > 1.5 (vol spike) -> +0.5
-- Earnings < 5 days -> +0.5
-
-```
-ATR-KO (LONG)  = price - (ATR × multiplier)
-ATR-KO (SHORT) = price + (ATR × multiplier)
-```
-
-### B - Chart-based KO
-
-Strongest support (LONG) or resistance (SHORT) from Step 1 § 1.4, + 0.5-1% buffer.
-
-### C - Final KO
+Compute per `RULES.md § V1` (Mechanics → ATR-based KO + Chart-based KO + Final selection). Output table:
 
 | Method | Level | Distance |
 |--------|-------|----------|
@@ -98,44 +64,20 @@ Strongest support (LONG) or resistance (SHORT) from Step 1 § 1.4, + 0.5-1% buff
 | Chart-based | XX.XX | X.X% |
 | **FINAL** | **XX.XX** | **X.X%** (further of the two) |
 
+If either calculation cannot complete → trade is invalid, abort (V1 is a hard Veto).
+
 ---
 
-## Optimal Entry (W4, script-driven)
+## Optimal Entry
+
+Run scripts (already pulled in Step 2):
 
 ```bash
-python3 scripts/reversion_guard.py {{SYMBOL}} --direction <LONG|SHORT>   # already pulled in Step 2
-python3 scripts/entry_calibration.py {{SYMBOL}}                          # intraday-dip statistics + buy range
+python3 scripts/reversion_guard.py {{SYMBOL}} --direction <LONG|SHORT>
+python3 scripts/entry_calibration.py {{SYMBOL}}
 ```
 
-### Verdict logic
-
-| Reversion-Guard says | Entry-Center rule | entry_price in DB |
-|----------------------|-------------------|-------------------|
-| LONG: Pullback-Pflicht | Center = Close - 1×ATR | Center level |
-| LONG: Kein Reversion-Edge | Center = Buy-range upper (P25 dip) | Center level |
-| LONG: real breakout (no reversion setup, R1 break) | Center = trigger level | Trigger level |
-| SHORT: valid | Center = Close + 1×ATR OR extension-break level | Trigger level |
-| SHORT: NO-TRADE | abort setup | - |
-
-**Hard:** `prediction_db.py record --entry` = **Center level** of the range (not Primär, not Fallback), never the close. HDD.DE #82 is the post-mortem reason for this rule.
-
-### Limit Range instead of point value (vol-derived, MANDATORY)
-
-A point limit ("exactly $89.00") systematically misses fills when the market only just touches the value. Instead: **range around center level**, width from volatility.
-
-**Formula:**
-```
-Range half-width = max(0.25 × ATR, 0.5% × Close, 0.10 EUR)
-Primary level    = Center - half-width  (optimistic, better fill price)
-Fallback level   = Center + half-width  (defensive, higher fill probability)
-```
-
-- `0.25 × ATR` is the basic vol component - reflects the stock-specific intraday noise level
-- `0.5% × Close` is the floor for low-ATR names (e.g. SAP: ATR 2% -> range would otherwise be too tight)
-- `0.10 EUR` is the absolute minimum tick floor (warrants/turbos whose spread step > computed range)
-- Max of all three = final half-width
-
-**Fallback trigger time:** 60-90 minutes after primary order placement (at US-open entry typically 11:00-11:30 NY / 17:00-17:30 CET). Do not raise the order before the trigger.
+Compute the entry per `RULES.md § W4` (Mechanics → Center derivation + half-width formula + four levels + reconciliation).
 
 ### Entry Plan Card (mandatory in Step 3 output)
 
@@ -144,7 +86,7 @@ Fallback level   = Center + half-width  (defensive, higher fill probability)
 ║  ENTRY PLAN (limit range, vol-derived) - UNDERLYING          ║
 ╠══════════════════════════════════════════════════════════════╣
 ║  Center level:     Stock $XX.XX                              ║
-║  Range half-width: $X.XX  (max(0.25×ATR, 0.5%, 0.10€))       ║
+║  Range half-width: $X.XX                                     ║
 ║                                                              ║
 ║  1. PRIMARY LIMIT:    Stock @ $XX.XX  (range low)            ║
 ║     valid until XX:XX CET                                    ║
@@ -160,9 +102,9 @@ Fallback level   = Center + half-width  (defensive, higher fill probability)
 ╚══════════════════════════════════════════════════════════════╝
 ```
 
-**DB record:** `--entry <Center-Level>` - the backtest needs the mid expected fill price, not the optimistic or defensive one.
+**DB record:** `--entry <Center-Level>` — the backtest needs the mid expected fill price. The pre-commit reconciliation in W4 enforces this.
 
-The cert-side translation of this range (cert primary/fallback levels in EUR), the cert leverage selection, and the KO range that Trade Republic should hit are all done in Step 4 - not here.
+The cert-side translation of this range (cert primary/fallback levels in EUR), the cert leverage selection, and the KO range that Trade Republic should hit are all done in Step 4 — not here.
 
 ---
 
@@ -170,220 +112,76 @@ The cert-side translation of this range (cert primary/fallback levels in EUR), t
 
 **Entry (limit center):** XX.XX  |  **KO:** XX.XX  |  **Stop (mental, above KO):** XX.XX
 
-**Profit Exits (v9, replaces v5/v8):**
-- 80% SELL at +20% cert gain - immediately
+**Profit Exits:**
+- 80% SELL at +20% cert gain — immediately
 - Rest max +30%, then trail
-- Trump event / overnight event -> all out
+- Trump event / overnight event → all out per W12
 
-**Loss Exits (W9 — Tiered Stop-Strategy, MANDATORY, replaces single-stop):**
+**Loss Exits:** apply per `RULES.md § W9`. The trading card emits all three triggers (Tier 2, Tier 3, Support-Override) with their concrete cert-% / underlying-level values for the current trade — see `prompts/04_summary_send.md § 1` for the card layout. After fill: run `python3 scripts/tr/place_exits.py --isin <CERT_ISIN> --buy <FILL> --shares <N>` to place the real stop-market sell orders + +20% TP alarm per W9.
 
-Reference unit is **CERT-%**, not underlying-%, because user trades leveraged certs.
+**SW2 Re-Entry Cooldown:** if `now < exit_ts + 24h` for the candidate symbol, emit the **clamped Trading Card variant** (`prompts/04_summary_send.md § 1a`) and the **clamped DB record** path per `RULES.md § SW2` (Mechanics → NO-TRADE Output Clamp table). Do NOT print Entry Plan / KO / Stop / Sizing / Cert-Request blocks under cooldown.
 
-> **W9 — Stops are tiered, not single-shot.** A single stop-loss waiting for
-> KO is the dominant capital-leak in the post-mortem 2026-04-21..27 (n=271 closed
-> trades): trades that fell to ≤−15% cert ended on average at **−33%**, and **84%
-> of total loss-damage came from the ≤−15% tail**. Disciplined tier-exits would have
-> capped the tail at −15% to −25% instead of −35% to −50%.
->
-> Rationale and full statistics: `RULES.md § W9`.
+**Time stops:** 3 days < 5% profit → halve | 5 days sideways → exit | Earnings < 2 days → 50% off
 
-```
-TIER 2: Cert −15%  →  HARD-EXIT 50% (no discussion, no waiting)
-  - Sell 50% IMMEDIATELY
-  - Remaining 50% gets new mental stop at cert −25%
-  - Empirical: ≤−15% cert trades end on Ø −33%; only 16% recover to BE
-  - Forbidden: "I think it'll bounce" — bias, not data
-
-TIER 3: Cert −25%  →  HARD-EXIT 100% (no exception)
-  - Sell ALL, regardless of how nice the chart looks
-  - Thesis is empirically falsified
-  - Activate SW2 Re-Entry-Cooldown
-  - Empirical: 84% of historical loss-damage (n=271) came from positions
-    that breached this threshold without exit-discipline
-
-SUPPORT-OVERRIDE (technical breakdown trumps tier waits):
-  If the UNDERLYING closes below the strongest support level identified
-  in Step 1 § 1.4 (typical: SMA50, prior swing low, or 3M-low):
-  - Force HARD-EXIT 50% even if cert hasn't hit −15% yet
-  - Reason: the technical thesis (uptrend / level holds) is broken;
-    waiting for −15% cert is letting more capital follow a dead thesis
-  - Document the support level in Step 3 trade plan as "Support-Stop"
-    alongside KO and tier levels
-  - Cite the level explicitly in the trading card so the user knows
-    which underlying close triggers a 50% exit
-```
-
-**Why no Tier-1 (−10% watch):** The 4h-watch was operationally unrealistic
-for a non-fulltime trader. A rule that can't be executed reliably is worse
-than no rule — it generates inconsistent behavior. Tier 2 / Tier 3 / Support
-override are the three hard triggers. Removed 2026-04-28 after one full
-trading day under the rule showed the watch was never actually used.
-
-**Forbidden patterns (auto-veto in Step-3 reasoning):**
-- "Hold to KO and re-enter" — KO is a backstop for runaway gaps, not a managed exit
-- "Hedge with opposite cert at −20%" — negative-EV due to spread + dual leverage decay
-- "Tighten stop to −2% more" once −25% breached — disciplined exit, not tweak
-- Any stop calculation in **underlying-%** for cert-trades — must be cert-%
-
-**SW2 — Re-Entry Cooldown (Soft Warning)**
-
-After ANY exit on symbol X (Tier-2/3 stop OR TP+20%):
-
-- 24h cooldown from `exit_ts`.
-- During cooldown: pipeline run allowed, output is NO-TRADE-clamped.
-- After 24h: normal pipeline run, normal trade possible if the pipeline
-  produces a signal.
-
-No re-eval criteria. No +10pp. No +1 NEW catalyst. No extension. No
-pre-/post-24h cases.
-
-**Rationale:** The pipeline IS the re-eval criterion. A 70%+ signal with
-all V-vetos PASS produced 24h after a stop is qualitatively no worse than
-the same signal produced on a never-traded symbol.
-
-**NO-TRADE Output Clamp (mandatory when `now < exit_ts + 24h`):**
-
-| Field | Allowed under cooldown? |
-|---|---|
-| Signal (clamped to NO-TRADE) | yes, MANDATORY |
-| Confidence + 6-axis Scorecard | yes (educational) |
-| Reversion-Guard verdict | yes (educational) |
-| Statistical Setup Strength block (Trade-Window pattern, Convergence, etc.) | yes (educational) |
-| Cooldown Status line + `eligible_at` timestamp | yes, MANDATORY |
-| **Entry Plan (Center / Primary / Fallback / NO-CHASE)** | **no** |
-| **KO Computation table (ATR-based / Chart-based / FINAL)** | **no** |
-| **Stop levels (Tier-2/3 cert pricing)** | **no** |
-| **Position Sizing table (EUR amounts)** | **no** |
-| **Cert-Request block** | **no** |
-| DB Record `--entry / --stop / --target / --ko` | omit (NULL) |
-| DB Record `--direction` and `--confidence` | yes, recorded for tracking |
-
-`eligible_at` is always `exit_ts + 24h`.
-
-**Time stops:** 3 days < 5% profit -> halve | 5 days sideways -> exit | Earnings < 2 days -> 50% off
-
-**Expected duration:** 1-3d momentum / 2-4d pullback / 1-2d event. If > 5d -> warn explicitly that the cert is not suitable.
+**Expected duration:** 1-3d momentum / 2-4d pullback / 1-2d event. If > 5d → warn explicitly that the cert is not suitable.
 
 ---
 
 ## Risk Audit
 
-### Vetos (one active Veto means signal = NO-TRADE; full rationale: `RULES.md § Vetos`)
+For every active rule in `RULES.md`, evaluate the rule against the current setup. Output **one line per rule**, in this order:
 
-| # | Rule | Value | Status |
-|---|------|-------|--------|
-| V4 | ATR > 7%? (warrants/options instead of KO) | ATR=X.X% | PASS/VETO |
-| V5 | ≥ 3 open turbo positions? | X/3 | PASS/VETO |
+1. Vetos (V1–V5)
+2. Soft Vetos (SV1–SV3)
+3. Warnings (W1–W12)
+4. Soft Warnings (SW1–SW2)
 
-### Soft Vetos (block by default, override with documented reason)
+Format per line:
 
-| # | Rule | Value | Status |
-|---|------|-------|--------|
-| SV1 | CHOPPY + Score < 50? | Regime=X, Score=X | PASS/VETO/OVERRIDE |
-| SV2 | 60d daily-return correlation to ANY open position ≥ 0,7? | corr=X.XX vs <SYM> | PASS/VETO/OVERRIDE |
-| SV3 | Sector > 40%? (AI-semis grouped: NVDA/AMD/AVGO/MRVL/TSM/ASML treated as ONE sector) | Sector: X% | PASS/VETO/OVERRIDE |
+```
+- <ID> (<one-line summary from RULES.md>): <STATUS> — <observed value or condition>
+```
 
-> Note: V1 (KO computed), V2 (SHORT scorecard), V3 (APIs only) are pipeline-format Vetos enforced earlier in the analysis (Step 1 / Step 2 / KO Level section above). They are not part of this risk-audit table because they would already have aborted the analysis if violated.
+`<STATUS>` = `PASS` | `VETO` | `OVERRIDE` | `WARN`.
 
-### Warnings (modify trade-plan, sizing, or confidence; no block)
+**Decision rules (per severity):**
+- Any active **Veto** → signal = NO-TRADE, abort the trade plan.
+- Any active **Soft Veto** → signal = NO-TRADE by default. Judge may override; the override line `<ID>-override: <reason>` MUST appear verbatim in the Step-3 card.
+- Any active **Warning** → apply the mandated adjustment per `RULES.md § <ID>` (Mechanics block). Signal continues.
+- Any active **Soft Warning** → apply the default behaviour per `RULES.md § <ID>`. User may override with explicit acknowledgement.
 
-| # | Rule | Effect when active | Status |
-|---|------|--------------------|--------|
-| W10 | Earnings < 5 days | KO multiplier +0.5 | PASS/WARN |
-| W11 | KO < 2× ATR (too tight) | Push KO out, raise multiplier | PASS/WARN |
-| W12 | Overnight event < 24h (FOMC/CPI/NFP/Trump/Earnings) | Overnight rule (below) | PASS/WARN |
+The full mechanics for each rule live in `RULES.md`. Do NOT duplicate them here. If a rule's status depends on values the Step-1 / Step-2 output does not yet show, fetch the missing input before evaluating (e.g. live Cash via `pytr portfolio` for W1, 60d correlation via `lib/risk_audit.py` for SV2).
 
-> Note: W1–W9 (sizing basis, price-action penalty, indicator aggregation, entry format, oversold bonus, sizing brackets, earnings, sizing pre-flight, tiered stops) are enforced in their respective Step-1 / Step-3 sections. The table here covers only the trade-plan modifiers checked during Risk Audit.
-
-> **SV1 override:** explicit `"SV1-override: <reason>"` allowed when there is
-> a specific stock-level signal the regime classifier missed.
->
-> **SV2 override:** explicit `"SV2-override: <reason>"` citing why correlation
-> breakdown is expected (e.g. divergent earnings, sector-rotation thesis).
->
-> **SV2 indeterminate:** if either symbol has < 60 days of yfinance history,
-> SV2 returns soft warning ("SV2 inconclusive, n<60") and does NOT auto-veto.
->
-> **SV3 override:** explicit `"SV3-override: <reason>"` naming the divergence
-> the sector label misses.
-
-**W12 Overnight Protection** (full rationale: `RULES.md § W12`):
-- Position ≥ +10% -> stop to BE (mandatory)
-- Position ≥ +15% -> 50% partial exit or stop to +5%
-- Position < +10% -> default = close, or document risk acceptance
-- Friday: always BE-stop before the weekend
-
-**Result:** APPROVED / BLOCKED - [reason]
+**Result:** APPROVED / BLOCKED — [reason citing the rule ID(s) that fired]
 
 ---
 
-## Position Sizing (v9: Scout-inverted sizing for borderline confidence)
+## Position Sizing
 
-> **W1 — All position recommendations are in % of available Cash**, not (Cash + invested). Pull live Cash from `pytr portfolio` at sizing time. The cert count in EUR comes only at the end of Step 4 (`Scout EUR / cert ask price`). Full text: `RULES.md § W1`.
-
-### Sizing Pre-Flight Gate (W8, MANDATORY before EUR-Empfehlung)
-
-Before ANY EUR sizing number is written, this block MUST appear in Step 3
-output, each check with explicit source citation:
+Apply `RULES.md § W6` (Mechanics → Confidence-computation, sizing brackets, compute steps). Before any EUR figure: run the **Sizing Pre-Flight Gate per `RULES.md § W8`** (three checks). Emit each check with the cited source value:
 
 ```
-SIZING PRE-FLIGHT:
-[ ] 1. Confidence-Bias-Check:
-       - indicator_context.py Strongest-Axis-Adjust = ±X.XX%
-       - My Rating 1 assigned = X/10
-       - Consistency check: If adjust > 0 AND Rating 1 < 6/10 → BIAS FLAG,
-         reconsider Rating. If adjust < 0 AND Rating 1 > 5/10 → BIAS FLAG.
-       - Forbidden words in Rating-1 reasoning: "überkauft", "overbought",
-         "exhaustion", "blowoff-reflex" WITHOUT a cited green-rate.
-       Status: PASS / FLAG
-
-[ ] 2. Correlation/Cluster-Check (SV2):
-       - Open positions: pytr portfolio output quoted verbatim
-       - For each open position vs candidate symbol: 60d daily-return correlation
-       - Rule: corr ≥ 0,7 → SV2 fires (NO-TRADE by default, override possible)
-       - If position closed but DB shows open: stale DB → recompute open list
-         from pytr first; do not size off a stale snapshot
-       Status: PASS / SV2-ACTIVE / USER-CONFIRMATION-NEEDED
-
-[ ] 3. Cash-Basis (W1):
-       - Live Cash from `pytr portfolio`: XXX EUR
-       - Incoming cash within 2 trading days (user stated): XXX EUR
-       - Cash basis for sizing = XXX EUR
-       - Mark-to-market value of open positions is NOT included
-       Status: PASS / AMBIGUOUS
+SIZING PRE-FLIGHT (per W8):
+[ ] 1. Confidence-Bias-Check:  PASS / FLAG
+[ ] 2. Correlation/Cluster-Check (SV2):  PASS / SV2-ACTIVE / USER-CONFIRMATION-NEEDED
+[ ] 3. Cash-Basis (W1):  PASS / AMBIGUOUS
 ```
 
-**Hard:** If any check is FLAG / USER-CONFIRMATION-NEEDED / AMBIGUOUS →
-STOP. Do not print the Risk-per-Trade table. Return to user for
-clarification. Never guess.
-
-**W6 sizing brackets** (full rationale: `RULES.md § W6`):
-
-| Confidence | Total (% Cash) | Scout % of Total | Confirmation % of Total | Scout (% Cash) | Confirmation (% Cash) |
-|------------|----------------|------------------|-------------------------|----------------|-----------------------|
-| 60-65% | 10% | **40% (inverted)** | **60%** | 4% | 6% |
-| 65%+ | 20% | **50%** | **50%** | 10% | 10% |
-
-**Compute:**
-- Live Cash from `pytr portfolio`
-- Scout = Cash × Scout-% → divide by cert ask price → cert count
-- Confirmation = Cash × Confirm-% → only after signal confirmation (Scout +5% in profit OR clear regime evidence)
-
-**Card requirement:** Step 3 card and Step 4 order plan must explicitly document whether scout-inversion is active ("scout-inverted" for 60-65% bracket, "scout-classic" for 65%+).
+If any check is not PASS → STOP. Do not print the Risk-per-Trade table. Return to user for clarification.
 
 ### Risk-per-Trade Table
 
 | Metric | Value |
 |--------|-------|
-| Portfolio value | XXX EUR |
-| Position size (XX%) | XXX EUR |
-| Scout (XX% of total - v9 split) | XXX EUR |
-| Confirmation (XX% of total - v9 split) | XXX EUR |
-| Max loss per trade (10%) | XXX EUR |
+| Cash (live, from `pytr portfolio`) | XXX EUR |
+| Position size (XX% of Cash, per W6 bracket) | XXX EUR |
+| Scout (XX% of Total) | XXX EUR |
+| Confirmation (XX% of Total) | XXX EUR |
+| Max loss per trade | XXX EUR |
 | Currently at risk | XXX EUR |
 | Remaining risk budget | XXX EUR |
 
-(Cert count = Scout EUR / cert ask price - computed in Step 4 once the cert is known.)
+(Cert count = Scout EUR / cert ask price — computed in Step 4 once the cert is known.)
 
 ---
 
@@ -410,14 +208,16 @@ Step 3:
 ║ KO (final):        XX.XX  (X.X%, method: ATR|Chart)          ║
 ║ Target (+20%):     XX.XX (underlying equivalent of +20% cert)║
 ║                                                              ║
-║ Position size:     XX% portfolio (XXX EUR)                   ║
-║ v9 split:          Scout-inverted (40/60) |                  ║
-║                    Scout-classic (60/40)                     ║
-║ Oversold bonus:    NO | +5% (RSI<20 green XX%) |             ║
-║                    +8% (RSI<15 green XX% capitulation)       ║
+║ Position size:     XX% Cash (XXX EUR)                        ║
+║ W6 split:          scout-inverted (40/60) | scout-classic    ║
+║                    (50/50)                                   ║
+║ Oversold bonus:    NO | +5% | +8%                            ║
 ║                                                              ║
-║ Vetos active:      <none | V4/V5/SV1/SV2/SV3>                ║
-║ Warnings active:   <none | W10/W11/W12>  -> trade-plan mods  ║
+║ Risk Audit:                                                  ║
+║   Vetos:           <list of fired Vetos or "all PASS">       ║
+║   Soft Vetos:      <list with override notes if any>         ║
+║   Warnings:        <list of fired Warnings + adjustment>     ║
+║   Soft Warnings:   <list of fired SW + override notes>       ║
 ║ Approved:          YES / NO                                  ║
 ╚══════════════════════════════════════════════════════════════╝
 

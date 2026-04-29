@@ -66,51 +66,15 @@ The script returns 5/10/20-day trend + green-day count + verdict. Rules:
 python3 scripts/indicator_context.py {{SYMBOL}} --expected-price <Close from 1.2> --expected-date <last trading day>
 ```
 
-The script:
-- Computes RSI / BB-position / Dist-3M-high over 3 years of THIS stock's history
-- Reports per band sample size [SOLID n>=30 / WEAK 15-29 / THIN <15] and Fwd-5d Green-Rate
-- Computes a sigmoid Confidence-Adjust per axis (continuous, no bucket cliffs)
-- Aggregates with the **strongest single axis** (max absolute adjust) - does NOT sum across axes
-- Classifies as TREND-STOCK or Range/Normal-stock
-- Aborts with exit code 2 if history is >2 trading days stale or close diverges >0.5% (stale-data guard)
+The script computes per-stock RSI / BB-position / Dist-3M-high green-rates over 3 years of history, reports sample tags (SOLID / WEAK / THIN), and emits the sigmoid-adjust per axis plus the strongest single axis. Full mechanics (formula, reference values, aggregation rule): `RULES.md § W3`.
 
-**Sigmoid Adjust formula** (already computed by the script):
-```
-adjust = 5.0 * tanh((green_rate - 0.5) * 4) * sample_weight
-sample_weight: SOLID (n>=30) = 1.0  /  WEAK (15-29) = 0.5  /  THIN (<15) = 0.0
-```
-
-Reference values (SOLID, max +/-5%):
-
-| Green-Rate | Adjust |
-|------------|--------|
-| 50% | 0.00% |
-| 55% | +0.99% |
-| 60% | +1.90% |
-| 65% | +2.69% |
-| 70% | +3.32% |
-| 75% | +3.81% |
-| 80% | +4.17% |
-| 85%+ | +4.43% to +4.61% |
-
-Negative green-rates mirror symmetrically (35% -> -2.69%, 25% -> -3.81%, etc.). WEAK halves; THIN is 0.
-
-**Aggregation rule:** Take the **strongest single axis** as Rating 1 input. Reasoning: RSI / BB / DistHigh are positively correlated for trend stocks (a stock near 3M-high tends to have BB high and RSI elevated). Naive summing would double-count. The script already prints `STRONGEST AXIS: <name>  adjust=±X.X%` - use that single number.
+The script aborts with exit code 2 if history is > 2 trading days stale or close diverges > 0.5% (stale-data guard).
 
 ### v9 Extreme-Oversold Bonus (W5, MANDATORY)
 
-When the current RSI band from the script output meets the conditions below, **explicitly add** the oversold bonus to LONG confidence. It overrides regime penalties.
+When the current RSI band from the script output meets the W5 conditions, add the LONG bonus per `RULES.md § W5` (Mechanics → bonus table + addition order). The bonus is cited explicitly in the summary table below and re-cited in the Judge step.
 
-| Current RSI band | Fwd-5d green-rate | Sample | LONG bonus |
-|------------------|-------------------|--------|------------|
-| < 20 | ≥ 65% | n ≥ 20 [SOLID] | **+5%** |
-| < 15 | ≥ 70% | n ≥ 20 [SOLID] | **+8%** (capitulation low) |
-
-Example reading: `indicator_context.py` shows "RSI 16 | Fwd5 +4.2% green=75% [SOLID n=34]" -> **+5% LONG bonus** mandatory in the summary table below and cited in the Judge step.
-
-**Rationale:** Backtest 2026-04-16, 5/5 predictions with confidence <50% during extreme-oversold went +8.82% in signal direction. The system blocked them due to TRENDING penalties, but the stock-specific Fwd green-rate dominates historically.
-
-**Forbidden:** No "overbought reflexes" without script output. Sentences like "RSI 72 is overbought -> -5%" or "BB >100% -> fade likely -> -5%" without first citing the green-rate are bias, not analysis.
+The forbidden inverse — applying an "overbought penalty" without a cited per-stock green-rate — is covered by W3.
 
 **Output table for your analysis:**
 
@@ -287,7 +251,7 @@ Convergence: <strongest-axis green X% / Mode1 green Y% / Mode2 green Z% [tag]>
 
 ## 1.8b Earnings Window Pattern (MANDATORY)
 
-> **W7 — Earnings proximity is NEVER a skip reason.** Forbidden phrases: "earnings in X days, too close", "window closed", "hold time too limited". Mandatory: run earnings_pattern.py and use the **per-stock pre-earnings green-rate as a confidence adjustment** (sigmoid output, ~±5%), not as a gate. If pre-earnings is historically bullish (green-rate >=55%, avg>0) -> LONG edge, do NOT skip. If bearish (<=45%) -> consider SHORT or LONG with reduced size. Adjust hold time (exit 1 day before earnings), but never reject the trade. Full text: `RULES.md § W7`.
+> **W7 — Earnings proximity is NEVER a skip reason.** Run `earnings_pattern.py` and use the per-stock pre-earnings green-rate as a confidence adjustment, not as a gate. Adjust hold time (typically exit one day before earnings) — never reject the trade itself. Full mechanics (backward vs. trade-window modes, sample tags, when to skip): `RULES.md § W7`.
 
 ```bash
 python3 scripts/earnings_pattern.py {{SYMBOL}}
@@ -298,27 +262,13 @@ python3 scripts/earnings_pattern.py {{SYMBOL}} --trade-entry <T-N> --trade-exit 
 #   --same-month highlights historical quarters in the same calendar month
 ```
 
-Script logic (two modes):
-- **Backward mode** (without --trade-entry): T-X→T0 returns, answers "how far away was the price X days before earnings?". Useful for rough phase categorization, **but does NOT measure the trade window.**
-- **Trade-window mode** (with --trade-entry/--trade-exit): interval return T-N→T-M, answers "if I enter today and exit the day before earnings - what happened historically?". This is the **primary metric for our 1-3d primary trade horizon (up to 5d if structurally justified).**
-
-Other:
-- Earnings > 30 days: skip with note (standard day pattern from § 1.8 is sufficient)
-- No earnings (commodity/index): cleanly skipped
-
 If full analysis ran, fill the table (Backward-mode T-5d/T-3d/T-1d/T+1d/T+3d/T+5d Avg/Green/n) AND separately Trade-Window return per quarter + summary.
 
 After the run, mandatorily document:
 1. Current phase in the earnings window
 2. Edge direction from script output (pre-earnings drift / post-earnings / NO clear pattern)
-3. **Trade-Window adjust (primary source):** the script's printed sigmoid adjust applies - NOT the backward-mode WARNING penalty.
+3. **Trade-Window adjust (primary source):** the script's printed sigmoid adjust applies — read directly per W7.
 4. Same-month hint: if the script finds ≥3 quarters in the target month, treat as validation; if THIN (<3), only as a directional hint.
-
-The script's sigmoid uses earnings-specific thresholds (SOLID n≥8, WEAK 4-7, THIN <4) because earnings sample size is structurally small (max ~10 quarters). Adjust value is read directly from the script output - do not re-derive from buckets.
-
-Backward-mode WARNING is **secondary signal only** (context, no auto-penalty) when Trade-Window stats are available.
-
-**Why this v9 design:** The original rule used T-5d→T0 backward returns and pulled -5% across the board on weak "phase". But that measures **drift toward earnings day**, not the **return over the held trade interval**. For HOOD (T-8): backward stats showed 30% green T-5d→T0, actual held interval T-8→T-3 showed 80% green + Ø +1.57%. The two metrics can give opposite signals - the trade-window metric is the correct one for our 1-3d primary horizon (up to 5d if structurally justified).
 
 Earnings pattern overrides the standard day pattern when earnings are near.
 
