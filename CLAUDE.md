@@ -69,15 +69,12 @@ intent. The pre-flight script enforces the blindspot checks.
   ≤−15% trades end on Ø −33%, 84% of total loss-damage came from
   this tail. Full ruleset in `prompts/03_judge_risk.md` § Loss Exits.
 - **Rule 27 — Re-Entry Cooldown after ANY exit (Tier-2/3 stop or +20% TP).**
-  Anchored to `exit_ts`. Base cooldown 24h. Pre-24h re-eval: criteria-fail
-  extends to 72h from exit; criteria-pass is informative only (no override).
-  Post-24h re-eval: criteria-fail = +48h from re-eval attempt; criteria-pass
-  unlocks the trade. Criteria: full re-analysis + confidence ≥10pp higher
-  than closed trade + ≥1 new catalyst. Trade-plan output is hard-clamped
-  while cooldown is active — no KO / entry / sizing / cert request emitted;
-  DB record stores direction + confidence with NULL trade-plan fields. Full
-  decision tree in `prompts/03_judge_risk.md` § Rule 27. Evidence base and
-  tracking trigger (n ≥ 10) in `memory/strategy_v9.md` § 10.
+  24h cooldown from `exit_ts`. During cooldown: pipeline run allowed,
+  output NO-TRADE-clamped (no entry/stop/KO/sizing/cert; DB record stores
+  direction + confidence with NULL trade-plan fields). After 24h: normal
+  pipeline run, normal trade if the pipeline produces a signal. The
+  pipeline IS the re-eval criterion — no separate +10pp / NEW-catalyst
+  gates. Full text: `prompts/03_judge_risk.md` § Rule 27.
 - **Rule 28 — Trader-Day Circuit-Breaker (PENDING, re-eval 2026-05-29).**
   Demoted from hard veto to soft warning + tracking on 2026-04-29: n=12
   April evidence cannot separate Tilt vs Market-confound vs Selection-bias.

@@ -225,53 +225,23 @@ trading day under the rule showed the watch was never actually used.
 - "Tighten stop to −2% more" once −25% breached — disciplined exit, not tweak
 - Any stop calculation in **underlying-%** for cert-trades — must be cert-%
 
-**Rule 27 — Re-Entry Cooldown (MANDATORY after every cert exit, Tier 2/3 or +20% take-profit):**
+**Rule 27 — Re-Entry Cooldown (HARD)**
 
-Re-evaluation is always allowed (information gathering is free). Trade-plan
-output is HARD-CLAMPED while cooldown is active — see § "NO-TRADE Output
-Clamp" below.
+After ANY exit on symbol X (Tier-2/3 stop OR TP+20%):
 
-**Re-entry criteria (all three must hold to lift cooldown):**
+- 24h cooldown from `exit_ts`.
+- During cooldown: pipeline run allowed, output is NO-TRADE-clamped.
+- After 24h: normal pipeline run, normal trade possible if the pipeline
+  produces a signal.
 
-```
-C2: Full 4-step re-analysis with FRESH data
-C3: Confidence ≥10pp higher than the closed-trade confidence
-C4: ≥1 NEW catalyst not present in the original plan
-```
+No re-eval criteria. No +10pp. No +1 NEW catalyst. No extension. No
+pre-/post-24h cases.
 
-**Decision tree (anchor: exit_ts = stop-tier or TP timestamp):**
+**Rationale:** The pipeline IS the re-eval criterion. A 70%+ signal with
+all V-vetos PASS produced 24h after a stop is qualitatively no worse than
+the same signal produced on a never-traded symbol.
 
-```
-Case A: no re-eval attempted yet
-  cooldown_active = (now < exit_ts + 24h)
-  eligible_at     = exit_ts + 24h
-
-Case B: re-eval attempted with reeval_ts < exit_ts + 24h  (pre-24h)
-  if criteria pass:
-    cooldown_active = True               # base 24h holds; pre-24h pass is informative only
-    eligible_at     = exit_ts + 24h      # re-test then; no override path
-  if criteria fail:
-    cooldown_active = (now < exit_ts + 72h)
-    eligible_at     = exit_ts + 72h
-
-Case C: re-eval attempted with reeval_ts ≥ exit_ts + 24h  (post-24h)
-  if criteria pass:
-    cooldown_active = False              # trade allowed
-    eligible_at     = reeval_ts
-  if criteria fail:
-    cooldown_active = (now < reeval_ts + 48h)
-    eligible_at     = reeval_ts + 48h
-```
-
-Pre-24h re-evals that pass criteria do NOT unlock the trade. They are logged
-in `memory/v10_log.md` § Same-Symbol Re-Entry as informative data points.
-There is no override path. Edge cases get logged as data, not bypassed.
-
-**NO-TRADE Output Clamp (mandatory when cooldown_active = True):**
-
-When the cooldown is active, Step 3 + Step 4 output MUST omit handleable
-trade-plan fields. Rationale: actionable levels in a NO-TRADE card become
-ambient temptation in the next stress moment.
+**NO-TRADE Output Clamp (mandatory when `now < exit_ts + 24h`):**
 
 | Field | Allowed under cooldown? |
 |---|---|
@@ -287,6 +257,8 @@ ambient temptation in the next stress moment.
 | **Cert-Request block** | **no** |
 | DB Record `--entry / --stop / --target / --ko` | omit (NULL) |
 | DB Record `--direction` and `--confidence` | yes, recorded for tracking |
+
+`eligible_at` is always `exit_ts + 24h`.
 
 **Rule 28 — Trader-Day Circuit-Breaker (PENDING, re-evaluate 2026-05-29):**
 

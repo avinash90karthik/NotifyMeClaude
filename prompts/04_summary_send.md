@@ -56,9 +56,9 @@ This step produces the final user-facing artifact. Order: **Trading Card -> Cert
 ║ Support-Stop:    Underlying close < <LEVEL>  -> sell 50%     ║
 ║                  even if cert hasn't hit -15% yet            ║
 ║                                                              ║
-║ Re-entry rule:   24h cooldown after ANY exit (incl. TP).     ║
-║ (Rule 27)        Re-entry needs +10pp confidence AND ≥1 new  ║
-║                  catalyst. Else extend cooldown 48h.         ║
+║ Re-entry rule:   24h cooldown from exit_ts. After 24h:       ║
+║ (Rule 27)        normal pipeline run, normal trade possible  ║
+║                  if signal. Pipeline IS the criterion.       ║
 ║                                                              ║
 ║ ─ CONTEXT ───────────────────────────────────────────        ║
 ║ Reversion-Guard: <Pullback-Pflicht @ X.XX | No-Edge |        ║
@@ -89,11 +89,11 @@ Field rationale:
 
 ## 1a. Trading Card variant — Rule 27 Cooldown active (NO-TRADE Output Clamp)
 
-When `prompts/03_judge_risk.md § Rule 27` reports `cooldown_active = True`,
-the standard Trading Card above MUST NOT be emitted. Use this clamped
-variant instead. The omitted blocks (Entry Plan, KO, Stop levels, Position
-Sizing, Cert Request) are intentionally absent — handleable levels in a
-NO-TRADE card become ambient temptation in the next stress moment.
+When `now < exit_ts + 24h` for the symbol, the standard Trading Card
+above MUST NOT be emitted. Use this clamped variant instead. The omitted
+blocks (Entry Plan, KO, Stop levels, Position Sizing, Cert Request) are
+intentionally absent — handleable levels in a NO-TRADE card become
+ambient temptation in the next stress moment.
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
@@ -105,11 +105,8 @@ NO-TRADE card become ambient temptation in the next stress moment.
 ║ Regime:          TRENDING | RANGE | CHOPPY | TRANSITIONAL    ║
 ║                                                              ║
 ║ ─ COOLDOWN STATUS ──────────────────────────────────         ║
-║ Decision-tree case:  A (no re-eval) | B (pre-24h) | C (post) ║
 ║ exit_ts:             YYYY-MM-DD HH:MM CET                    ║
-║ reeval_ts:           YYYY-MM-DD HH:MM CET                    ║
-║ Criteria check:      C2=PASS|FAIL  C3=±Xpp  C4=N catalysts   ║
-║ eligible_at:         YYYY-MM-DD HH:MM CET                    ║
+║ eligible_at:         YYYY-MM-DD HH:MM CET (= exit_ts + 24h)  ║
 ║                                                              ║
 ║ ─ STATISTICAL SETUP STRENGTH (educational, no levels) ──     ║
 ║ Strongest Bull:  <1-2 lines from Step 2>                     ║
@@ -136,17 +133,13 @@ python3 scripts/prediction_db.py record {{SYMBOL}} \
   --confidence [XX] \
   --regime [...] \
   --atr-pct [X.X] \
-  --reason "Rule 27 cooldown clamp. Case <A|B|C>. eligible_at=YYYY-MM-DD HH:MM CET. C3=±Xpp, C4=<count>. <statistical setup summary>."
+  --reason "Rule 27 cooldown clamp. eligible_at=YYYY-MM-DD HH:MM CET. <statistical setup summary>."
 ```
 
 `--entry`, `--stop`, `--target`, `--ko` are omitted (the schema accepts
 NULL on these columns; migrated 2026-04-29). The DB row records the
 direction + confidence for tracking purposes; the absence of trade-plan
 fields signals "cooldown-clamped, not actioned."
-
-The cooldown clamp also requires a tracking entry in
-`memory/v10_log.md` § Same-Symbol Re-Entry Attempts before the
-session ends.
 
 ---
 
