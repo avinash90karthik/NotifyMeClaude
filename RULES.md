@@ -4,7 +4,7 @@
 > for the Silver Hawk Trading pipeline. Operational mechanics
 > (thresholds, output formatting, score tables) live in the prompt that
 > enforces each rule; this file links to that owner. The DB schema lives
-> in `scripts/prediction_db.py`; strategy version history lives in `git
+> in `scripts/ops/prediction_db.py`; strategy version history lives in `git
 > log`.
 
 ## Severity legend
@@ -71,7 +71,7 @@ Owner of the operational table for V4 / V5: [`prompts/03_judge_risk.md` § Risk 
 ## V3 — Prices and FX come from APIs, never from web search
 
 - **Severity:** Veto
-- **Owner (mechanics):** [`prompts/01_data_collection.md` § 1.2](prompts/01_data_collection.md) (and `scripts/collect_data.py`)
+- **Owner (mechanics):** [`prompts/01_data_collection.md` § 1.2](prompts/01_data_collection.md) (and `scripts/analysis/collect_data.py`)
 - **One-line summary:** All prices (underlying spot, cert bid/ask, FX) come from a structured API. Never hardcode fallbacks; never derive prices from web search. When the US market is closed, use premarket / postmarket data via the same API. If all APIs fail, the analysis aborts.
 - **Source order:**
   1. **yfinance** — primary for underlying spot, OHLC, FX (`yf.Ticker(SYMBOL).info`, `.history(period='1d', interval='5m', prepost=True)` for premarket / postmarket).
@@ -171,7 +171,7 @@ violation.
 ## W3 — Indicator Context Check (strongest-axis aggregation)
 
 - **Severity:** Warning
-- **Owner (workflow):** [`prompts/01_data_collection.md` § 1.4 Indicator Context Check](prompts/01_data_collection.md) and `scripts/indicator_context.py::print_aggregation`
+- **Owner (workflow):** [`prompts/01_data_collection.md` § 1.4 Indicator Context Check](prompts/01_data_collection.md) and `scripts/analysis/indicator_context.py::print_aggregation`
 - **One-line summary:** Use this stock's own historical conditional probabilities (per-stock RSI/BB/DistHigh green-rate) instead of textbook overbought/oversold priors; aggregate via the strongest single axis (max |adjust|), not by summing.
 - **Mechanics:**
   - **Sigmoid-Adjust formula** (computed by `indicator_context.py`):

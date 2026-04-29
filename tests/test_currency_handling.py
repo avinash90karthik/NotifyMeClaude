@@ -18,7 +18,7 @@ class TestCurrencyDetection:
     def test_eur_symbol_detected(self):
         """Symbols ending in .DE must have native_currency=EUR."""
         from unittest.mock import patch, MagicMock
-        from scripts.collect_data import collect
+        from scripts.analysis.collect_data import collect
 
         mock_info = {
             'currency': 'EUR',
@@ -52,7 +52,7 @@ class TestCurrencyDetection:
             'Volume': [3_000_000] * n,
         }, index=idx)
 
-        with patch('scripts.collect_data.yf') as mock_yf:
+        with patch('scripts.analysis.collect_data.yf') as mock_yf:
             # Main ticker
             main_ticker = MagicMock()
             main_ticker.info = mock_info
@@ -85,7 +85,7 @@ class TestCurrencyDetection:
     def test_usd_symbol_detected(self):
         """US symbols must have native_currency=USD."""
         from unittest.mock import patch, MagicMock
-        from scripts.collect_data import collect
+        from scripts.analysis.collect_data import collect
 
         mock_info = {
             'currency': 'USD',
@@ -119,7 +119,7 @@ class TestCurrencyDetection:
             'Volume': [5_000_000] * n,
         }, index=idx)
 
-        with patch('scripts.collect_data.yf') as mock_yf:
+        with patch('scripts.analysis.collect_data.yf') as mock_yf:
             main_ticker = MagicMock()
             main_ticker.info = mock_info
             main_ticker.history.return_value = mock_hist
@@ -146,7 +146,7 @@ class TestCurrencyDetection:
     def test_no_hardcoded_eurusd_fallback(self):
         """If EUR/USD fetch fails, collect() must error — not use 1.05 fallback."""
         from unittest.mock import patch, MagicMock
-        from scripts.collect_data import collect
+        from scripts.analysis.collect_data import collect
 
         import pandas as pd
         import numpy as np
@@ -160,7 +160,7 @@ class TestCurrencyDetection:
             'Volume': [5_000_000] * n,
         }, index=idx)
 
-        with patch('scripts.collect_data.yf') as mock_yf:
+        with patch('scripts.analysis.collect_data.yf') as mock_yf:
             main_ticker = MagicMock()
             main_ticker.info = {'currency': 'USD', 'currentPrice': 95.0, 'previousClose': 92.0}
             main_ticker.history.return_value = mock_hist
@@ -184,7 +184,7 @@ class TestCurrencyDetection:
     def test_analyst_targets_have_currency_annotation(self):
         """JSON output must include analyst_target_currency field."""
         from unittest.mock import patch, MagicMock
-        from scripts.collect_data import collect
+        from scripts.analysis.collect_data import collect
 
         import pandas as pd
         import numpy as np
@@ -198,7 +198,7 @@ class TestCurrencyDetection:
             'Volume': [3_000_000] * n,
         }, index=idx)
 
-        with patch('scripts.collect_data.yf') as mock_yf:
+        with patch('scripts.analysis.collect_data.yf') as mock_yf:
             main_ticker = MagicMock()
             main_ticker.info = {
                 'currency': 'EUR',

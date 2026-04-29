@@ -128,7 +128,7 @@ ambient temptation in the next stress moment.
 DB record under cooldown clamp:
 
 ```bash
-python3 scripts/prediction_db.py record {{SYMBOL}} \
+python3 scripts/ops/prediction_db.py record {{SYMBOL}} \
   --direction [LONG|SHORT] \
   --confidence [XX] \
   --regime [...] \
@@ -250,7 +250,7 @@ The leverage formula + sanity checks are **mandatory** - no free-form leverage p
 ## 3. DB Record (MANDATORY - even on NO-TRADE)
 
 ```bash
-python3 scripts/prediction_db.py record {{SYMBOL}} \
+python3 scripts/ops/prediction_db.py record {{SYMBOL}} \
   --direction [LONG|SHORT] \
   --confidence [XX] \
   --entry [XX.XX] \
@@ -267,7 +267,7 @@ python3 scripts/prediction_db.py record {{SYMBOL}} \
 **After user confirms the trade (DB + W9 exit orders, both mandatory):**
 ```bash
 # 1. DB record
-python3 scripts/prediction_db.py open ID --shares XX --cert-price XX.XX [--cert-type turbo|warrant|stock]
+python3 scripts/ops/prediction_db.py open ID --shares XX --cert-price XX.XX [--cert-type turbo|warrant|stock]
 
 # 2. W9 exit orders + TP alarm via pytr → TR
 python3 scripts/tr/place_exits.py --isin <CERT_ISIN> --buy <FILL_PRICE> --shares <XX>

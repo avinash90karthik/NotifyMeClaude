@@ -38,7 +38,7 @@ import yfinance as yf
 
 # Allow `from lib.X` when invoked as `python3 scripts/indicator_context.py`
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from lib.indicators import sigmoid_adjust
 from lib.conditional_stats import (

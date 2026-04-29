@@ -49,7 +49,7 @@ import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DB_FILE = os.path.join(PROJECT_ROOT, 'memory', 'predictions.db')
 
 

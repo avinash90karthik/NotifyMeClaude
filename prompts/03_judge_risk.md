@@ -73,8 +73,8 @@ If either calculation cannot complete → trade is invalid, abort (V1 is a hard 
 Run scripts (already pulled in Step 2):
 
 ```bash
-python3 scripts/reversion_guard.py {{SYMBOL}} --direction <LONG|SHORT>
-python3 scripts/entry_calibration.py {{SYMBOL}}
+python3 scripts/analysis/reversion_guard.py {{SYMBOL}} --direction <LONG|SHORT>
+python3 scripts/analysis/entry_calibration.py {{SYMBOL}}
 ```
 
 Compute the entry per `RULES.md § W4` (Mechanics → Center derivation + half-width formula + four levels + reconciliation).

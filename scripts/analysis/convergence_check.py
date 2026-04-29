@@ -44,7 +44,7 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from lib.conditional_stats import (
     analog_match_green_rate,

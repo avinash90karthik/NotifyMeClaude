@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 import numpy as np
 
 # Allow `from lib.X` and `from scripts.Y` when invoked as `python3 scripts/backtest.py`
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 SCORE_THRESHOLD = 40
 MIN_HISTORY_DAYS = 300  # Need ~1y+ of history
@@ -25,7 +25,7 @@ MIN_HISTORY_DAYS = 300  # Need ~1y+ of history
 
 def parse_watchlist_symbols():
     """Load symbols from the watchlist table in predictions.db."""
-    from scripts.prediction_db import get_watchlist_symbols
+    from scripts.ops.prediction_db import get_watchlist_symbols
     return [s['symbol'] for s in get_watchlist_symbols()]
 
 

@@ -19,14 +19,14 @@ import os
 import sys
 from collections import defaultdict
 
-# Allow `from lib.X` and `from scripts.Y` when invoked as `python3 scripts/preopen_backtest.py`
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Allow `from lib.X` and `from scripts.Y` when invoked as `python3 scripts/analysis/preopen_backtest.py`
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 import numpy as np
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PATTERNS_FILE = os.path.join(PROJECT_ROOT, 'memory', 'preopen_patterns.json')
 ET = ZoneInfo('America/New_York')
 WARMUP_DAYS = 250
@@ -48,7 +48,7 @@ ALL_DIMS = ('score', 'rsi_zone', 'regime', 'gap', 'macd', 'volume', 'bb', 'futur
 
 def get_watchlist_symbols():
     """Load US symbols from predictions.db watchlist (skip EU stocks)."""
-    from scripts.prediction_db import get_watchlist_symbols as db_watchlist
+    from scripts.ops.prediction_db import get_watchlist_symbols as db_watchlist
     return [s['symbol'] for s in db_watchlist()
             if not any(s['symbol'].endswith(sfx) for sfx in EU_SUFFIXES)]
 

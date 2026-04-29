@@ -78,7 +78,7 @@ def test_db(tmp_path, monkeypatch):
     conn.close()
 
     # Patch DB_FILE in prediction_db and risk_audit
-    monkeypatch.setattr('scripts.prediction_db.DB_FILE', db_path)
+    monkeypatch.setattr('scripts.ops.prediction_db.DB_FILE', db_path)
 
     return db_path
 

@@ -75,7 +75,7 @@ def parse_portfolio_summary():
     runs once per analysis, so the ~200ms latency is acceptable.
     """
     try:
-        from scripts.prediction_db import get_db
+        from scripts.ops.prediction_db import get_db
         conn = get_db()
 
         # Open positions — include cert_type so V3 can exclude hedges.

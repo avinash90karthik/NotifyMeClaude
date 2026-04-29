@@ -19,7 +19,7 @@ import pandas as pd
 import yfinance as yf
 
 # Allow `from lib.X` when invoked as `python3 scripts/collect_data.py`
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from lib.indicators import calc_adx, calc_bollinger, detect_regime
 

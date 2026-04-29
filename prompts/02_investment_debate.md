@@ -81,8 +81,8 @@ Verdicts:
 Run once before filling the scorecard (Step 3 will fetch it again, but the scorecard needs it here):
 
 ```bash
-python3 scripts/reversion_guard.py {{SYMBOL}} --direction LONG
-python3 scripts/reversion_guard.py {{SYMBOL}} --direction SHORT
+python3 scripts/analysis/reversion_guard.py {{SYMBOL}} --direction LONG
+python3 scripts/analysis/reversion_guard.py {{SYMBOL}} --direction SHORT
 ```
 
 Mapping verdict -> Reversion-Edge rating (symmetric, max LONG = 8 in strongest case):

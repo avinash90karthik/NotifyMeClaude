@@ -4,9 +4,9 @@ These two functions consume the technical-indicator dict produced by
 calc_technicals() and return a 0-100 score plus a list of triggered
 signals. They are used by:
 
-  - scripts/preopen_check.py
-  - scripts/preopen_backtest.py
-  - scripts/backtest.py (rolling-window validation + feature-importance
+  - scripts/analysis/preopen_check.py
+  - scripts/analysis/preopen_backtest.py
+  - scripts/backtest/backtest.py (rolling-window validation + feature-importance
     decomposition; the only falsification loop for the weights below)
 
 Both functions are pure: they only inspect the input dict and an optional

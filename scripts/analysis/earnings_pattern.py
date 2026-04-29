@@ -26,7 +26,7 @@ import pandas as pd
 
 # Allow `from lib.X` when invoked as `python3 scripts/earnings_pattern.py`
 import os as _os
-sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))))
 
 from lib.indicators import sigmoid_adjust
 

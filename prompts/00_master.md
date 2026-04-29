@@ -18,13 +18,13 @@ Execute sequentially. Each step builds on the previous. No step may be skipped.
 | 3 | `prompts/03_judge_risk.md` | Signal + confidence, KO, reversion guard, risk audit, stock trade plan |
 | 4 | `prompts/04_summary_send.md` | Trading card, cert request, prediction DB record |
 
-**Step 0 command:** `python3 scripts/preflight_check.py {{SYMBOL}}` - runs FIRST. Its date/market output is ground truth. Echo the checklist back with your answers before Step 1.
+**Step 0 command:** `python3 scripts/analysis/preflight_check.py {{SYMBOL}}` - runs FIRST. Its date/market output is ground truth. Echo the checklist back with your answers before Step 1.
 
 ## Rules
 
 - **Primary ruleset:** `CLAUDE.md` Hard Rules (Gate, Exits, KO, Position Sizing, Rules 1-24). Re-read before each analysis in case rules changed.
 - **Rules:** `RULES.md` (single registry).
-- **Portfolio state:** `python3 scripts/prediction_db.py portfolio` - run BEFORE Step 1.
+- **Portfolio state:** `python3 scripts/ops/prediction_db.py portfolio` - run BEFORE Step 1.
 - **yfinance = truth** for all price data. Never use web search for prices.
 - **Pre-/Post-Market with yfinance:** When the US market is closed, `preflight_check.py` only returns the last regular close. For extended-hours live prices use `yf.Ticker(SYMBOL).info` (fields `preMarketPrice`, `preMarketChangePercent`, `postMarketPrice`) or `yf.Ticker(SYMBOL).history(period='1d', interval='5m', prepost=True)`. Twelvedata Basic plan does NOT support pre-/post-market - don't waste time on it.
 - **Every trade** needs: entry, stop, KO, exits, time-stop.
@@ -37,7 +37,7 @@ Execute sequentially. Each step builds on the previous. No step may be skipped.
 
 Before completing Step 4, record the prediction:
 ```bash
-python3 scripts/prediction_db.py record {{SYMBOL}} \
+python3 scripts/ops/prediction_db.py record {{SYMBOL}} \
   --direction [LONG|SHORT] --confidence [XX] \
   --entry [XX.XX] --stop [XX.XX] --target [XX.XX] --ko [XX.XX] \
   --regime [TRENDING|RANGE|CHOPPY|TRANSITIONAL] --atr-pct [X.X] \

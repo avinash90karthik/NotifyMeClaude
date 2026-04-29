@@ -125,7 +125,7 @@ End-to-end v10 decision drift on the full 17-symbol watchlist
   cluster C (operational, ≥30%): 4 symbols (ARM, ASML, GOOGL, AAPL)
 
 Patch applied 2026-04-27: `HAS_WAVELET = False` in
-`scripts/collect_data.py` (commit `0a04d06`). Future analyses no longer
+`scripts/analysis/collect_data.py` (commit `0a04d06`). Future analyses no longer
 call `denoise_ohlcv()`; the indicator pipeline operates on raw Close
 prices.
 

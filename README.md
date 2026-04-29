@@ -66,9 +66,9 @@ pip3 install yfinance numpy pandas pywavelets python-dotenv
 cp .env.template .env
 
 # 5. Smoke-test the install
-python3 scripts/preflight_check.py AAPL
-python3 scripts/collect_data.py AAPL
-python3 scripts/prediction_db.py portfolio
+python3 scripts/analysis/preflight_check.py AAPL
+python3 scripts/analysis/collect_data.py AAPL
+python3 scripts/ops/prediction_db.py portfolio
 
 # 6. Run your first analysis
 claude
@@ -82,8 +82,8 @@ The `memory/predictions.db` SQLite file is created on first use.
 ```
 You (Claude Code)
 ├── "Analysiere SYMBOL"                        → pre-flight + 4-step analysis → terminal trading card
-├── python3 scripts/prediction_db.py portfolio  → view positions, cash, slots
-└── python3 scripts/collect_data.py SYMBOL      → quick technical snapshot
+├── python3 scripts/ops/prediction_db.py portfolio  → view positions, cash, slots
+└── python3 scripts/analysis/collect_data.py SYMBOL      → quick technical snapshot
 
 Local State
 ├── memory/predictions.db                       → positions, stops, P&L, analysis log
@@ -94,12 +94,12 @@ Local State
 ## Analysis Pipeline
 
 Tell Claude Code: **"Analysiere SYMBOL"** (or "Analyze SYMBOL"). The
-pipeline starts with a pre-flight check (`scripts/preflight_check.py`)
+pipeline starts with a pre-flight check (`scripts/analysis/preflight_check.py`)
 and runs all four steps below — no shortcuts, no mini-versions.
 
 | Step | What Happens |
 |------|--------------|
-| 0. Pre-Flight | `scripts/preflight_check.py` — real date/weekday/market-status, yfinance news (7d), mandatory Trump/Reddit/day-news/event searches, echo-back checklist. |
+| 0. Pre-Flight | `scripts/analysis/preflight_check.py` — real date/weekday/market-status, yfinance news (7d), mandatory Trump/Reddit/day-news/event searches, echo-back checklist. |
 | 1. Data Collection | yfinance prices, RSI, MACD, SMAs, ATR, short interest, news, correlation check, event calendar, geopolitical triggers. Per-stock indicator-context with sigmoid adjusts (strongest single axis). Earnings-window pattern. Reversion-edge probe. Step 1 ends with a one-line summary block. |
 | 2. Investment Debate | Bull vs Bear — 2 full rounds + LONG vs SHORT 6-axis scorecard (/60). Reversion-edge mapped to a symmetric rating (LONG max 8/10 in the strongest case). |
 | 3. Judge & Risk | Verdict + confidence (smooth differential penalty), KO via max(ATR, chart), V-vetos + W-warnings, position sizing in % of portfolio with v9 Scout-inversion below 65%. |
@@ -129,19 +129,19 @@ sqlite3 memory/predictions.db "DELETE FROM watchlist WHERE symbol='AAPL';"
 
 ```bash
 # Show current state (positions, cash, slots, recent closes)
-python3 scripts/prediction_db.py portfolio
+python3 scripts/ops/prediction_db.py portfolio
 
 # Set cash balance
-python3 scripts/prediction_db.py cash 10000
+python3 scripts/ops/prediction_db.py cash 10000
 
 # After a trade is opened
-python3 scripts/prediction_db.py open ID --shares 50 --cert-price 2.50 --cert-type turbo
+python3 scripts/ops/prediction_db.py open ID --shares 50 --cert-price 2.50 --cert-type turbo
 
 # v9 confirmation buy (after Scout +5% in profit)
-python3 scripts/prediction_db.py confirm ID --shares 30 --cert-price 2.65
+python3 scripts/ops/prediction_db.py confirm ID --shares 30 --cert-price 2.65
 
 # Close (full or partial)
-python3 scripts/prediction_db.py close ID --exit-price 3.10 --reason target
+python3 scripts/ops/prediction_db.py close ID --exit-price 3.10 --reason target
 ```
 
 ## Repository Layout
@@ -152,7 +152,11 @@ NotifyMeClaude/
 ├── README.md                  # this file
 ├── .env.template              # optional config (gitignored .env)
 ├── prompts/                   # 5 prompt files (00_master + 01-04)
-├── scripts/                   # CLI tools
+├── scripts/
+│   ├── analysis/              # pipeline scripts called by prompts
+│   ├── ops/                   # portfolio state CLI (prediction_db)
+│   ├── backtest/              # validation / falsification tools
+│   └── tr/                    # Trade Republic broker access
 ├── lib/                       # shared library modules
 ├── tests/                     # pytest suite
 └── memory/                    # local state (predictions.db, patterns)
@@ -167,25 +171,25 @@ and is imported by the scripts — never invoked directly.
 
 | Script | Purpose |
 |--------|---------|
-| `scripts/preflight_check.py` | Mandatory first step — date/market status, yfinance news, mandatory search-query banner, echo-back checklist |
-| `scripts/collect_data.py` | Full technical snapshot (price, RSI, MACD, ATR, SMAs, S/R, events, FX) |
-| `scripts/price_action_check.py` | 5/10/20-day trend + green-day count + verdict (Rule 14) |
-| `scripts/indicator_context.py` | Per-stock RSI/BB/DistHigh band statistics + sigmoid adjust + STRONGEST AXIS aggregation (Rule 16) |
-| `scripts/day_pattern.py` | Similar-day forward-return distribution |
-| `scripts/pattern_timeline.py` | Mode 1 similar-day + Mode 2 analog-match forecast for Day +1 to +5 |
-| `scripts/earnings_pattern.py` | Per-stock earnings-window historical behavior (backward + trade-window mode) |
-| `scripts/event_impact.py` | Big-moves (>3%) reaction history with bounce rate |
-| `scripts/reversion_guard.py` | Per-stock LONG/SHORT reversion-edge check (Rule 18) |
-| `scripts/entry_calibration.py` | Intraday-dip statistics + realistic buy-range computation |
+| `scripts/analysis/preflight_check.py` | Mandatory first step — date/market status, yfinance news, mandatory search-query banner, echo-back checklist |
+| `scripts/analysis/collect_data.py` | Full technical snapshot (price, RSI, MACD, ATR, SMAs, S/R, events, FX) |
+| `scripts/analysis/price_action_check.py` | 5/10/20-day trend + green-day count + verdict (Rule 14) |
+| `scripts/analysis/indicator_context.py` | Per-stock RSI/BB/DistHigh band statistics + sigmoid adjust + STRONGEST AXIS aggregation (Rule 16) |
+| `scripts/analysis/day_pattern.py` | Similar-day forward-return distribution |
+| `scripts/analysis/pattern_timeline.py` | Mode 1 similar-day + Mode 2 analog-match forecast for Day +1 to +5 |
+| `scripts/analysis/earnings_pattern.py` | Per-stock earnings-window historical behavior (backward + trade-window mode) |
+| `scripts/analysis/event_impact.py` | Big-moves (>3%) reaction history with bounce rate |
+| `scripts/analysis/reversion_guard.py` | Per-stock LONG/SHORT reversion-edge check (Rule 18) |
+| `scripts/analysis/entry_calibration.py` | Intraday-dip statistics + realistic buy-range computation |
 
 ### Operational scripts
 
 | Script | Purpose |
 |--------|---------|
-| `scripts/prediction_db.py` | Portfolio state + trade log + analysis record (SQLite CLI) |
-| `scripts/preopen_check.py` | Pre-open verdict: buy NOW or WAIT? Pattern-based |
-| `scripts/preopen_backtest.py` | Backtest pre-open patterns on historical data |
-| `scripts/backtest.py` | Rolling-window validation of `lib/scoring.py` weights + per-component feature-importance decomposition (falsification loop for `score_long`/`score_short`) |
+| `scripts/ops/prediction_db.py` | Portfolio state + trade log + analysis record (SQLite CLI) |
+| `scripts/analysis/preopen_check.py` | Pre-open verdict: buy NOW or WAIT? Pattern-based |
+| `scripts/analysis/preopen_backtest.py` | Backtest pre-open patterns on historical data |
+| `scripts/backtest/backtest.py` | Rolling-window validation of `lib/scoring.py` weights + per-component feature-importance decomposition (falsification loop for `score_long`/`score_short`) |
 
 ### Library modules (imported, not invoked)
 
