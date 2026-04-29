@@ -12,7 +12,7 @@ the single source of truth for positions, cash, and analysis history.
 - **Rules (single registry):** `RULES.md` — rationale, evidence, falsification triggers per rule. Mechanics for each rule live in the prompt that enforces it (linked from each rule entry).
 - **Pipeline architecture:** `prompts/00_master.md`. Each step file (`01` … `04`) enforces its own rules inline.
 - **Portfolio + analysis history:** `prediction_db.py` CLI + `memory/predictions.db`.
-- **Tracking data for pending rules:** `memory/v10_log.md`.
+- **Tracking data for pending rules:** `memory/TRACKING.md`.
 - **Setup / onboarding:** `README.md` + `.env.template`.
 - **Live broker access (pytr — already authenticated):**
   - `scripts/tr/list_orders.py` — read open orders + price alarms

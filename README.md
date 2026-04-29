@@ -88,7 +88,7 @@ You (Claude Code)
 Local State
 ├── memory/predictions.db                       → positions, stops, P&L, analysis log
 ├── memory/preopen_patterns.json                → pre-open pattern statistics
-└── memory/strategy_v9.md                       → strategy rationale (the "why" behind rules)
+└── RULES.md                                    → single rule registry (rationale, evidence, falsification)
 ```
 
 ## Analysis Pipeline
@@ -106,8 +106,8 @@ and runs all four steps below — no shortcuts, no mini-versions.
 | 4. Trading Card | Final card in terminal. `memory/predictions.db` updated with the analysis (always, even on NO-TRADE). Cert request with target-based leverage formula and KO-range. |
 
 Hard rules live inline in the prompts where they are enforced. The "why"
-behind each rule (post-mortems, backtest rationale) lives in
-`memory/strategy_v9.md`.
+behind each rule (rationale, evidence base, falsification trigger) lives
+in `RULES.md` at the repo root.
 
 ## Watchlist
 
@@ -224,8 +224,10 @@ CHART_OUTPUT_DIR=...    # chart output directory
 - **`CLAUDE.md`** — onboarding index for Claude Code (project meta-conventions)
 - **`prompts/00_master.md`** — pipeline overview + invocation rules
 - **`prompts/01_data_collection.md` … `04_summary_send.md`** — step instructions, hard rules inline
-- **`memory/strategy_v9.md`** — strategy rationale (the "why" behind every rule, post-mortems, backtest details)
-- **`tests/`** — what we never want to break (currency handling, ATR true-range, hedge slot counting, SQL injection guard, V5 drawdown veto)
+- **`RULES.md`** — single rule registry (severity, owner, rationale, evidence, falsification per rule)
+- **`memory/TRACKING.md`** — pending rules and accumulating evidence
+- **`archive/`** — historical context retained for evidentiary value (e.g. v9 backtest rationale)
+- **`tests/`** — what we never want to break (currency handling, ATR true-range, slot counting, SQL injection guard)
 
 ## FAQ
 

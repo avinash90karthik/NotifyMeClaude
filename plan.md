@@ -154,5 +154,5 @@ engineering when prioritised. Not blocking live trading on `main`.
 
 - v11 research-branch detailed tracking: `refactor/v11-stochastic` -> `plan.md`
 - v11.1 trade-path simulator spec: `paper/v11_1_TRADE_PATH_SPEC.md` (on v11 branch)
-- Live strategy: `memory/strategy_v9.md`
+- Live rules: `RULES.md`
 - Live pipeline entry: `prompts/00_master.md`
