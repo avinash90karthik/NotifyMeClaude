@@ -71,13 +71,14 @@ intent. The pre-flight script enforces the blindspot checks.
 - **Re-entry after ANY exit needs 24h cooldown + +10pp confidence
   + ≥1 new catalyst (Rule 27).** No same-thesis re-entry into a
   falling market. Post-mortem: AMD #130 (2026-04-27).
-- **Rule 28 — Trader-Day Circuit-Breaker.** After any Tier-2 stop today,
-  no new SYMBOL entries until 22:00 CET. After any Tier-3 / Support-
-  Override stop, blocked today AND tomorrow. Existing positions can be
-  managed. Override: explicit `"Rule-28-override: <reason>"` with a NEW
-  catalyst. Enforced in `scripts/preflight_check.py` (free-text match
-  on `close_events.reason`). Post-mortem: ENR-then-NVDA tilt-trade
-  2026-04-28.
+- **Rule 28 — Trader-Day Circuit-Breaker (PENDING, re-eval 2026-05-29).**
+  Demoted from hard veto to soft warning + tracking on 2026-04-29: n=12
+  April evidence cannot separate Tilt vs Market-confound vs Selection-bias.
+  `scripts/preflight_check.py` now emits `[RULE 28 PENDING — TRACKING]` on
+  Tier-2/3 stop in trailing 32h **without exiting** — pipeline runs through.
+  User MUST log each stop in `memory/v10_log.md` (template + locked decision
+  schema there). Without log entries, the 2026-05-29 evaluation is blind.
+  Rule 27 (same-symbol cooldown, AMD #130) remains hard and unchanged.
 - **v10 concentration limits (tightened 2026-04-28):** Slot cap **2** (was 3,
   hedges excluded). Sector cap **40%** (was 60%) with AI-semi grouping
   {NVDA, AMD, AVGO, MRVL, TSM, ASML} treated as ONE effective sector.

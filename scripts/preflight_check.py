@@ -549,11 +549,41 @@ def main():
 
     symbol = args.symbol.upper()
 
-    # Rule 28 — Trader-Day Circuit-Breaker. Hard veto BEFORE any work.
+    # Rule 28 — Trader-Day Circuit-Breaker. PENDING (2026-04-29):
+    # Reduced from hard veto to soft warning until 2026-05-29 evaluation.
+    # Reason: April n=12 too small to distinguish Tilt vs. Market-confound vs.
+    # Selection-bias. Tracking in memory/v10_log.md collects S&P + sector-ETF
+    # daily returns alongside follow-up trade outcomes. See memory/strategy_v9.md
+    # § 11 for hypotheses and decision schema.
     allowed, veto_msg = check_rule_28(symbol)
     if not allowed:
-        print(veto_msg, file=sys.stderr)
-        sys.exit(2)
+        # Build a Pending-form notice. veto_msg under v10.0 was a hard block;
+        # under Pending we convert it into an awareness ping + logging reminder.
+        # Extract the "Tier-... stop on <SYM> at <DATE> ..." prefix and the
+        # "blocked until ..." suffix from veto_msg so the pending notice keeps
+        # the same time-anchor info but flips the framing.
+        prefix_split = veto_msg.split("[RULE 28 VETO] ", 1)
+        tail = prefix_split[1] if len(prefix_split) == 2 else veto_msg
+        # Strip the obsolete hard-block phrasing from the tail.
+        tail = tail.replace(
+            " New entries blocked until ",
+            " (Hard-veto suspended; old unblock-time was ",
+        )
+        tail = tail.replace(
+            " Manage existing positions only.",
+            ").",
+        )
+        tail = tail.replace(
+            " Override: 'Rule-28-override: <reason citing new catalyst>'.",
+            "",
+        ).strip()
+        pending_msg = (
+            f"[RULE 28 PENDING — TRACKING] {tail} "
+            "Trade decision is yours; please log this stop "
+            "in memory/v10_log.md regardless of outcome."
+        )
+        print(pending_msg, file=sys.stderr)
+        # Continue execution — no sys.exit(2). Pipeline runs normally.
 
     date_ctx = get_date_context()
     price_snap, price_err = fetch_price_snapshot(symbol)

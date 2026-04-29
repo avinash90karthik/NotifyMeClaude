@@ -243,35 +243,40 @@ generated −€603 unrealized loss in 1 trading session. Recency bias on
 losses across the 2026-04 sample.
 ```
 
-**Rule 28 — Trader-Day Circuit-Breaker (MANDATORY, enforced in preflight):**
+**Rule 28 — Trader-Day Circuit-Breaker (PENDING, re-evaluate 2026-05-29):**
 
 ```
-After ANY Rule 26 Tier-2 exit (cert −15%) on any symbol today (CET):
-  → NEW symbol entries blocked for the rest of the trading day (CET).
-  → Existing positions can still be managed (sells, confirms, hedges OK).
-  → Override: explicit user override "Rule-28-override: <reason>" required,
-     citing a NEW catalyst not present at the time of the stop.
+STATUS: Pending. n=12 April evidence is too small to distinguish Tilt vs.
+Market-confound vs. Selection-bias. Hard-veto suspended; pipeline runs but
+emits [RULE 28 PENDING — TRACKING] notice on Tier-2/3 stop in trailing 32h.
 
-After ANY Rule 26 Tier-3 exit (cert −25%) or Support-Override on any symbol today:
-  → NEW symbol entries blocked TODAY AND TOMORROW (next trading day).
-  → Existing positions can still be managed.
-  → Tomorrow's first analysis MUST include a written reflection
-     ("what triggered yesterday's stop") before any new analysis runs.
-  → Override: explicit user override "Rule-28-override: <reason>" required,
-     citing a NEW catalyst not present at the time of the stop.
+After ANY Rule 26 Tier-2 / Tier-3 / Support-Override exit on any symbol:
+  → preflight prints PENDING notice to stderr (does NOT exit)
+  → user MUST log the event in memory/v10_log.md (template + decision
+    schema there). Without the log entry, the 2026-05-29 evaluation is
+    blind and Pending will extend by default.
+  → user retains full trade autonomy on new symbols. No magic-string
+    override needed.
 
-Enforcement: scripts/preflight_check.py queries close_events.reason via
-free-text match (TIER2_PATTERNS / TIER3_PATTERNS) for tier 2/3 / support-
-override exits in the trailing 32h window. If a match exists AND the
-candidate symbol is NOT already open in the DB, preflight emits a
-[RULE 28 VETO] message to stderr and exits with code 2 → analysis aborts.
+Tracking required per stop:
+  - Date, Symbol, Tier, Realized P&L
+  - Same-day follow-up trade outcome (or watchlist pipeline-run if no trade)
+  - S&P-500 daily return on stop-day
+  - Sector-ETF daily return on stop-day
+    (SOXX / ICLN / ARKX / XLK / XLV / XLF — see v10_log.md mapping)
 
-Rationale: April 2026 data showed P&L on next-trade after a loss averaging
-−€136 (33% win-rate, n=12) vs +€82 (78% win-rate) after a win. ENR
-2026-04-28: Tier-2 + Tier-3 in 17 minutes, then NVDA scout opened
-immediately — exactly the failure mode this rule prevents. Rule 27
-protects against same-symbol re-entry; Rule 28 protects against
-fresh-symbol entry on a tilt day.
+Decision 2026-05-29: schema in memory/v10_log.md, locked in advance.
+Possible outcomes: hard-veto restoration | drop entirely | extend tracking.
+
+Restoration mechanic: single-commit revert in scripts/preflight_check.py
+(replace pending notice with sys.exit(2)) + update CLAUDE.md hard-rule
+list + flip § 11 status in memory/strategy_v9.md.
+
+Background (April 2026): n=12 trades after stop showed 33% win-rate vs 78%
+after win. ENR 2026-04-28 (Tier-2 + Tier-3 in 17 min, NVDA scout same day)
+is the founding case. Under Pending it is now data, not blocked behavior.
+Rule 27 (same-symbol cooldown) remains hard and unchanged — it covers the
+worst tilt sub-case (re-entry into the just-stopped symbol).
 ```
 
 **Time stops:** 3 days < 5% profit -> halve | 5 days sideways -> exit | Earnings < 2 days -> 50% off

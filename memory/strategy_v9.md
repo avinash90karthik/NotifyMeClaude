@@ -392,24 +392,48 @@ re-rationalizes the original thesis with the user's preferred
 direction baked in. New catalyst forces the analysis to update on
 real new information.
 
-## 11. Rule 28 — Trader-Day Circuit-Breaker (added 2026-04-28, v10)
+## 11. Rule 28 — Trader-Day Circuit-Breaker (PENDING, re-evaluate 2026-05-29)
 
-**Rule statement:** After any Rule 26 Tier-2 exit on a symbol today, NEW
-symbol entries are blocked until 22:00 CET. After any Rule 26 Tier-3 exit
-(or Support-Override), blocked today AND the next trading day. Existing
-positions can still be managed. Override: explicit "Rule-28-override:
-<reason>" with a NEW catalyst not present at the time of the stop.
+**Status:** PENDING. Originally introduced 2026-04-28 as hard veto in v10.0.
+Demoted 2026-04-29 to soft warning + tracking, after the evidence base was
+re-examined. Tracking and decision schema live in `memory/v10_log.md`.
 
-Enforcement: `scripts/preflight_check.py::check_rule_28(symbol)` queries
-`close_events.reason` via free-text regex match (Tier-2 / Tier-3 /
-Support-Override patterns) in the trailing 32-hour window. If matched AND
-the candidate symbol is NOT already in `predictions` with `status='open'`,
-preflight prints a `[RULE 28 VETO]` message to stderr and exits with code 2.
-The analysis pipeline aborts.
+**Current behavior:** `scripts/preflight_check.py::check_rule_28()` still
+detects Tier-2 / Tier-3 / Support-Override stops in the trailing 32-hour
+window. On match, preflight emits a `[RULE 28 PENDING — TRACKING]` notice
+to stderr **but does NOT exit** — the pipeline continues. The notice
+includes a reminder to log the stop in `memory/v10_log.md`.
 
-### Why Rule 28 — April 2026 data
+### Why demoted from hard veto to pending
 
-Trade-after-loss / trade-after-win behavior across the 31 April trades:
+The April 2026 evidence base (n=12 follow-up trades after a Tier-2/3 stop)
+is too small to distinguish three observationally equivalent hypotheses:
+
+1. **Tilt hypothesis:** trader makes worse decisions in the hours after a stop
+2. **Market hypothesis:** Tier-2/3 stops cluster on bad market days, follow-up
+   trade suffers from the same market environment
+3. **Selection hypothesis:** fewer good setups exist on stop-days because the
+   broader market is bearish — follow-up sample is biased toward weaker setups
+
+A hard veto under hypothesis 1 is correct intervention. Under hypothesis 2,
+the correct intervention is a market-state filter (not a stop-state filter).
+Under hypothesis 3, the correct intervention is tighter setup-quality gating.
+Without S&P-500 and sector-ETF returns alongside follow-up outcomes, all
+three hypotheses produce the same observed Win-Rate gap (33% after loss vs
+78% after win in April).
+
+### Backtest contribution — corrected estimate
+
+The April-2026 v10 backtest reported +€1029 vs original baseline. The
+commit message did not break this down by component. Realistic isolated
+attribution for Rule 28: 3 prevented trades × expected P&L at the
+loss-after-loss baseline (33% Win-Rate, +€82 on win, −€136 on loss):
+1×82 − 2×136 = **+€190**. Sizing flatten (Rule 20 v10) and Concentration
+tightening (V3/V4/V6) carry the bulk of the +€1029 edge. Rule 28 is the
+weakest of the three v10 changes by April backtest, and its evidence base
+is also the smallest.
+
+### April 2026 baseline data (still relevant for tracking calibration)
 
 | Cohort | n | Avg P&L | Win-rate |
 |--------|---|---------|----------|
@@ -417,37 +441,43 @@ Trade-after-loss / trade-after-win behavior across the 31 April trades:
 | Trade after a WIN  | 13 | +€82  | 78% |
 | Baseline (all)     | 31 | −€22  | 58% |
 
-Tilt is the dominant failure mode after a stop. The next-trade after a
-loss is **6 percentage points worse on win-rate** than baseline and
-**9× larger negative P&L** than baseline. After a win, the next trade
-performs +20pp better — confirming directionality is real, not noise.
+The Tilt-style interpretation predicted by these numbers is real if and only
+if the May tracking shows the same Win-Rate gap **with S&P returns near zero
+on stop-days**. If the gap shrinks under S&P-controlled comparison, the
+April pattern was market-confounded.
 
-**Specific case study — ENR 2026-04-28:**
+### Specific case study — ENR 2026-04-28
+
 - 11:12 CET: Tier 2 (€1,60) trigger, 193 shares closed at −€55.
 - 11:29 CET: Tier 3 (€1,46) trigger, 192 shares closed at −€97.
-- The whole position completed loss in **17 minutes**.
+- Position completed loss in **17 minutes**.
 - Within hours, NVDA Scout opened (102 shares @ €1,96, €200 deployed).
-- No system layer paused trading after the back-to-back stops.
-- Rule 28 with free-text matching on close_events.reason would have
-  blocked the NVDA scout entry on the same day.
+- This is the founding case for Rule 28. Under Pending, the pattern is now
+  observable but not blocked — it becomes one logged data point among 30
+  that the 2026-05-29 evaluation will use.
 
-### Why free-text matching, not a schema column
+### Decision schema 2026-05-29
 
-The `predictions` table has a free-text `reason` column written via
-`prediction_db.py close --reason`. The `close_events.reason` column carries
-free-text values like *"Both Tier 2 (€1.60) + Tier 3 (€1.41) triggered
-within 17 min..."*. A schema migration to add `exit_reason TEXT` was
-considered but rejected: it would require backfill of historical trades
-and discipline on every future close call. Free-text regex on a closed
-vocabulary ({tier 2, tier 3, support-override}) is robust enough — these
-strings already appear in close-reason text by convention.
+See `memory/v10_log.md` § "Decision schema for 2026-05-29" for the locked
+numerical schema (S&P-500 mean × Follow-up Win-Rate matrix). Schema is
+locked in advance to prevent post-hoc redefinition.
 
-### Why 32-hour trailing window
+### Implementation notes (kept for restoration if Rule 28 promoted to hard)
 
-A Tier-2 stop on a Wednesday at 11:00 CET should block until 22:00 CET
-the same day = 11h. A Tier-3 stop on Thursday at 14:00 CET should block
-until Friday 22:00 CET = 32h. The window is sized to capture both cases
-in a single SQL query.
+- Free-text matching on `close_events.reason` was chosen over a schema
+  column because the column already carries strings like *"Both Tier 2
+  (€1.60) + Tier 3 (€1.41) triggered within 17 min..."*. Closed
+  vocabulary {tier 2, tier 3, support-override} is robust against
+  reason-text drift.
+- 32-hour trailing window covers both Tier-2 (block until 22:00 same
+  day = 11h) and Tier-3 (block today + next day = 32h) cases in one SQL.
+
+### Restoration path (if 2026-05-29 promotes back to hard)
+
+In `scripts/preflight_check.py::main()` replace the Pending notice block
+with the original hard-veto block (`print(veto_msg, file=sys.stderr);
+sys.exit(2)`). Update CLAUDE.md hard-rule list and this § 11 status line.
+Single commit, no schema or DB migration needed.
 
 ## 12. v10 Concentration Tightening (added 2026-04-28)
 
