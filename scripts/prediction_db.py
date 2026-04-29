@@ -10,6 +10,12 @@ Workflow:
         --entry 135.50 --stop 128.00 --target 155.00 --ko 120.00 \\
         --regime TRENDING --atr-pct 4.5 --reason "Your thesis here"
 
+    # 1a. Analysis under Rule 27 cooldown clamp (NO-TRADE Output Clamp)
+    #     entry/stop/target/ko OMITTED — recorded as NULL
+    python prediction_db.py record SYMBOL --direction LONG --confidence 70 \\
+        --regime TRENDING --atr-pct 4.5 \\
+        --reason "Rule 27 cooldown clamp. Case B. eligible_at=..."
+
     # 2. User confirms trade
     python prediction_db.py open 3 --shares 75 --cert-price 2.67
 
@@ -32,6 +38,11 @@ Workflow:
     python prediction_db.py analyze
 
     # Other: list [--open|--closed], export
+
+Schema note (2026-04-29): entry_price / stop_price / target_price are
+nullable to support Rule 27 NO-TRADE Output Clamp. For existing DBs
+created before this change, run scripts/migrate_rule27_nullable.py
+once to relax the legacy NOT NULL constraints.
 """
 
 import argparse
@@ -59,9 +70,9 @@ def get_db():
         symbol TEXT NOT NULL,
         direction TEXT NOT NULL CHECK(direction IN ('LONG', 'SHORT')),
         confidence INTEGER NOT NULL CHECK(confidence BETWEEN 0 AND 100),
-        entry_price REAL NOT NULL,
-        stop_price REAL NOT NULL,
-        target_price REAL NOT NULL,
+        entry_price REAL,
+        stop_price REAL,
+        target_price REAL,
         ko_level REAL,
         regime TEXT,
         atr_pct REAL,
@@ -147,6 +158,11 @@ def get_db():
         if col not in existing:
             conn.execute(f'ALTER TABLE predictions ADD COLUMN {col} {typ}')
 
+    # NOTE: NOT-NULL → NULL migration on entry_price/stop_price/target_price
+    # for legacy DBs is handled by scripts/migrate_rule27_nullable.py (one-time,
+    # idempotent). NOT done in get_db() because table-swap migrations should
+    # never run silently inside a hot path.
+
     conn.commit()
     return conn
 
@@ -165,8 +181,19 @@ def record_prediction(args):
          args.ko, args.regime, args.atr_pct, args.reason))
     conn.commit()
     rid = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
-    print(f'✅ Analysis #{rid}: {args.symbol} {args.direction} '
-          f'conf={args.confidence}% entry=${args.entry:.2f} stop=${args.stop:.2f} target=${args.target:.2f}')
+
+    # Differentiate output for trade-plan vs cooldown-clamped records
+    if args.entry is None and args.stop is None and args.target is None:
+        # Rule 27 NO-TRADE Output Clamp record
+        print(f'✅ Analysis #{rid}: {args.symbol} {args.direction} '
+              f'conf={args.confidence}% [Rule 27 cooldown clamp — '
+              f'entry/stop/target/ko = NULL]')
+    else:
+        entry_str = f'${args.entry:.2f}' if args.entry is not None else 'NULL'
+        stop_str = f'${args.stop:.2f}' if args.stop is not None else 'NULL'
+        target_str = f'${args.target:.2f}' if args.target is not None else 'NULL'
+        print(f'✅ Analysis #{rid}: {args.symbol} {args.direction} '
+              f'conf={args.confidence}% entry={entry_str} stop={stop_str} target={target_str}')
     conn.close()
 
 
@@ -182,6 +209,14 @@ def open_position(args):
         sys.exit(f'⚠️  #{args.id} already open. Use "confirm" to add shares.')
     if row['status'] == 'closed':
         sys.exit(f'❌ #{args.id} already closed.')
+
+    # Guard: cannot open a cooldown-clamped record (no trade plan)
+    if row['entry_price'] is None or row['stop_price'] is None or row['target_price'] is None:
+        sys.exit(
+            f'❌ #{args.id} was recorded under Rule 27 cooldown clamp '
+            f'(entry/stop/target = NULL). Cannot open this analysis. '
+            f'Run a fresh analysis once the cooldown expires.'
+        )
 
     invested = round(args.shares * args.cert_price, 2)
     cert_type = args.cert_type or 'turbo'
@@ -321,7 +356,7 @@ def show_portfolio(args):
     hedges = sum(1 for p in positions if (p['cert_type'] or 'turbo') == 'hedge')
     hedge_str = f' + {hedges}H' if hedges else ''
     print(f'\n  Invested: {total_invested:,.2f} EUR | Cash: {cash:,.2f} EUR')
-    print(f'  Portfolio: ~{portfolio_total:,.0f} EUR | Slots: {slots}/3{hedge_str}')
+    print(f'  Portfolio: ~{portfolio_total:,.0f} EUR | Slots: {slots}/2{hedge_str}')
 
     if closed:
         print(f'\nGESCHLOSSENE TRADES:')
@@ -368,8 +403,12 @@ def fill_outcomes(args):
         sys.exit('yfinance required: pip install yfinance')
 
     conn = get_db()
+    # Skip cooldown-clamped records (no trade plan to evaluate)
     rows = conn.execute('''SELECT * FROM predictions
         WHERE outcome_filled = 0 AND created_at < datetime('now', '-1 day')
+          AND entry_price IS NOT NULL
+          AND stop_price IS NOT NULL
+          AND target_price IS NOT NULL
     ''').fetchall()
 
     if not rows:
@@ -629,8 +668,13 @@ def list_predictions(args):
         if len(reason) > 60:
             reason = reason[:57] + '...'
 
+        # Handle NULL trade-plan fields (Rule 27 cooldown clamp)
+        entry_str = f'${r["entry_price"]:>7.2f}' if r["entry_price"] is not None else '   NULL  '
+        stop_str = f'${r["stop_price"]:>7.2f}' if r["stop_price"] is not None else '   NULL  '
+        target_str = f'${r["target_price"]:>7.2f}' if r["target_price"] is not None else '   NULL  '
+
         print(f'{r["id"]:>3} {date:<10} {r["symbol"]:<9} {r["direction"]:<5} {r["confidence"]:>3}% '
-              f'${r["entry_price"]:>7.2f} ${r["stop_price"]:>7.2f} ${r["target_price"]:>7.2f} '
+              f'{entry_str} {stop_str} {target_str} '
               f'{status:<8} {shares_str:>5} {pnl_str:>10}')
         if reason:
             print(f'    └ {reason}')
@@ -745,14 +789,17 @@ def main():
     p = argparse.ArgumentParser(description='Silver Hawk Trading DB v2')
     sub = p.add_subparsers(dest='command')
 
-    # record
+    # record (entry/stop/target now optional — Rule 27 cooldown clamp omits them)
     s = sub.add_parser('record', help='Record analysis (always, even if not traded)')
     s.add_argument('symbol')
     s.add_argument('--direction', required=True, choices=['LONG', 'SHORT'])
     s.add_argument('--confidence', required=True, type=int)
-    s.add_argument('--entry', required=True, type=float)
-    s.add_argument('--stop', required=True, type=float)
-    s.add_argument('--target', required=True, type=float)
+    s.add_argument('--entry', type=float,
+                   help='Entry price (omit under Rule 27 cooldown clamp)')
+    s.add_argument('--stop', type=float,
+                   help='Stop price (omit under Rule 27 cooldown clamp)')
+    s.add_argument('--target', type=float,
+                   help='Target price (omit under Rule 27 cooldown clamp)')
     s.add_argument('--ko', type=float)
     s.add_argument('--regime', type=str)
     s.add_argument('--atr-pct', type=float)
