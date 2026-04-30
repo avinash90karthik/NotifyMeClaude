@@ -10,9 +10,16 @@ Pre-flight runs before Step 1 (`python3 scripts/analysis/preflight_check.py {{SY
 
 ```bash
 python3 scripts/ops/prediction_db.py portfolio
+pytr portfolio
 ```
 
-Inspect open positions, cash, slot count before continuing.
+Both sources run in parallel:
+- **pytr portfolio** = truth for realised fills, cash, current shares (broker-side).
+- **prediction_db** = truth for analysis coverage (every analysed symbol, including those never bought).
+
+Both data sources are gitignored (`memory/predictions.db`, `account_transactions.csv`, `pytr_*.csv`, `portfolio_*.csv`) and must never land on GitHub.
+
+If pytr and DB disagree on an open position, pytr wins for size/cash, DB wins for analysis history. Inspect open positions, cash, slot count before continuing.
 
 ## 1.2 Technical Data
 
@@ -25,6 +32,7 @@ Collects: price, RSI (delta/divergence/slope), MACD, ATR, ADX, regime, SMA50/200
 Review output. Flag anomalies (elevated ATR, divergence, regime shift).
 
 > **V3 — Prices and FX from APIs only.** Never hardcode an exchange rate (e.g. "1.10" as fallback). `collect_data.py` already pulls live FX. If all APIs fail for FX, the analysis aborts — no web-search substitute. Full text: `RULES.md § V3`.
+> You know I would like to say just check rules if a veto is true. 
 
 ## 1.3 Pre-Open Pattern Check
 
@@ -37,6 +45,7 @@ python3 scripts/analysis/preopen_check.py {{SYMBOL}} --entry-timing
 ```
 
 Document: verdict, hit rates, gap-fill %, best entry timing.
+> Cool is this working? do we really have a csv? Can you show me the results?
 
 ## 1.4 Chart Analysis
 
@@ -47,6 +56,10 @@ if [ -n "$SCRIPT" ]; then ${YFINANCE_VENV:-python3} $SCRIPT {{SYMBOL}}; fi
 ```
 
 Fill the chart table: trend, SMA 50/200 (golden/death cross), RSI + divergence, volume, pattern, support, resistance.
+
+> is this saved somewhere? Can I also see it? If not, can you show me the image?
+> Do you need this or is this just for me?
+> Because it could be also helpful for you th go and read chart data? I mean raw data are something else then "just" parameters like RSI, etc?
 
 ### Price-Action Reality Check (W2, MANDATORY)
 
@@ -70,7 +83,7 @@ The script computes per-stock RSI / BB-position / Dist-3M-high green-rates over 
 
 The script aborts with exit code 2 if history is > 2 trading days stale or close diverges > 0.5% (stale-data guard).
 
-### v9 Extreme-Oversold Bonus (W5, MANDATORY)
+### Extreme-Oversold Bonus (W5, MANDATORY)
 
 When the current RSI band from the script output meets the W5 conditions, add the LONG bonus per `RULES.md § W5` (Mechanics → bonus table + addition order). The bonus is cited explicitly in the summary table below and re-cited in the Judge step.
 
@@ -141,36 +154,29 @@ Via web search: VIX (< 15 calm, 15-25 normal, 25-35 elevated, > 35 fear), CNN Fe
 
 ### Active Geopolitical Triggers (MANDATORY)
 
-For each of the following, search and document the **current status + next deadline**. Do not skip on the assumption that "nothing's happening" - the user got burned on a missed Iran-ceasefire-expiry on 2026-04-21.
+Run an open geopolitical scan via web search. Goal: surface every active trigger with a deadline, expiry, or material headline in the next 7 days that could move equities, oil, FX, or rates. Do not skip on the assumption that "nothing's happening".
 
-1. **Iran conflict / Strait of Hormuz status**
-   - Search: `Iran ceasefire status [today's date]`
-   - Search: `Strait Hormuz oil shipping [today's date]`
-   - Document: Is a ceasefire active YES/NO? Next expiry date. Oil price reaction in last 24h.
+Categories to scan (non-exhaustive — add any active trigger that surfaces):
+- Active armed conflicts and ceasefire expiries (any region)
+- Tariff / executive-order / sanctions deadlines
+- Central bank decision windows (Fed, ECB, BoE, BoJ) — days until next decision
+- Energy-supply chokepoints (shipping lanes, pipeline status, oil/gas headlines)
+- Election or referendum dates with market implications
 
-2. **Trump tariff / executive-order deadlines**
-   - Search: `Trump tariff deadline [next 14 days]`
-   - Search: `Trump executive order [today's date]`
-   - Document: Any deadlines in the next 7 days? Sectors affected? Posts from the last 24h on truth social?
+**Output: list only the ACTIVE triggers** (one line each). Skip categories that are quiet — do not pad with "QUIET" rows. If nothing material is active, write a single line: `Geopolitical scan: no active triggers in next 7d`.
 
-3. **Fed / ECB next decision window**
-   - Already partially covered above, but explicitly state: days-until-next-decision. If < 5 days -> add as event row in 1.9.
-
-4. **Russia / Ukraine major events** (only if last 7 days had a material headline)
-   - Search: `Russia Ukraine war stock market [today's date]`
-
-Output format - **one line per trigger** (write "QUIET" if no relevant news in 7 days):
-
+Format per active trigger:
 ```
-Iran/Hormuz:    <status + next deadline + 24h oil reaction>
-Trump tariffs:  <deadlines in next 7d + sectors + truth-social posts 24h>
-Fed/ECB:        <days until next decision + most recent guidance>
-Russia/Ukraine: <QUIET | <headline + impact>>
+<trigger name>: <current status> | next deadline <date> | 24h market reaction <if relevant>
 ```
+
+Any trigger with a deadline < 5 trading days → also add as event row in §1.9.
 
 ## 1.7 Correlation Check
 
-From `prediction_db.py portfolio`: list open positions with sectors. Check:
+Primary source: `pytr portfolio` (broker truth for current holdings). Cross-reference with `prediction_db.py portfolio` only if pytr is unreachable.
+
+List open positions with sectors. Check:
 - Same sector as {{SYMBOL}}? > 60% concentration after this trade = WARNING
 - Same direction (all LONG)? Diversification risk
 - Correlation with Nasdaq/S&P?
@@ -197,13 +203,13 @@ python3 scripts/analysis/pattern_timeline.py {{SYMBOL}}
 ```
 
 Two modes in one output:
-- **Mode 1 (similar-day):** fwd-return distribution for Day +1 to +5 based on days with a similar today-return (classified into 5 return bands, n usually >100).
+- **Mode 1 (similar-day):** fwd-return distribution for Day +1 to +3 based on days with a similar today-return (classified into 5 return bands, n usually >100).
 - **Mode 2 (analog match):** searches historical 7-day windows that match (correlation ≥0.7, RSI ±7, ATR regime 0.7-1.4). Skips if <10 analogs.
 
 Per day: mean, ±1σ range, green-rate. Both modes in parallel + AGREEMENT/DIVERGE check per day.
 
 **Interpretation:**
-- **Both modes AGREE on all 5 days** -> forecast robust, can be used as confidence input.
+- **Both modes AGREE on all 3 days** -> forecast robust, can be used as confidence input.
 - **DIVERGE on ≥3 days** -> forecast uncertain. Cap signal confidence in Step 3 at 60-63% even if scorecard is higher.
 - **Mode 2 SKIP** (analogs <10) -> no edge provable through pattern matching. Use only Mode 1 as a hint, not a driver.
 - **±1σ range** is the realistic entry-limit corridor. If Day+1 mean +0.5% but lower bound -2%, a limit at Close-1.5% (P25 zone) is reasonable.

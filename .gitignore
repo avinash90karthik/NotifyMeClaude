@@ -47,6 +47,8 @@ position_watcher.py
 watcher*.log
 watcher_state.json
 
-# Trade Republic exports
+# Trade Republic exports (pytr — never push to GitHub)
 all_events.json
 account_transactions.csv
+pytr_*.csv
+portfolio_*.csv
