@@ -1,148 +1,125 @@
 # STEP 2: INVESTMENT DEBATE
 
 **Asset:** {{SYMBOL}}
-**Input:** Bullets + 4 ratings from Step 1.
+**Input:** Raw data from Step 1 (`runs/.../step1_data.md`).
+
+Goal: Two-sided reasoning that surfaces real arguments and counter-arguments. No new data fetching — work strictly with Step 1 output. The debate produces a structured judgment block for Step 3.
 
 ---
 
-## Rules for the debate
+## Per-Stock-Conditioning Rule (mandatory)
 
-> **V2 — The 6-axis scorecard is filled for BOTH directions** in every analysis. SHORT is not optional even when the bull thesis looks obvious — if SHORT-Total >= LONG-Total, that's the setup, regardless of preconceived direction. The mirror test in Step 3 catches asymmetric scoring. Full text: `RULES.md § V2`.
+For every claim about RSI, volume, volatility, momentum, or any indicator: do NOT use textbook thresholds ("RSI 70 = overbought", "Volume 2x avg = breakout"). Instead, use the 250 daily bars and intraday history from Step 1 to assess how unusual the current value is **for THIS stock**.
 
-> **Citation rule (technical): Every technical claim about RSI, BB-position,
-> or distance-to-3M-high in the Bull/Bear arguments MUST cite the per-stock
-> green-rate from Step 1's indicator_context output. Example REQUIRED form:
-> "RSI 76 -- but this stock's own green-rate at RSI 70-80 is 72% (n=42 SOLID),
-> contradicting textbook overbought." Forbidden form: "RSI 76 is overbought."
-> If the green-rate is THIN (n<15), state that explicitly and treat the signal
-> as inconclusive rather than defaulting to textbook interpretation. When the
-> indicator_context output's "Textbook CONTRADICTED" verdict applies, the
-> Bull/Bear argument MUST acknowledge the contradiction rather than restate
-> the textbook claim.
+**Required form:** "RSI is 76. Looking at the last 12 months of daily bars, this stock spent 14 days above RSI 70, and on 9 of those 14 days the next day closed green. No clear mean-reversion signal at this level for this stock."
 
-> **Citation rule (convergence): When § 1.8c convergence_check reports
-> HIGH SPREAD (≥20pp) OR emits an asymmetry directive in its Reading line,
-> the Bull and/or Bear argument that relies on the narrow per-stock conditional
-> MUST acknowledge the asymmetry. Example REQUIRED form: "RSI 71-81 green=80%
-> per indicator_context, but convergence_check shows broad return-bucket
-> conditional at 57% (HIGH SPREAD 23pp) — the bullish edge is regime-conditional,
-> works while the current RSI regime holds." Forbidden form: citing the 80%
-> per-stock figure as the Bull case without naming the broad conditional.
-> THIN Mode 2 is corroboration only — never quote it as if it were SOLID.
+**Forbidden form:** "RSI 76 is overbought."
 
-- Use only data from Step 1. No new numbers, no web searches.
-- The four Step-1 ratings (Technical Green-Rate, Price-Action, News+Reddit, Event/Catalyst) are FIXED. The debate may cite, interpret, contextualize - but NOT change them. Anchoring on debate-confidence is the main mistake this structure prevents.
-- The debate produces only two NEW values: **Chart Structure** (qualitative, from chart analysis § 1.4) and **Reversion-Edge** (from reversion_guard.py, see below).
+If the historical sample is small (<10 occurrences), say so explicitly: "Only 4 occurrences above this RSI level in 12 months — sample too thin to draw a conclusion."
 
-## Round 1: BULL (4-6 sentences per argument, concrete numbers, chart reference)
-
-1. **Technical:** cite the indicator-context values from Step 1 (RSI band green-rate, BB, DistHigh), classify the archetype
-2. **Price-Action:** Greens-10d, Trend-5d, price_action verdict
-3. **News/Catalysts:** NSI, concrete headlines with date, retail flag
-4. **Macro:** VIX, F&G, Fed - only if relevant within <7d for the trade
-
-Bull target: $XX.XX (+XX%) | Confidence: XX% | Horizon: 1-3d primary (up to 5d)
-
-## Round 1: BEAR (4-6 sentences, must rebut Bull)
-
-Same structure, against Bull. Weaknesses in the Step-1 data, not gut feel.
-
-Bear target: $XX.XX (-XX%) | Confidence: XX% | Horizon: 1-3d primary (up to 5d)
-
-## Round 2: Rebuttals (3-4 sentences)
-
-Bull rebuts Bear arguments 1-3 + one new. Bear rebuts Bull 1-3 + one new.
-
-## Round 3: Final synthesis (4-6 sentences)
-
-**Bull final:** strongest non-rebutted argument, adjusted target, Bull final confidence XX%
-**Bear final:** strongest non-rebutted argument, adjusted target, Bear final confidence XX%
+The same logic applies to gap behavior, volume spikes, ATR ranges, distance-from-SMA, and any other indicator the LLM cites.
 
 ---
 
-## Reversion-Edge - what it means
+## Round 1: Bull Case (4-6 sentences)
 
-The `reversion_guard.py` script checks four per-stock triggers (RSI vs. own P80, green-streak length vs. own P80, daily-move vs. own P90, gap vs. own P90) against this stock's **own** forward-5d return distribution. A reversion-edge fires only when:
+Build the strongest case for LONG. Cover:
 
-- Today's metric exceeds the stock's own percentile threshold (extreme for THIS stock, not textbook)
-- AND the historical fwd-5d distribution at that level shows mean-reversion
-  (LONG: green-rate <45% means "pullback expected"; SHORT: green-rate <45% means "blowoff fades")
-- AND sample size is SOLID (n >= 8)
+1. **Technical setup**: chart structure, momentum, key levels — referenced to specific bars/dates from Step 1
+2. **Per-stock conditioning**: at least one explicit conditional ("at this RSI level, this stock has historically...")
+3. **News/sentiment**: which headlines or Reddit signals support the bull thesis (with date)
+4. **Macro context**: only if directly relevant (Fed/CPI within 7d, sector rotation visible in market-wide data)
 
-Verdicts:
+End with: **Bull target: $XX.XX (+XX%)** | **Bull conviction: XX%** | **Horizon: 1-3d primary**
 
-- **LONG "Pullback-Pflicht"**: wait for limit entry below close (continuation OK but not at this price)
-- **LONG "Kein Reversion-Edge"**: continuation dominates, entry at close acceptable
-- **SHORT "valid"**: blowoff-fade historically works for this stock
-- **SHORT "NO-TRADE"**: no blowoff in this stock's history - continuation dominates, no SHORT
+## Round 1: Bear Case (4-6 sentences)
 
-## Pull Reversion-Edge forward
+Build the strongest case for SHORT. Must directly counter Bull where possible. Same structure:
 
-Run once before filling the scorecard (Step 3 will fetch it again, but the scorecard needs it here):
+1. Technical weakness or short setup
+2. Per-stock conditioning (e.g., "at this distance from 52w-high, this stock has historically faded")
+3. News/sentiment counter-narrative
+4. Macro risks
 
-```bash
-python3 scripts/analysis/reversion_guard.py {{SYMBOL}} --direction LONG
-python3 scripts/analysis/reversion_guard.py {{SYMBOL}} --direction SHORT
-```
+End with: **Bear target: $XX.XX (-XX%)** | **Bear conviction: XX%** | **Horizon: 1-3d primary**
 
-Mapping verdict -> Reversion-Edge rating (symmetric, max LONG = 8 in strongest case):
+## Round 2: Rebuttals (2-3 sentences each)
 
-| Script verdict | LONG Rating | SHORT Rating |
-|----------------|-------------|--------------|
-| LONG "Kein Reversion-Edge" AND SHORT "NO-TRADE" | **8** | 2 |
-| LONG "Kein Reversion-Edge" AND SHORT "valid" | 4 | 7 |
-| LONG "Pullback-Pflicht" AND SHORT "NO-TRADE" | **5** | 2 |
-| LONG "Pullback-Pflicht" AND SHORT "valid" | 2 | 7 |
+**Bull rebuts Bear**: address the strongest 1-2 Bear points directly. Where Bull cannot rebut, acknowledge it.
 
-Interpretation: "Kein Reversion-Edge" LONG means continuation bias intact -> when SHORT is also a NO-TRADE, that's the strongest pro-LONG signal the script can give (LONG = 8). "Pullback-Pflicht" means entry deferred, but direction intact - not automatically penalized to 3, deserves 5. "Valid" SHORT means blowoff-fade is historically proven -> SHORT = 7.
+**Bear rebuts Bull**: same — address strongest Bull points, acknowledge what cannot be rebutted.
 
----
+The honest acknowledgment of un-rebutted points is more valuable than forced counter-arguments. If a Bear point stands, mark it as standing.
 
-## 6-Axis Scorecard (MANDATORY)
+## Round 3: Synthesis (3-5 sentences)
 
-Four axes (1-4) come VERBATIM from the Step 1 rating block. Two axes (5-6) come from the debate + reversion_guard.
+After both sides have presented and rebutted: what is the honest read?
 
-| Criterion (0-10) | LONG | SHORT | Source |
-|------------------|------|-------|--------|
-| 1. Technical Green-Rate | /10 | /10 | Step 1 Rating 1 (unchanged) |
-| 2. Price-Action Reality | /10 | /10 | Step 1 Rating 2 (unchanged, loosened cap) |
-| 3. News + Reddit Flow | /10 | /10 | Step 1 Rating 3 (unchanged) |
-| 4. Event/Catalyst | /10 | /10 | Step 1 Rating 4 (unchanged) |
-| 5. Chart Structure | /10 | /10 | Debate - pattern, S/R, volume setup |
-| 6. Reversion-Edge | /10 | /10 | reversion_guard.py verdict (mapping above) |
-| **TOTAL** | **/60** | **/60** | |
+- Which arguments survived rebuttal?
+- Where is asymmetry — does one side have substantially stronger, more concrete arguments?
+- Are both sides weak (suggesting NO-TRADE)?
+- Are both sides strong (suggesting high uncertainty, smaller position or wait)?
 
-**Decision rule:**
-- LONG-Total ≥ SHORT+10 -> LONG setup in Step 3
-- SHORT-Total ≥ LONG+10 -> SHORT setup in Step 3
-- Difference < 10 -> develop both setups, Step 3 Judge decides
-- Both totals < 30 -> consider NO-TRADE
+This is the LLM's actual reasoning. Don't hedge — commit to a read.
 
 ---
 
-## Output Card (no JSON)
+## Output Block
 
 ```
-Step 2:
-╔════════════════════════════════════════════════════╗
-║ SCORECARD - {{SYMBOL}}                             ║
-╠════════════════════════════════════════════════════╣
-║                              LONG   │   SHORT      ║
-║ 1. Technical Green-Rate      X/10   │   X/10       ║
-║ 2. Price-Action Reality      X/10   │   X/10       ║
-║ 3. News + Reddit Flow        X/10   │   X/10       ║
-║ 4. Event/Catalyst            X/10   │   X/10       ║
-║ 5. Chart Structure           X/10   │   X/10       ║
-║ 6. Reversion-Edge            X/10   │   X/10       ║
-║ ─────────────────────────────────── │ ──────       ║
-║ TOTAL                       XX/60   │  XX/60       ║
-╠════════════════════════════════════════════════════╣
-║ Bull target: $XX.XX (+XX%) Confidence XX%          ║
-║ Bear target: $XX.XX (-XX%) Confidence XX%          ║
-║ Strongest Bull:  <1 sentence>                      ║
-║ Strongest Bear:  <1 sentence>                      ║
-║ Recommended:     LONG | SHORT | BOTH | NO-TRADE    ║
-╚════════════════════════════════════════════════════╝
+Step 2: Investment Debate — {{SYMBOL}}
+
+Bull conviction: XX%
+Bull reason: <one sentence — strongest standing argument>
+
+Bear conviction: XX%
+Bear reason: <one sentence — strongest standing argument>
+
+Strongest non-rebutted Bull point: <one sentence>
+Strongest non-rebutted Bear point: <one sentence>
+
+Asymmetry: clear-LONG | clear-SHORT | balanced | both-weak
+
+Notes for Step 3:
+  <2-3 sentences on what Step 3 should pay particular attention to —
+   per-stock conditioning concerns, macro timing risks, key levels to watch>
 
 [STEP 2 COMPLETE]
 ```
+
+Step 3 derives the trade direction from the Asymmetry tag and the conviction values — Step 2 does not commit to LONG/SHORT/NO-TRADE itself.
+
+---
+
+## Persistence
+
+Write the full debate (Rounds 1-3 + Output Block) to:
+```
+runs/{{SYMBOL}}_{{YYYYMMDD}}_{{HHMMSS}}/step2_debate.md
+```
+
+Overwrite if file exists. Re-runs of the same analysis use a new run_id (new folder).
+
+The user reviews this file as part of the trade decision — the reasoning is for the user too, not just for Step 3.
+
+## What Step 2 does NOT do
+
+- Does not compute KO, stop, target levels — that is Step 3
+- Does not commit to LONG/SHORT/NO-TRADE — Step 3 decides
+- Does not fetch new data — Step 1 output is the input
+- Does not generate a numeric scorecard — conviction percentages are direct LLM estimates with one-sentence reasons
+- Does not cite scripts that don't exist (no indicator_context, no reversion_guard, no convergence_check — these were aggregations and have been removed in v1.0)
+
+## Conviction calibration (guidance, not rule)
+
+When assigning conviction percentages:
+
+- **0-30%**: weak case, mostly speculation, multiple major counter-arguments standing
+- **30-50%**: plausible case, but significant counter-arguments unrebutted
+- **50-70%**: solid case, most counter-arguments answered, some risks remain
+- **70-90%**: strong case, counter-arguments rebutted with concrete evidence
+- **>90%**: rare — should require multiple independent confirmations and clear per-stock conditioning
+
+If both Bull and Bear conviction are above 60%, that is itself a signal: high uncertainty, the stock is genuinely contested. Mark Asymmetry as `balanced` and let Step 3 size accordingly.
+
+If both are below 40%, mark Asymmetry as `both-weak` — Step 3 will likely decide NO-TRADE.

@@ -1,444 +1,251 @@
 #!/usr/bin/env python3
-"""Silver Hawk — Pre-flight check for analyses (MANDATORY FIRST STEP).
+"""Step 0 — Pre-Flight Check (v1.0).
 
-Runs BEFORE any analysis begins. Purpose: eliminate the recurring blind spots
-that have burned the user multiple times:
+Four hard-stop checks before any analysis. No data fetching beyond a single
+symbol-resolve call. No news, no Reddit, no Trump, no macro — those live in
+Step 1+.
 
-    1. Wrong date / weekday ("Friday CPI" while today is Saturday)
-    2. Missed Trump Truth Social posts (market manipulator → gap risk)
-    3. Missed Reddit retail-sentiment flow
-    4. Missed yfinance news (day-news catalyst missed)
-    5. Bias toward a default direction (LONG/SHORT/NO-TRADE)
+Output is structured per `prompts/00_preflight.md`:
 
-Prints an in-your-face banner with the ground truth (date, market status,
-recent news) and a checklist Claude MUST echo back before Step 1.
+    TIMESTAMP, WEEKDAY
+    MARKET_HOURS_TODAY: US + DE
+    SYMBOL_VALIDITY: symbol/exchange/resolved
+    HARD_STOPS:
+      Max_3_Slots:  <X>/3 turbos open → ok | STOP
+      Cooldown_24h: last stop on SYMBOL was <date> → ok | STOP
+    STATUS: READY_FOR_STEP_1 | STOP
 
 Usage:
-    python3 preflight_check.py SYMBOL
-    python3 preflight_check.py SYMBOL --json   # machine-readable
+    python3 scripts/analysis/preflight_check.py SYMBOL
+    python3 scripts/analysis/preflight_check.py SYMBOL --json
 
 Exit codes:
-    0 = OK
-    2 = symbol invalid or data fetch failed (analysis MUST abort)
+    0 = READY_FOR_STEP_1
+    1 = STOP (any hard veto fired)
+    2 = error (symbol resolve / DB read failed)
 """
+
+from __future__ import annotations
 
 import argparse
 import json
 import os
+import sqlite3
 import sys
-import urllib.parse
-import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
-try:
-    import pytz
-except ImportError:
-    print("FATAL: pytz not installed. Run: pip install pytz", file=sys.stderr)
-    sys.exit(2)
+REPO = Path(__file__).resolve().parent.parent.parent
+DB_PATH = REPO / 'memory' / 'predictions.db'
+
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
+from lib.risk_audit import MAX_OPEN_TURBOS
 
 try:
     import yfinance as yf
 except ImportError:
-    print("FATAL: yfinance not installed. Run: pip install yfinance", file=sys.stderr)
+    print('FATAL: yfinance not installed', file=sys.stderr)
     sys.exit(2)
 
 
-WEEKDAYS_DE = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
+CET = ZoneInfo('Europe/Berlin')
+NY = ZoneInfo('America/New_York')
+
+WEEKDAYS_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+# US market hours in CET (DST-naive heuristic — fallback only).
+# Primary truth comes from yfinance info.marketState in Step 1; here we
+# only need today's open window for the banner.
+US_OPEN_CET = (15, 30)   # 15:30 CET
+US_CLOSE_CET = (22, 0)   # 22:00 CET
+DE_OPEN_CET = (9, 0)     # 09:00 CET (XETRA)
+DE_CLOSE_CET = (17, 30)  # 17:30 CET
 
 
-def get_date_context():
-    """Ground truth for date/time/market — the ONE source Claude must trust."""
-    berlin = pytz.timezone("Europe/Berlin")
-    ny = pytz.timezone("America/New_York")
-    now_b = datetime.now(berlin)
-    now_ny = datetime.now(ny)
+def market_window(open_h: tuple[int, int], close_h: tuple[int, int],
+                  now: datetime) -> tuple[str, str]:
+    """Return (status_str, hours_or_reason)."""
+    if now.weekday() >= 5:
+        return 'closed', 'weekend'
+    o = f'{open_h[0]:02d}:{open_h[1]:02d}'
+    c = f'{close_h[0]:02d}:{close_h[1]:02d}'
+    return 'open', f'{o}-{c} CET'
 
-    wd = now_b.weekday()
-    is_weekend = wd >= 5
 
-    # US market: 09:30-16:00 NY = 15:30-22:00 CET (DST-aware via pytz)
-    ny_hour = now_ny.hour + now_ny.minute / 60
-    us_open = (not is_weekend) and (9.5 <= ny_hour < 16.0)
-
-    # EU (XETRA): 09:00-17:30 Berlin
-    b_hour = now_b.hour + now_b.minute / 60
-    eu_open = (not is_weekend) and (9.0 <= b_hour < 17.5)
-
-    # "Yesterday" resolves to last trading day (weekend → Friday)
-    last_trading_day = now_b - timedelta(days=1)
-    while last_trading_day.weekday() >= 5:
-        last_trading_day -= timedelta(days=1)
-
+def date_block() -> dict:
+    now_cet = datetime.now(CET)
+    now_ny = datetime.now(NY)
+    us_status, us_hours = market_window(US_OPEN_CET, US_CLOSE_CET, now_cet)
+    de_status, de_hours = market_window(DE_OPEN_CET, DE_CLOSE_CET, now_cet)
     return {
-        "date_cet": now_b.strftime("%Y-%m-%d"),
-        "time_cet": now_b.strftime("%H:%M"),
-        "weekday_cet": WEEKDAYS_DE[wd],
-        "date_ny": now_ny.strftime("%Y-%m-%d"),
-        "time_ny": now_ny.strftime("%H:%M"),
-        "is_weekend": is_weekend,
-        "us_market": "OPEN" if us_open else "CLOSED",
-        "eu_market": "OPEN" if eu_open else "CLOSED",
-        "last_trading_day": last_trading_day.strftime("%Y-%m-%d (%A)"),
-        "yesterday_cet": (now_b - timedelta(days=1)).strftime("%Y-%m-%d"),
+        'timestamp_cet': now_cet.isoformat(timespec='seconds'),
+        'weekday': WEEKDAYS_EN[now_cet.weekday()],
+        'us_status': us_status,
+        'us_hours': us_hours,
+        'de_status': de_status,
+        'de_hours': de_hours,
+        'now_ny': now_ny.isoformat(timespec='seconds'),
     }
 
 
-def fetch_yfinance_news(symbol, lookback_days=7):
-    """Pull recent news from yfinance's free .news field.
-
-    Returns list of {date, title, publisher, link, age_days}, newest first.
-    Only items within lookback_days are returned.
-    """
+def resolve_symbol(symbol: str) -> dict:
+    """Single yfinance call — does the symbol exist, what's its exchange?"""
     try:
         t = yf.Ticker(symbol)
-        raw = t.news or []
+        info = t.info or {}
     except Exception as e:
-        return [], f"yfinance news fetch failed: {e}"
+        return {'symbol': symbol, 'resolved': False, 'exchange': None,
+                'error': f'yfinance lookup failed: {e}'}
+    # A non-existent symbol typically has empty info or only a few fallback
+    # keys. Use the presence of `regularMarketPrice` OR `previousClose` OR
+    # `quoteType` as the resolve signal.
+    has_quote = any(info.get(k) is not None for k in
+                    ('regularMarketPrice', 'previousClose', 'quoteType'))
+    return {
+        'symbol': symbol,
+        'resolved': bool(has_quote),
+        'exchange': info.get('fullExchangeName') or info.get('exchange'),
+        'currency': info.get('currency'),
+        'short_name': info.get('shortName'),
+        'error': None,
+    }
 
-    now_utc = datetime.now(timezone.utc)
-    cutoff = now_utc - timedelta(days=lookback_days)
+
+def hard_stops(symbol: str, db_path: Path) -> dict:
+    """V5 slot check + SW2 24h cooldown."""
+    if not db_path.exists():
+        return {'max_3_slots': {'verdict': 'STOP',
+                                'detail': f'DB missing at {db_path}'},
+                'cooldown_24h': {'verdict': 'STOP',
+                                 'detail': f'DB missing at {db_path}'}}
+
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    try:
+        # Max_3_Slots: count open turbo positions
+        open_count = conn.execute(
+            "SELECT COUNT(*) FROM predictions "
+            "WHERE status='open' AND (cert_type='turbo' OR cert_type IS NULL)"
+        ).fetchone()[0]
+        max_3_slots = {
+            'open_turbos': open_count,
+            'cap': MAX_OPEN_TURBOS,
+            'verdict': 'STOP' if open_count >= MAX_OPEN_TURBOS else 'ok',
+            'detail': f'{open_count}/{MAX_OPEN_TURBOS} turbos open',
+        }
+
+        # Cooldown_24h: any stop trigger on this symbol within the last 24h?
+        # Source: close_events.reason LIKE 'stop%' joined to the predictions row.
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)
+                  ).strftime('%Y-%m-%d %H:%M:%S')
+        row = conn.execute("""
+            SELECT ce.closed_at, ce.reason
+              FROM close_events ce
+              JOIN predictions p ON p.id = ce.prediction_id
+             WHERE p.symbol = ?
+               AND lower(ce.reason) LIKE 'stop%'
+               AND ce.closed_at > ?
+             ORDER BY ce.closed_at DESC
+             LIMIT 1
+        """, (symbol.upper(), cutoff)).fetchone()
+
+        if row is None:
+            cooldown_24h = {
+                'last_stop_on_symbol': None,
+                'verdict': 'ok',
+                'detail': 'no stop in last 24h',
+            }
+        else:
+            cooldown_24h = {
+                'last_stop_on_symbol': row['closed_at'],
+                'verdict': 'STOP',
+                'detail': f"stop triggered {row['closed_at']}",
+            }
+    finally:
+        conn.close()
+
+    return {'max_3_slots': max_3_slots, 'cooldown_24h': cooldown_24h}
+
+
+def render_text(symbol: str, d: dict, sym: dict, hs: dict, status: str) -> str:
+    bar = '=' * 60
     out = []
-
-    for item in raw:
-        # yfinance .news format varies across versions. Normalize both shapes.
-        content = item.get("content") if isinstance(item, dict) else None
-        if content:
-            title = content.get("title") or ""
-            publisher = (content.get("provider") or {}).get("displayName") or ""
-            link = (content.get("canonicalUrl") or {}).get("url") or ""
-            pub_date_str = content.get("pubDate") or content.get("displayTime") or ""
-            try:
-                pub_dt = datetime.fromisoformat(pub_date_str.replace("Z", "+00:00"))
-            except Exception:
-                pub_dt = None
-        else:
-            title = item.get("title", "")
-            publisher = item.get("publisher", "")
-            link = item.get("link", "")
-            ts = item.get("providerPublishTime")
-            pub_dt = datetime.fromtimestamp(ts, tz=timezone.utc) if ts else None
-
-        if not title or not pub_dt:
-            continue
-        if pub_dt < cutoff:
-            continue
-
-        age = (now_utc - pub_dt).total_seconds() / 86400
-        out.append({
-            "date": pub_dt.strftime("%Y-%m-%d %H:%M UTC"),
-            "title": title,
-            "publisher": publisher,
-            "link": link,
-            "age_days": round(age, 1),
-        })
-
-    out.sort(key=lambda x: x["age_days"])
-    return out, None
+    out.append(bar)
+    out.append(f'  STEP 0 — PRE-FLIGHT  {symbol}')
+    out.append(bar)
+    out.append(f'TIMESTAMP: {d["timestamp_cet"]}')
+    out.append(f'WEEKDAY:   {d["weekday"]}')
+    out.append('')
+    out.append('MARKET_HOURS_TODAY:')
+    us_line = (f'  US: open {d["us_hours"]}'
+               if d['us_status'] == 'open'
+               else f'  US: closed ({d["us_hours"]})')
+    de_line = (f'  DE: open {d["de_hours"]}'
+               if d['de_status'] == 'open'
+               else f'  DE: closed ({d["de_hours"]})')
+    out.append(us_line)
+    out.append(de_line)
+    out.append('')
+    out.append('SYMBOL_VALIDITY:')
+    out.append(f'  symbol:   {sym["symbol"]}')
+    out.append(f'  exchange: {sym["exchange"] or "—"}')
+    out.append(f'  resolved: {"yes" if sym["resolved"] else "no"}')
+    if sym.get('error'):
+        out.append(f'  error:    {sym["error"]}')
+    out.append('')
+    out.append('HARD_STOPS:')
+    s = hs['max_3_slots']
+    c = hs['cooldown_24h']
+    out.append(f'  Max_3_Slots:  {s["detail"]} → {s["verdict"]}')
+    out.append(f'  Cooldown_24h: {c["detail"]} → {c["verdict"]}')
+    out.append('')
+    out.append(f'STATUS: {status}')
+    out.append(bar)
+    return '\n'.join(out)
 
 
-def fetch_earnings_context(symbol):
-    """Check if earnings are near. If yes, flag for full pattern analysis."""
-    try:
-        t = yf.Ticker(symbol)
-        ed = t.get_earnings_dates(limit=20)
-        if ed is None or len(ed) == 0:
-            return None, None
-
-        import pandas as pd
-        now = pd.Timestamp.now(tz="America/New_York")
-        future = ed[ed.index > now]
-        if len(future) == 0:
-            return None, None
-
-        next_ed = future.index.min()
-        days = (next_ed - now).days
-        return {
-            "next_date": next_ed.strftime("%Y-%m-%d"),
-            "days_to_earnings": days,
-            "near": days <= 30,
-            "very_near": days <= 10,
-        }, None
-    except Exception as e:
-        return None, f"Earnings fetch failed: {e}"
+def determine_status(sym: dict, hs: dict) -> str:
+    if not sym['resolved']:
+        return 'STOP'
+    if hs['max_3_slots']['verdict'] != 'ok':
+        return 'STOP'
+    if hs['cooldown_24h']['verdict'] != 'ok':
+        return 'STOP'
+    return 'READY_FOR_STEP_1'
 
 
-def _load_env_key(name):
-    """Read a key from .env (simple KEY=VALUE parser). Returns None if absent."""
-    val = os.environ.get(name)
-    if val:
-        return val.strip()
-    env_path = Path(__file__).resolve().parent / ".env"
-    if not env_path.exists():
-        return None
-    try:
-        for line in env_path.read_text().splitlines():
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            k, v = line.split("=", 1)
-            if k.strip() == name:
-                return v.strip().strip('"').strip("'")
-    except Exception:
-        return None
-    return None
-
-
-def _fetch_twelvedata_quote(symbol):
-    """Fallback price source when yfinance flakes. Returns (snap, err)."""
-    api_key = _load_env_key("TWELVEDATA_API") or _load_env_key("TWELVEDATA_API_KEY")
-    if not api_key:
-        return None, "TWELVEDATA_API not set in .env"
-    try:
-        params = urllib.parse.urlencode({"symbol": symbol, "apikey": api_key})
-        url = f"https://api.twelvedata.com/quote?{params}"
-        with urllib.request.urlopen(url, timeout=10) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-        if data.get("status") == "error" or "close" not in data:
-            return None, f"twelvedata: {data.get('message', 'no data')}"
-        price = float(data["close"])
-        prev = float(data.get("previous_close") or price)
-        chg_raw = data.get("percent_change")
-        chg = float(chg_raw) if chg_raw not in (None, "") else (
-            ((price - prev) / prev * 100) if prev else 0.0
-        )
-        return {
-            "price": round(price, 2),
-            "prev_close": round(prev, 2),
-            "change_pct": round(chg, 2),
-            "currency": data.get("currency", "USD"),
-            "name": data.get("name") or symbol,
-            "source": "twelvedata",
-        }, None
-    except Exception as e:
-        return None, f"twelvedata fetch failed: {e}"
-
-
-def fetch_price_snapshot(symbol):
-    """Minimal price snapshot — just enough so Claude knows the ticker is real.
-
-    Primary source: yfinance. Fallback: twelvedata (when Yahoo API flakes).
-    """
-    yf_err = None
-    try:
-        t = yf.Ticker(symbol)
-        hist = t.history(period="5d")
-        try:
-            info = t.info or {}
-        except Exception:
-            info = {}
-        if hist.empty and not info:
-            yf_err = f"No history or info for {symbol}"
-        else:
-            price = (
-                info.get("currentPrice")
-                or info.get("regularMarketPrice")
-                or (float(hist["Close"].iloc[-1]) if not hist.empty else None)
-            )
-            if price is None:
-                yf_err = f"No price for {symbol}"
-            else:
-                if info.get("previousClose"):
-                    prev = float(info["previousClose"])
-                elif len(hist) >= 2:
-                    prev = float(hist["Close"].iloc[-2])
-                else:
-                    prev = float(price)
-                chg = ((price - prev) / prev * 100) if prev else 0.0
-                return {
-                    "price": round(float(price), 2),
-                    "prev_close": round(float(prev), 2),
-                    "change_pct": round(chg, 2),
-                    "currency": info.get("currency", "USD"),
-                    "name": info.get("shortName") or info.get("longName") or symbol,
-                    "source": "yfinance",
-                }, None
-    except Exception as e:
-        yf_err = f"yfinance: {e}"
-
-    snap, td_err = _fetch_twelvedata_quote(symbol)
-    if snap is not None:
-        return snap, None
-    return None, f"Price fetch failed — {yf_err}; fallback {td_err}"
-
-
-def build_search_queries(symbol, date_ctx):
-    """Exact search strings Claude must run. No paraphrasing allowed."""
-    today = date_ctx["date_cet"]
-    return {
-        "trump_truth": [
-            f'Trump Truth Social "{symbol}"',
-            f'Trump "{symbol}" site:truthsocial.com',
-            f'"Donald Trump" "{symbol}" tweet OR truth OR post last 7 days',
-        ],
-        "reddit": [
-            f'site:reddit.com/r/wallstreetbets {symbol}',
-            f'site:reddit.com/r/wallstreetbetsGer {symbol}',
-            f'site:reddit.com/r/stocks {symbol}',
-            f'site:reddit.com/r/investing {symbol}',
-        ],
-        "day_news": [
-            f'{symbol} news {today}',
-            f'{symbol} stock catalyst today',
-            f'{symbol} premarket news',
-        ],
-        "events": [
-            f'economic calendar {today}',
-            f'CPI NFP FOMC {date_ctx["last_trading_day"][:10]}',
-        ],
-    }
-
-
-def print_banner(symbol, date_ctx, price_snap, price_err, news, news_err, queries, earnings_ctx=None):
-    bar = "=" * 72
-    print(bar)
-    print(f"  PRE-FLIGHT CHECK — {symbol}")
-    print(bar)
-    print()
-    print("  [GROUND TRUTH — DO NOT GUESS, DO NOT PARAPHRASE]")
-    print(f"  Datum heute (CET):  {date_ctx['date_cet']}  {date_ctx['weekday_cet']}  {date_ctx['time_cet']}")
-    print(f"  Datum heute (NY):   {date_ctx['date_ny']}  {date_ctx['time_ny']}")
-    print(f"  Wochenende?         {'JA' if date_ctx['is_weekend'] else 'NEIN'}")
-    print(f"  US-Markt:           {date_ctx['us_market']}")
-    print(f"  EU-Markt:           {date_ctx['eu_market']}")
-    print(f"  Letzter Handelstag: {date_ctx['last_trading_day']}")
-    print(f"  Gestern (CET):      {date_ctx['yesterday_cet']}")
-    print()
-
-    if date_ctx["is_weekend"]:
-        print("  ⚠  ACHTUNG: Wochenende — ALLE 'heute' Events aus Web-Suchen sind GESTERN")
-        print("     oder früher. Ein 'CPI Freitag' Ergebnis = bereits passiert, NICHT kommend.")
-        print()
-
-    print(bar)
-    print(f"  PRICE SNAPSHOT — {symbol}")
-    print(bar)
-    if price_err:
-        print(f"  ERROR: {price_err}")
-    else:
-        print(f"  {price_snap['name']}")
-        print(f"  Price: {price_snap['price']} {price_snap['currency']}  "
-              f"Change: {price_snap['change_pct']:+.2f}%  "
-              f"(prev close: {price_snap['prev_close']})")
-    print()
-
-    print(bar)
-    print(f"  EARNINGS STATUS — {symbol}")
-    print(bar)
-    if earnings_ctx is None:
-        print(f"  No earnings data (index / commodity / futures)")
-    else:
-        print(f"  Next Earnings: {earnings_ctx['next_date']}")
-        print(f"  Days to Earnings: {earnings_ctx['days_to_earnings']}")
-        if earnings_ctx['very_near']:
-            print(f"  ⚠  EARNINGS SEHR NAH (≤10 Tage) — Pattern-Analyse PFLICHT")
-            print(f"     → python3 earnings_pattern.py {symbol}")
-            print(f"     → Time-Stop: 5 Tage vor Earnings (v5/v8 Regel)")
-        elif earnings_ctx['near']:
-            print(f"  ⚠  EARNINGS NAH (≤30 Tage) — Pattern-Analyse PFLICHT")
-            print(f"     → python3 earnings_pattern.py {symbol}")
-            print(f"     → Trade-Haltezeit limitiert bis max {max(1, earnings_ctx['days_to_earnings'] - 5)} Tage")
-        else:
-            print(f"  Earnings nicht nah (>30 Tage) — Standard Day-Pattern reicht")
-    print()
-
-    print(bar)
-    print(f"  YFINANCE NEWS (last 7 days) — {symbol}")
-    print(bar)
-    if news_err:
-        print(f"  WARN: {news_err}")
-    elif not news:
-        print("  (no news items in yfinance feed — web search MANDATORY)")
-    else:
-        for n in news[:10]:
-            print(f"  [{n['date']}] ({n['age_days']}d) {n['publisher']}")
-            print(f"     {n['title']}")
-    print()
-
-    print(bar)
-    print("  MANDATORY SEARCHES — run EACH query, document findings")
-    print(bar)
-    print("  [A] TRUMP TRUTH SOCIAL / TWEETS (market manipulator — gap risk)")
-    for q in queries["trump_truth"]:
-        print(f"      → {q}")
-    print()
-    print("  [B] REDDIT RETAIL FLOW")
-    for q in queries["reddit"]:
-        print(f"      → {q}")
-    print()
-    print("  [C] DAY NEWS / CATALYSTS")
-    for q in queries["day_news"]:
-        print(f"      → {q}")
-    print()
-    print("  [D] EVENT CALENDAR (macro)")
-    for q in queries["events"]:
-        print(f"      → {q}")
-    print()
-
-    print(bar)
-    print("  CLAUDE — CHECKLIST TO ECHO BACK (VERBATIM) BEFORE STEP 1.1")
-    print(bar)
-    print(f"""
-  PRE-FLIGHT {symbol}:
-  [ ] DATUM bestätigt: {date_ctx['date_cet']} {date_ctx['weekday_cet']} (Wochenende: {'JA' if date_ctx['is_weekend'] else 'NEIN'})
-  [ ] US-Markt-Status: {date_ctx['us_market']}
-  [ ] Trump-Search durchgeführt: [JA/NEIN + Ergebnis: keine Posts / Post gefunden @ datum]
-  [ ] Reddit-Subs durchsucht (WSB, WSB-Ger, stocks, investing): [EUPHORIC/BULLISH/NEUTRAL/BEARISH/PANIC/QUIET]
-  [ ] Day-News (yfinance + web) gesichtet: [X items, notable: ...]
-  [ ] Neutralität: kein Default-Bias (weder LONG, SHORT, noch NO-TRADE)
-  [ ] Spiegel-Test: bei spiegelbildlichen Daten würde ich dieselben Argumente gelten lassen
-""")
-    print(bar)
-    print("  HARD RULES — violating any = INVALID analysis, must restart")
-    print(bar)
-    print("""
-  1. NIEMALS ein Event als 'heute/morgen' klassifizieren ohne Abgleich
-     gegen das Datum oben. Wochenende? Dann war 'Freitag CPI' GESTERN.
-  2. NIEMALS eine volle Analyse als 'Mini-Analyse' abkürzen.
-     Eine Analyse = IMMER alle 4 Steps (01→02→03→04), keine Ausnahmen.
-  3. NIEMALS eine Default-Richtung annehmen. Daten sprechen.
-  4. NIEMALS yfinance-News ignorieren wenn sie etwas Material zeigen.
-  5. NIEMALS Trump/Reddit-Search überspringen — beides pflicht für Step 1.5.
-""")
-    print(bar)
-    print("  PRE-FLIGHT DONE — now execute Step 1 (prompts/01_data_collection.md)")
-    print(bar)
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Silver Hawk pre-flight check")
-    parser.add_argument("symbol", help="Ticker symbol (e.g. PLTR, ENR.DE)")
-    parser.add_argument("--json", action="store_true", help="JSON output only")
-    parser.add_argument("--lookback-days", type=int, default=7, help="News lookback window")
-    args = parser.parse_args()
+def main() -> int:
+    p = argparse.ArgumentParser(description='Step 0 pre-flight check')
+    p.add_argument('symbol')
+    p.add_argument('--json', action='store_true', help='Emit JSON instead of text')
+    p.add_argument('--db', default=str(DB_PATH))
+    args = p.parse_args()
 
     symbol = args.symbol.upper()
 
-    date_ctx = get_date_context()
-    price_snap, price_err = fetch_price_snapshot(symbol)
-    news, news_err = fetch_yfinance_news(symbol, args.lookback_days)
-    earnings_ctx, earnings_err = fetch_earnings_context(symbol)
-    queries = build_search_queries(symbol, date_ctx)
+    d = date_block()
+    sym = resolve_symbol(symbol)
+    hs = hard_stops(symbol, Path(args.db))
+    status = determine_status(sym, hs)
 
     if args.json:
         print(json.dumps({
-            "symbol": symbol,
-            "date_context": date_ctx,
-            "price": price_snap,
-            "price_error": price_err,
-            "news": news,
-            "news_error": news_err,
-            "earnings": earnings_ctx,
-            "earnings_error": earnings_err,
-            "mandatory_searches": queries,
+            'date_block': d,
+            'symbol': sym,
+            'hard_stops': hs,
+            'status': status,
         }, indent=2, default=str))
     else:
-        print_banner(symbol, date_ctx, price_snap, price_err, news, news_err, queries, earnings_ctx)
+        print(render_text(symbol, d, sym, hs, status))
 
-    # Abort if ticker is unreachable — no point running analysis on nothing
-    if price_err:
-        sys.exit(2)
+    if status == 'READY_FOR_STEP_1':
+        return 0
+    if not sym['resolved']:
+        return 2
+    return 1
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    sys.exit(main())

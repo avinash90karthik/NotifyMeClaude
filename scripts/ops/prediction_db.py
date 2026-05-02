@@ -71,12 +71,24 @@ def get_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         symbol TEXT NOT NULL,
-        direction TEXT NOT NULL CHECK(direction IN ('LONG', 'SHORT')),
+        direction TEXT NOT NULL CHECK(direction IN ('LONG', 'SHORT', 'NO_TRADE')),
         confidence INTEGER NOT NULL CHECK(confidence BETWEEN 0 AND 100),
+
+        -- Legacy trade-plan columns (still written by old `record` paths, kept for history)
         entry_price REAL,
         stop_price REAL,
         target_price REAL,
         ko_level REAL,
+
+        -- v1.0 trade-plan columns (Step 4 of v1.0 pipeline writes these)
+        entry_low REAL,
+        entry_high REAL,
+        target1 REAL,
+        target2 REAL,
+        ko REAL,
+        cert_isin TEXT,
+        run_id TEXT,
+
         regime TEXT,
         atr_pct REAL,
         reason TEXT,
@@ -144,7 +156,7 @@ def get_db():
         if col not in wl_existing:
             conn.execute(f'ALTER TABLE watchlist ADD COLUMN {col} {typ}')
 
-    # Migrate: add columns if missing (for existing DBs upgrading to v2)
+    # Migrate: add columns if missing (for existing DBs upgrading to v2 or v1.0)
     existing = {row[1] for row in conn.execute('PRAGMA table_info(predictions)').fetchall()}
     new_cols = [
         ('status', "TEXT NOT NULL DEFAULT 'analysis'"),
@@ -156,10 +168,35 @@ def get_db():
         ('closed_at', 'TEXT'),
         ('invested_eur', 'REAL DEFAULT 0'),
         ('reason', 'TEXT'),
+        # v1.0 trade-plan columns
+        ('entry_low', 'REAL'),
+        ('entry_high', 'REAL'),
+        ('target1', 'REAL'),
+        ('target2', 'REAL'),
+        ('ko', 'REAL'),
+        ('cert_isin', 'TEXT'),
+        ('run_id', 'TEXT'),
     ]
     for col, typ in new_cols:
         if col not in existing:
             conn.execute(f'ALTER TABLE predictions ADD COLUMN {col} {typ}')
+
+    # CHECK-constraint diagnostic: SQLite cannot ALTER a CHECK in place,
+    # so the v1.0 migration in scripts/ops/migrate_v1_0.py must have run
+    # at least once. If it hasn't, every NO_TRADE record will fail with
+    # a confusing constraint error. Surface that early.
+    table_sql_row = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='predictions'"
+    ).fetchone()
+    table_sql = (table_sql_row[0] if table_sql_row else '') or ''
+    if "'NO_TRADE'" not in table_sql:
+        print(
+            "WARN: predictions.direction CHECK constraint does not allow "
+            "'NO_TRADE'. Run `python3 scripts/ops/migrate_v1_0.py` once to "
+            "relax the constraint; otherwise NO_TRADE records will fail "
+            "with a CHECK violation.",
+            file=sys.stderr,
+        )
 
     conn.commit()
     return conn
@@ -168,29 +205,76 @@ def get_db():
 # ─── Record (Step 4 of analysis — ALL analyses saved) ───────────────
 
 def record_prediction(args):
-    """Record a new analysis prediction."""
+    """Record a new analysis prediction.
+
+    Two write modes:
+      legacy (v2): --entry --stop --target --ko    → entry_price/stop_price/target_price/ko_level
+      v1.0:        --entry-low --entry-high --target1 --target2 --ko-v1
+                   plus --cert-isin --run-id        → entry_low/entry_high/target1/target2/ko/...
+
+    Direction can be LONG / SHORT / NO_TRADE. NO_TRADE records keep all
+    trade-plan columns NULL (caller passes none).
+    """
+    direction = args.direction.upper()
+    if direction not in {'LONG', 'SHORT', 'NO_TRADE'}:
+        sys.exit(f'❌ direction must be LONG | SHORT | NO_TRADE, got {direction}')
+
+    # v1.0 takes precedence if any v1.0 flag is set
+    v1_flags = (
+        getattr(args, 'entry_low', None),
+        getattr(args, 'entry_high', None),
+        getattr(args, 'target1', None),
+        getattr(args, 'target2', None),
+        getattr(args, 'ko_v1', None),
+        getattr(args, 'cert_isin', None),
+        getattr(args, 'run_id', None),
+    )
+    is_v1 = any(v is not None for v in v1_flags)
+
     conn = get_db()
-    conn.execute('''INSERT INTO predictions
-        (symbol, direction, confidence, entry_price, stop_price, target_price,
-         ko_level, regime, atr_pct, reason, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'analysis')''',
-        (args.symbol.upper(), args.direction.upper(), args.confidence,
-         args.entry, args.stop, args.target,
-         args.ko, args.regime, args.atr_pct, args.reason))
+    if is_v1:
+        conn.execute('''INSERT INTO predictions
+            (symbol, direction, confidence,
+             entry_low, entry_high, target1, target2, ko, cert_isin, run_id,
+             regime, atr_pct, reason, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'analysis')''',
+            (args.symbol.upper(), direction, args.confidence,
+             args.entry_low, args.entry_high, args.target1, args.target2,
+             args.ko_v1, args.cert_isin, args.run_id,
+             args.regime, args.atr_pct, args.reason))
+    else:
+        conn.execute('''INSERT INTO predictions
+            (symbol, direction, confidence, entry_price, stop_price, target_price,
+             ko_level, regime, atr_pct, reason, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'analysis')''',
+            (args.symbol.upper(), direction, args.confidence,
+             args.entry, args.stop, args.target,
+             args.ko, args.regime, args.atr_pct, args.reason))
     conn.commit()
     rid = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
 
-    # Differentiate output for trade-plan vs cooldown-clamped records
-    if args.entry is None and args.stop is None and args.target is None:
-        # SW2 NO-TRADE Output Clamp record
-        print(f'✅ Analysis #{rid}: {args.symbol} {args.direction} '
+    if direction == 'NO_TRADE':
+        print(f'✅ Analysis #{rid}: {args.symbol} NO_TRADE conf={args.confidence}% '
+              f'(reason recorded, no trade-plan fields)')
+    elif is_v1:
+        elo = f'${args.entry_low:.2f}' if args.entry_low is not None else 'NULL'
+        ehi = f'${args.entry_high:.2f}' if args.entry_high is not None else 'NULL'
+        t1 = f'${args.target1:.2f}' if args.target1 is not None else 'NULL'
+        t2 = f'${args.target2:.2f}' if args.target2 is not None else 'NULL'
+        ko = f'${args.ko_v1:.2f}' if args.ko_v1 is not None else 'NULL'
+        print(f'✅ Analysis #{rid}: {args.symbol} {direction} '
+              f'conf={args.confidence}% entry={elo}-{ehi} t1={t1} t2={t2} ko={ko} '
+              f'cert={args.cert_isin or "—"} run={args.run_id or "—"}')
+    elif args.entry is None and args.stop is None and args.target is None:
+        # SW2 NO-TRADE Output Clamp record (legacy path)
+        print(f'✅ Analysis #{rid}: {args.symbol} {direction} '
               f'conf={args.confidence}% [SW2 cooldown clamp — '
               f'entry/stop/target/ko = NULL]')
     else:
         entry_str = f'${args.entry:.2f}' if args.entry is not None else 'NULL'
         stop_str = f'${args.stop:.2f}' if args.stop is not None else 'NULL'
         target_str = f'${args.target:.2f}' if args.target is not None else 'NULL'
-        print(f'✅ Analysis #{rid}: {args.symbol} {args.direction} '
+        print(f'✅ Analysis #{rid}: {args.symbol} {direction} '
               f'conf={args.confidence}% entry={entry_str} stop={stop_str} target={target_str}')
     conn.close()
 
@@ -208,24 +292,49 @@ def open_position(args):
     if row['status'] == 'closed':
         sys.exit(f'❌ #{args.id} already closed.')
 
-    # Guard: cannot open a cooldown-clamped record (no trade plan)
-    if row['entry_price'] is None or row['stop_price'] is None or row['target_price'] is None:
+    # NO_TRADE records have no trade plan and cannot be opened
+    if row['direction'] == 'NO_TRADE':
+        sys.exit(f'❌ #{args.id} is NO_TRADE — no trade plan, cannot open.')
+
+    # Guard: cannot open a record without any trade plan (legacy SW2 clamp
+    # OR a v1.0 record that somehow has neither legacy nor v1.0 fields).
+    cols = row.keys()
+    has_legacy = (
+        row['entry_price'] is not None
+        and row['stop_price'] is not None
+        and row['target_price'] is not None
+    )
+    has_v1 = (
+        'entry_low' in cols and row['entry_low'] is not None
+        and 'entry_high' in cols and row['entry_high'] is not None
+        and 'ko' in cols and row['ko'] is not None
+    )
+    if not (has_legacy or has_v1):
         sys.exit(
-            f'❌ #{args.id} was recorded under SW2 cooldown clamp '
-            f'(entry/stop/target = NULL). Cannot open this analysis. '
-            f'Run a fresh analysis once the cooldown expires.'
+            f'❌ #{args.id} has no usable trade plan (neither legacy entry/stop/target '
+            f'nor v1.0 entry_low/entry_high/ko). Likely an SW2 cooldown clamp — '
+            f'run a fresh analysis instead of opening this record.'
         )
 
     invested = round(args.shares * args.cert_price, 2)
     cert_type = args.cert_type or 'turbo'
-    conn.execute('''UPDATE predictions SET
-        status='open', trade_taken=1,
-        shares=?, cert_buyin=?, cert_type=?, invested_eur=?
-        WHERE id=?''',
-        (args.shares, args.cert_price, cert_type, invested, args.id))
+    cert_isin = getattr(args, 'cert_isin', None)
+    if cert_isin:
+        conn.execute('''UPDATE predictions SET
+            status='open', trade_taken=1,
+            shares=?, cert_buyin=?, cert_type=?, invested_eur=?, cert_isin=?
+            WHERE id=?''',
+            (args.shares, args.cert_price, cert_type, invested, cert_isin, args.id))
+    else:
+        conn.execute('''UPDATE predictions SET
+            status='open', trade_taken=1,
+            shares=?, cert_buyin=?, cert_type=?, invested_eur=?
+            WHERE id=?''',
+            (args.shares, args.cert_price, cert_type, invested, args.id))
     conn.commit()
+    extra = f' isin={cert_isin}' if cert_isin else ''
     print(f'✅ #{args.id} {row["symbol"]} OPEN: {args.shares} Stk @ €{args.cert_price:.2f} '
-          f'= €{invested:.2f} ({cert_type})')
+          f'= €{invested:.2f} ({cert_type}){extra}')
     conn.close()
 
 
@@ -401,12 +510,19 @@ def fill_outcomes(args):
         sys.exit('yfinance required: pip install yfinance')
 
     conn = get_db()
-    # Skip cooldown-clamped records (no trade plan to evaluate)
+    # Skip cooldown-clamped records (no trade plan to evaluate). Two record
+    # shapes are accepted:
+    #   legacy v2 — entry_price + stop_price + target_price + ko_level
+    #   v1.0      — entry_low + entry_high + target1 + ko (entry-range mid is the
+    #               proxy entry; cert-stop-staircase replaces stop_price)
     rows = conn.execute('''SELECT * FROM predictions
-        WHERE outcome_filled = 0 AND created_at < datetime('now', '-1 day')
-          AND entry_price IS NOT NULL
-          AND stop_price IS NOT NULL
-          AND target_price IS NOT NULL
+        WHERE direction != 'NO_TRADE'
+          AND outcome_filled = 0
+          AND created_at < datetime('now', '-1 day')
+          AND (
+                (entry_price IS NOT NULL AND stop_price IS NOT NULL AND target_price IS NOT NULL)
+             OR (entry_low IS NOT NULL AND entry_high IS NOT NULL AND target1 IS NOT NULL AND ko IS NOT NULL)
+          )
     ''').fetchall()
 
     if not rows:
@@ -417,8 +533,33 @@ def fill_outcomes(args):
     print(f'Filling outcomes for {len(rows)} predictions...')
     for row in rows:
         pid, sym = row['id'], row['symbol']
-        direction, entry = row['direction'], row['entry_price']
-        stop, target, ko = row['stop_price'], row['target_price'], row['ko_level']
+        direction = row['direction']
+        cols = row.keys()
+
+        is_v1 = (
+            'entry_low' in cols and row['entry_low'] is not None
+            and 'entry_high' in cols and row['entry_high'] is not None
+            and 'target1' in cols and row['target1'] is not None
+            and 'ko' in cols and row['ko'] is not None
+        )
+
+        if is_v1:
+            entry = (float(row['entry_low']) + float(row['entry_high'])) / 2.0
+            target = float(row['target1'])  # primary take-profit (50%)
+            ko = float(row['ko'])
+            # No underlying-stop in v1.0; cert-staircase handles risk on the
+            # cert side. For the "stop_triggered" outcome metric we re-purpose
+            # the underlying KO as the stop level — KO IS the stop on the
+            # underlying side (it's the auto-knockout boundary).
+            stop = ko
+            schema_tag = 'v1.0'
+        else:
+            entry = float(row['entry_price'])
+            stop = float(row['stop_price'])
+            target = float(row['target_price'])
+            ko = float(row['ko_level']) if row['ko_level'] is not None else None
+            schema_tag = 'legacy'
+
         created = datetime.fromisoformat(row['created_at'])
 
         start = created.date()
@@ -503,8 +644,11 @@ def fill_outcomes(args):
         p = f'day {p20_day}' if p20_hit else 'NO'
         status = row['status']
         traded_str = f' [{status.upper()}]' if status != 'analysis' else ' [SKIPPED]'
-        print(f'  #{pid} {sym} {direction}{traded_str}: '
-              f'MFE={max_fav:+.1f}% MAE={max_adv:+.1f}% Stop={s} Tgt={t} +20%={p}')
+        stop_label = 'KO' if schema_tag == 'v1.0' else 'Stop'
+        target_label = 'Tgt1' if schema_tag == 'v1.0' else 'Tgt'
+        print(f'  #{pid} {sym} {direction}{traded_str} ({schema_tag}): '
+              f'MFE={max_fav:+.1f}% MAE={max_adv:+.1f}% '
+              f'{stop_label}={s} {target_label}={t} +20%={p}')
 
     conn.commit()
     conn.close()
@@ -790,15 +934,23 @@ def main():
     # record (entry/stop/target now optional — SW2 cooldown clamp omits them)
     s = sub.add_parser('record', help='Record analysis (always, even if not traded)')
     s.add_argument('symbol')
-    s.add_argument('--direction', required=True, choices=['LONG', 'SHORT'])
+    s.add_argument('--direction', required=True, choices=['LONG', 'SHORT', 'NO_TRADE'])
     s.add_argument('--confidence', required=True, type=int)
-    s.add_argument('--entry', type=float,
-                   help='Entry price (omit under SW2 cooldown clamp)')
-    s.add_argument('--stop', type=float,
-                   help='Stop price (omit under SW2 cooldown clamp)')
-    s.add_argument('--target', type=float,
-                   help='Target price (omit under SW2 cooldown clamp)')
-    s.add_argument('--ko', type=float)
+    # Legacy v2 fields
+    s.add_argument('--entry', type=float, help='Legacy: single entry price (v2 path)')
+    s.add_argument('--stop', type=float, help='Legacy: stop price (v2 path)')
+    s.add_argument('--target', type=float, help='Legacy: single target price (v2 path)')
+    s.add_argument('--ko', type=float, help='Legacy: KO level (writes ko_level)')
+    # v1.0 fields (Step 4 v1.0 pipeline)
+    s.add_argument('--entry-low', type=float, help='v1.0: trade-window range low')
+    s.add_argument('--entry-high', type=float, help='v1.0: trade-window range high')
+    s.add_argument('--target1', type=float, help='v1.0: first take-profit (50 pct)')
+    s.add_argument('--target2', type=float, help='v1.0: stretch target (remaining 50 pct)')
+    s.add_argument('--ko-v1', dest='ko_v1', type=float,
+                   help='v1.0: KO level (writes ko column, separate from legacy ko_level)')
+    s.add_argument('--cert-isin', type=str, help='v1.0: chosen cert ISIN from Phase A')
+    s.add_argument('--run-id', type=str, help='v1.0: run folder ID (SYMBOL_YYYYMMDD_HHMMSS)')
+    # Common
     s.add_argument('--regime', type=str)
     s.add_argument('--atr-pct', type=float)
     s.add_argument('--reason', type=str)
@@ -809,6 +961,8 @@ def main():
     s.add_argument('--shares', required=True, type=int)
     s.add_argument('--cert-price', required=True, type=float)
     s.add_argument('--cert-type', type=str, default='turbo')
+    s.add_argument('--cert-isin', type=str,
+                   help='Optional: cert ISIN (also written by record --cert-isin in v1.0)')
 
     # confirm
     s = sub.add_parser('confirm', help='v5 confirmation (add shares)')

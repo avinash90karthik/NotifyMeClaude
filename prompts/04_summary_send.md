@@ -1,307 +1,289 @@
 # STEP 4: SUMMARY & DELIVERY
 
 **Asset:** {{SYMBOL}}
-**Input:** Cards from Step 1, Step 2, Step 3.
+**Input:** Step 3 Output Card (Underlying trade plan).
 
-This step produces the final user-facing artifact. Order: **Trading Card -> Cert Request -> DB Record**. Step 3 already settled the underlying-side trade plan; Step 4 picks the certificate, validates the leverage math, and records the prediction.
+This step delivers the final trade artifact in two phases:
+
+- **Phase A**: Cert Request for the user (before user picks cert)
+- **User input**: User searches in Trade Republic, returns ISIN + current ask
+- **Phase B**: Final Trading Card + DB Record + `place_exits.py` (after user input)
+
+Step 3 settled the underlying-side trade plan. Step 4 picks the certificate translation and records the prediction.
 
 ---
 
-## 1. Trading Card (final user output)
+## Phase A: Cert Request
+
+### A.1 Leverage Estimate from KO and Entry Range
+
+From Step 3 Output Card:
+- KO Level (Underlying): $XX.XX
+- Entry range (Underlying): $XX.XX  -  $XX.XX
+- Target 1 (Underlying): $XX.XX
+- Target 2 (Underlying): $XX.XX
+
+Because the entry is a range, the resulting leverage is also a range. The LLM reasons in 2-3 sentences:
+
+- Leverage at entry-range low: 100 / (distance from low to KO)%
+- Leverage at entry-range high: 100 / (distance from high to KO)%
+- Sanity-check: at this leverage, Target 1 should produce roughly +10-15% cert gain, Target 2 roughly +20-30%. If the math produces +5% cert at Target 1 (leverage too low) or +35% at Target 1 (leverage too high), reconsider — likely the KO-distance or Targets need adjustment back in Step 3.
+
+### A.2 Geometry Sanity Check
+
+The cert-stop staircase needs room between Stop 3 (-25% cert) and the KO. Compute the underlying move that would trigger Stop 3:
+
+```
+Stop3_Underlying_move = 25% / Leverage
+```
+
+If `Stop3_Underlying_move` is close to or beyond the KO distance, the staircase degenerates — Stop 3 sits at or beyond the KO and provides no meaningful discipline before the auto-knockout.
+
+If the geometry doesn't work cleanly, surface the constraint to the user with two alternative paths:
+
+- Search for a cert with higher leverage (tighter KO, more room for the staircase)
+- Or a cert with a wider KO (further out, but lower leverage and possibly weaker target gains)
+
+The LLM explains briefly which path is more sensible for this trade. Only if neither path is available on Trade Republic: NO-TRADE.
+
+### A.3 Emit Cert Request
+
+Output to user (German conversational tone, this is for the user not the pipeline):
+
+```
+Bitte such ein Cert auf Trade Republic:
+
+  Symbol:        {{SYMBOL}}
+  Type:          Turbo-{Long|Short}
+  Leverage:      <Lev-low>× bis <Lev-high>×
+  KO range:      $<KO-low> bis $<KO-high>  (Underlying)
+  Issuer:        any verfügbare — am liebsten engster Spread und sinnvolle KO-Distance
+
+Dann sag mir:
+  - ISIN
+  - Aktueller Ask-Preis
+  - Tatsächliche Leverage und KO laut TR
+```
+
+Stop here. Wait for user input. Do not proceed to Phase B until the user provides ISIN + ask + actual leverage + actual KO.
+
+If the user reports "kein passendes Cert verfügbar":
+- If close to leverage range (off by ≤20%): proceed with what's available, note deviation in DB record reason
+- If significantly off (off by >40%): discuss with user — accept the deviation with smaller position, or NO-TRADE
+
+---
+
+## Phase B: Final Trading Card
+
+After user provides ISIN + ask:
+
+### B.1 Calculate Cert-Side Levels
+
+Cert-Stop staircase (from §5 Step 3, uniform across all trades):
+
+```
+Cert ask price:     ASK
+Stop 1 (-10%):      ASK × 0.90  — sell 33% of position
+Stop 2 (-17%):      ASK × 0.83  — sell 33% of position
+Stop 3 (-25%):      ASK × 0.75  — sell 34% of position
+```
+
+Cert-Side Targets (from underlying-move × actual leverage):
+
+```
+Target 1 cert price: ASK × (1 + Underlying-move-1% × Leverage / 100)
+Target 2 cert price: ASK × (1 + Underlying-move-2% × Leverage / 100)
+```
+
+Position math:
+
+```
+Position EUR:        from Step 3 sizing
+Cert count:          Position EUR / ASK  (round down to whole number)
+Actual position EUR: Cert count × ASK
+Max loss (full KO):  Cert count × ASK
+Realistic max loss   Cert count × ASK × 0.25  (= position lost at Stop 3)
+  (staircase):
+```
+
+### B.2 Trading Card
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║ {{SYMBOL}} - FINAL                                           ║
+║ {{SYMBOL}} — FINAL                                           ║
 ╠══════════════════════════════════════════════════════════════╣
-║ Signal:          LONG | SHORT | NO-TRADE                     ║
-║ Confidence:      XX%   (Scorecard: LONG XX / SHORT XX)       ║
-║ Price:           $XX.XX  (EUR XX.XX)                         ║
-║ Regime:          TRENDING | RANGE | CHOPPY | TRANSITIONAL    ║
+║ Signal:          LONG | SHORT                                ║
+║ Confidence:      XX%                                         ║
+║ Underlying:      $XX.XX  |  Cert ask: EUR XX.XX              ║
 ║                                                              ║
-║ Judge override:  YES | NO                                    ║
-║   Rating:        <Technical|Price-Action|News|Event>         ║
-║   Reason:        <1 sentence - only when YES>                ║
-║   Impact:        scorecard <X> -> Judge <Y>                  ║
+║ ─ TRADE WINDOW (Underlying, valid 3 trading days) ─────      ║
+║ Entry range:     $XX.XX  -  $XX.XX                           ║
+║ Current price:   $XX.XX  (inside | wait for retrace/bounce)  ║
+║ No-chase level:  $XX.XX                                      ║
 ║                                                              ║
-║ ─ ENTRY PLAN (limit range, underlying) ──────────────        ║
-║ Center:          Stock $XX.XX                                ║
-║ Half-width:      $X.XX  (max(0.25×ATR, 0.5%, 0.10€))         ║
-║ 1. PRIMARY:      Stock $XX.XX  (range low) until XX:XX CET   ║
-║ 2. FALLBACK:     Stock $XX.XX  (range high) from XX:XX CET   ║
-║                  (+60-90 min after primary)                  ║
-║ 3. NO-CHASE:     Stock > $XX.XX (Center + 2×half-width)      ║
-║                  -> trade expires, do NOT buy                ║
+║ ─ CERT (translated for execution) ──────────────────         ║
+║ ISIN:            DE000XXXXXX                                 ║
+║ Type:            Turbo-Long | Turbo-Short                    ║
+║ Issuer:          HSBC | SocGen | Vontobel | UBS              ║
+║ Leverage:        X.X×                                        ║
+║ Cert ask:        EUR XX.XX                                   ║
 ║                                                              ║
-║ ─ STOCK TRADE PLAN ──────────────────────────────────        ║
-║ Stop (mental):   $XX.XX (underlying)                         ║
-║ KO (underlying): $XX.XX                                      ║
-║ Target +20%cert: ≈ $XX.XX (underlying equivalent)            ║
+║ ─ POSITION ─────────────────────────────────────────         ║
+║ Position EUR:    XXX EUR  (XX% of cash)                      ║
+║ Cert count:      XX shares                                   ║
+║ Max loss (KO):   XXX EUR                                     ║
+║ Max loss (3rd stop): XXX EUR  (= 25% of position)            ║
 ║                                                              ║
-║ ─ POSITION SIZING ───────────────────────────────────        ║
-║ Position:        XX% portfolio = XXX EUR                     ║
-║ v9 split:        Scout XX% / Confirm XX%                     ║
-║ Scout EUR:       XXX EUR                                     ║
-║ Confirm EUR:     XXX EUR                                     ║
+║ ─ EXIT STAIRCASE (Cert-%, placed via pytr after fill) ──     ║
+║ Stop 1 (-10% cert):  EUR XX.XX  → sell 33%                   ║
+║ Stop 2 (-17% cert):  EUR XX.XX  → sell 33%                   ║
+║ Stop 3 (-25% cert):  EUR XX.XX  → sell 34%                   ║
+║ KO (Underlying):     $XX.XX  (TR auto-out, backstop)         ║
 ║                                                              ║
-║ ─ PROFIT EXITS (v9) ─────────────────────────────────        ║
-║ +20% cert:       80% out immediately                         ║
-║ +30%+ cert:      rest with trail                             ║
-║ Time stop:       3d <5% -> halve  |  5d sideways -> exit     ║
-║ Overnight/Trump: all out                                     ║
+║ Target 1 (+XX% cert): EUR XX.XX  → manual sell 75%           ║
+║                                  + recalibrate stops to BE   ║
+║ Target 2 (+XX% cert): EUR XX.XX  → manual sell remaining 25% ║
 ║                                                              ║
-║ ─ LOSS EXITS (W9 - Tiered Stop, cert-% basis) ──             ║
-║ Tier 2 (-15%):   HARD: sell 50% immediately, no waiting      ║
-║ Tier 3 (-25%):   HARD: sell ALL, thesis falsified            ║
-║                  -> activate SW2 re-entry cooldown 24h       ║
-║ Support-Stop:    Underlying close < <LEVEL>  -> sell 50%     ║
-║                  even if cert hasn't hit -15% yet            ║
+║ ─ TIME STOPS ────────────────────────────────────────        ║
+║ End of Day 1 flat/negative cert: consider 50% exit           ║
+║ 3 days < 5% profit:    halve position                        ║
+║ 5 days sideways:       full exit                             ║
+║ Earnings < 2 days:     50% off                               ║
 ║                                                              ║
-║ Re-entry rule:   24h cooldown from exit_ts. After 24h:       ║
-║ (SW2)            normal pipeline run, normal trade possible  ║
-║                  if signal. Pipeline IS the criterion.       ║
-║                                                              ║
-║ ─ CONTEXT ───────────────────────────────────────────        ║
-║ Reversion-Guard: <Pullback-Pflicht @ X.XX | No-Edge |        ║
-║                   SHORT-NO-TRADE>                            ║
-║ S:               XX / XX / XX                                ║
-║ R:               XX / XX / XX                                ║
-║ Next event:      <event + time + clarity/uncertainty>        ║
-║                                                              ║
-║ Don't-Chase:     price now X.X% above fallback -> OK|WAIT    ║
-║ Time window:     XX:XX Berlin - [OK | after 22:00: limits    ║
-║                  for tomorrow, no trade today]               ║
-║                                                              ║
-║ Vetos active:    none | V4/V5/SV1/SV2/SV3                    ║
-║ Warnings:        none | W10/W11/W12  -> trade-plan mods      ║
-║ Approved:        YES | NO                                    ║
-║                                                              ║
-║ Reasoning:       <2-3 sentences from Step 3 - core thesis>   ║
+║ ─ REASONING ────────────────────────────────────────         ║
+║ <3 sentences from Step 3 Output Card>                        ║
 ╚══════════════════════════════════════════════════════════════╝
 ```
 
-Field rationale:
-- **Don't-Chase** and **Time window** are the two single-liners from the old entry-timing chain that actually add value. The rest was duplication from Step 3.
-- **Judge override** is mandatory-visible (CLAUDE.md: user sees every override).
-- **Reversion-Guard line** shows which entry mode was chosen.
-- **Entry plan** is on the **underlying** - cert-side translation lives in the cert request below. One source of truth for the stock trigger, one source of truth for the cert.
+### B.3 NO-TRADE Variant of the Card
 
----
-
-## 1a. Trading Card variant — SW2 Cooldown active (NO-TRADE Output Clamp)
-
-When `now < exit_ts + 24h` for the symbol, the standard Trading Card
-above MUST NOT be emitted. Use this clamped variant instead. The omitted
-blocks (Entry Plan, KO, Stop levels, Position Sizing, Cert Request) are
-intentionally absent — handleable levels in a NO-TRADE card become
-ambient temptation in the next stress moment.
+If Step 3 returned NO-TRADE, Phase A is skipped entirely. Phase B emits a minimal card:
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║ {{SYMBOL}} — FINAL  (SW2 Cooldown active)                    ║
+║ {{SYMBOL}} — NO TRADE                                        ║
 ╠══════════════════════════════════════════════════════════════╣
-║ Signal:          NO-TRADE  (SW2 cooldown clamp)              ║
-║ Confidence:      XX%   (Scorecard: LONG XX / SHORT XX)       ║
-║ Price:           $XX.XX  (EUR XX.XX)                         ║
-║ Regime:          TRENDING | RANGE | CHOPPY | TRANSITIONAL    ║
-║                                                              ║
-║ ─ COOLDOWN STATUS ──────────────────────────────────         ║
-║ exit_ts:             YYYY-MM-DD HH:MM CET                    ║
-║ eligible_at:         YYYY-MM-DD HH:MM CET (= exit_ts + 24h)  ║
-║                                                              ║
-║ ─ STATISTICAL SETUP STRENGTH (educational, no levels) ──     ║
-║ Strongest Bull:  <1-2 lines from Step 2>                     ║
-║ Strongest Bear:  <1-2 lines from Step 2>                     ║
-║ Indicator-Context: <strongest axis + green-rate + n>         ║
-║ Trade-Window:    <if applicable: avg/green/n + sigmoid>      ║
-║ Convergence:     <spread + verdict>                          ║
-║ Reversion-Guard: <verdict>                                   ║
-║                                                              ║
-║ Vetos active:    none | V4/V5/SV1/SV2/SV3                    ║
-║ Warnings:        none | W10/W11/W12                          ║
-║ SW2:             COOLDOWN active — see eligible_at above     ║
-║ Approved:        NO  (cooldown clamp)                        ║
-║                                                              ║
-║ Reasoning:       <why setup remains compelling but blocked>  ║
+║ Signal:          NO-TRADE                                    ║
+║ Reason:          <one sentence from Step 3>                  ║
+║ Underlying:      $XX.XX                                      ║
 ╚══════════════════════════════════════════════════════════════╝
 ```
 
-DB record under cooldown clamp:
+---
+
+## DB Record (always, including NO-TRADE)
 
 ```bash
 python3 scripts/ops/prediction_db.py record {{SYMBOL}} \
-  --direction [LONG|SHORT] \
+  --direction [LONG|SHORT|NO_TRADE] \
   --confidence [XX] \
-  --regime [...] \
-  --atr-pct [X.X] \
-  --reason "SW2 cooldown clamp. eligible_at=YYYY-MM-DD HH:MM CET. <statistical setup summary>."
-```
-
-`--entry`, `--stop`, `--target`, `--ko` are omitted (the schema accepts
-NULL on these columns; migrated 2026-04-29). The DB row records the
-direction + confidence for tracking purposes; the absence of trade-plan
-fields signals "cooldown-clamped, not actioned."
-
----
-
-## 2. Cert Request (MANDATORY - depends on signal)
-
-The cert request always follows the trading card, even on NO-TRADE. The format depends on the signal strength.
-
-**Exception:** When `SW2 cooldown_active = True` (clamped variant § 1a),
-the cert request is NOT emitted. No leverage formula table, no KO range, no
-stand-by request. The clamp is intentional — the cooldown is meant to
-prevent ambient-temptation handles, not to provide them.
-
-### 2a. Leverage formula (target-based on +20% cert in 1-5 days)
-
-The cert leverage is chosen so that a realistic stock move hits the +20% target AND a normal counter-day (1× ATR) does NOT knock the position out.
-
-**Formula:**
-```
-Stock-move-for-+20%  =  0.8 × ATR%        (realistic 2-3 day move)
-Leverage             =  20 / Stock-move-for-+20%
-                     =  25 / ATR%         (round to 0.5 step)
-
-Implied KO distance  =  100 / Leverage    (implicit from leverage)
-KO buffer to ATR     =  KO-distance / ATR%   (must be >= 3.0)
-```
-
-**Reference table (derived from formula):**
-
-| ATR% | Leverage (target +20% in ~3d) | KO distance ≈ | KO / ATR | Check |
-|------|-------------------------------|---------------|----------|-------|
-| <2%  | 12-15× | 7-8% | 3.5-4× | OK |
-| 2-3% | 9-12×  | 8-11% | 3.5-4× | OK |
-| 3-4% | 7-9×   | 11-14% | 3.5-4× | OK |
-| 4-5% | 5-7×   | 14-20% | 3.5-4× | OK |
-| 5-7% | 4-5×   | 20-25% | 3.5-4× | OK (high vol) |
-| >7%  | -      | -     | -    | V1 veto: warrants/options only |
-
-**Why this formula:**
-- **0.8× ATR as 2-3d move:** ATR is daily true range. Over 2-3 days, ~0.7-1.0× ATR cumulates as net move (not 2-3× ATR - that's only extreme continuation). 0.8× is the median.
-- **KO at 3.5-4× ATR distance:** survives a normal -1σ day (~0.8-1× ATR counter-move) with buffer. CLAUDE.md W3 warning ("KO < 2× ATR") is safely avoided.
-- **Leverage scales inversely with ATR:** low-vol stocks need more leverage to reach +20% (otherwise too slow); high-vol stocks need less (otherwise stop-out risk).
-
-**Mandatory sanity check (always perform):**
-```
-Leverage × KO-distance% ≈ 100     (mathematical coherence)
-KO-distance / ATR%      ≥ 3.0     (vol buffer)
-```
-
-If the chosen cert violates either check -> pick a different cert or adjust leverage.
-
-### 2b. Cert range (sanity check, not a separate trade trigger)
-
-The stock-side limit range from Step 3 is the trigger. The cert-side range is a **sanity check** only:
-
-```
-Cert primary level    ≈ ask at Stock = primary level   (interpolate via cert delta)
-Cert fallback level   ≈ ask at Stock = fallback level
-Cert range width      = |Cert fallback - Cert primary|
-
-Check: Cert range width must be > broker spread (typically €0.01-0.05).
-       Otherwise the range is smaller than the spread and the trade is unfillable
-       -> pick a different cert with smaller spread.
-```
-
-EUR/USD movement and discrete cert tick steps are the two main reasons we do this sanity check - the relationship is mostly linear, but tick steps and FX shift can collapse the range.
-
-### 2c. Request templates
-
-**On Signal = LONG/SHORT (Gate PASS):**
-```
-Cert request:
-  Please find a cert with:
-  - Type: Turbo-{Long|Short} on {{SYMBOL}}
-  - KO range: ${KO-low} to ${KO-high}
-      (from leverage formula: KO-distance = 100/leverage)
-  - Leverage range: {Lev-low}× to {Lev-high}×
-      (formula: 25/ATR% = {target-leverage}×, range ±20%)
-  - Current ask price (for exact share count)
-  - Available on Trade Republic
-
-  Pre-buy sanity check:
-  - Leverage × KO-distance% ≈ 100?  [YES/NO]
-  - KO-distance ≥ 3× ATR%?           [YES/NO]
-  - Cert range width > broker spread? [YES/NO]
-```
-
-**On Signal = NO-TRADE but borderline (confidence 55-59%):**
-```
-Cert request (stand-by, in case conditions flip):
-  Gate missed by X%. If tomorrow {concrete trigger} happens, the trade activates.
-  Pre-source a cert with:
-  - Type: Turbo-{Long|Short} on {{SYMBOL}}
-  - KO range: ${KO-low} to ${KO-high}
-  - Leverage range: {Lev-low}× to {Lev-high}×  (25/ATR% formula)
-  - Current ask price
-  - Available on Trade Republic
-
-  We do NOT buy the cert now - only have it ready if tomorrow's re-run gives PASS.
-```
-
-**On Signal = NO-TRADE clearly below gate (<55%):**
-No cert request. Reason: "no setup in reach." instead.
-
-The leverage formula + sanity checks are **mandatory** - no free-form leverage proposals.
-
----
-
-## 3. DB Record (MANDATORY - even on NO-TRADE)
-
-```bash
-python3 scripts/ops/prediction_db.py record {{SYMBOL}} \
-  --direction [LONG|SHORT] \
-  --confidence [XX] \
-  --entry [XX.XX] \
-  --stop [XX.XX] \
-  --target [XX.XX] \
+  --entry-low [XX.XX] \
+  --entry-high [XX.XX] \
   --ko [XX.XX] \
-  --regime [TRENDING|RANGE|CHOPPY|TRANSITIONAL] \
-  --atr-pct [X.X] \
-  --reason "Brief thesis summary (1-2 sentences from Step 3 reasoning)"
+  --target1 [XX.XX] \
+  --target2 [XX.XX] \
+  --reason "<2-3 sentences from Step 3 reasoning>"
 ```
 
-**Hard (W4):** `--entry` = limit/trigger CENTER level from Step 3 entry plan, NEVER the close. On Judge override, the override reason must appear in `--reason`.
-
-**After user confirms the trade (DB + W9 exit orders, both mandatory):**
-```bash
-# 1. DB record
-python3 scripts/ops/prediction_db.py open ID --shares XX --cert-price XX.XX [--cert-type turbo|warrant|stock]
-
-# 2. W9 exit orders + TP alarm via pytr → TR
-python3 scripts/tr/place_exits.py --isin <CERT_ISIN> --buy <FILL_PRICE> --shares <XX>
-```
-
-`place_exits.py` is generic (any cert ISIN, any exchange via --exchange).
-It places real sell orders into the TR order book, not just alerts:
-
-  - Tier 2 (-15% cert): stop-market sell, 50% of position
-  - Tier 3 (-25% cert): stop-market sell, remaining 50%
-  - TP-1 (+20% cert):   PRICE ALARM (push), not an order — TR reserves
-                        shares for any open sell order, so a TP limit
-                        would block the stops. Manual sell on alarm.
-
-The script always cancels existing sell orders on the ISIN first to avoid
-"not enough shares" rejections. Default exchange is TUB (HSBC turbos);
-use `--exchange LSX` for stocks/ETFs. Use `--dry-run` to preview the
-plan before mutating.
+For NO-TRADE: `--entry-low`, `--entry-high`, `--ko`, `--target1`, `--target2` are NULL. The `--reason` captures why the trade was declined.
 
 ---
 
-## 4. Wait for User Confirmation
+## After User Confirms the Trade
 
-- The analysis is in the DB with status `analysis`. No trade yet.
-- User confirms trade -> `prediction_db.py open ID ...` AND `set_loss_alarms.py`
-- User confirms v9 confirmation buy -> `prediction_db.py confirm ID ...`
-  AND re-run `set_loss_alarms.py` with the new blended buy price
-- Portfolio state updates automatically in the DB.
+Workflow:
 
-**Notifications: pytr can SET price alarms (push to TR mobile app). It
-CANNOT send arbitrary notifications and CANNOT place buy/sell orders
-autonomously. Order execution stays manual in TR by user. Reason: blast
-radius — irreversible real-money action requires explicit user click.**
+1. User manually buys the cert in the Trade Republic app
+2. User confirms fill in the chat (with fill price)
+3. **ASAP** after fill confirmation, run the two commands below to mark the prediction opened and place all exit orders + target alarms
+
+```bash
+# 1. Mark prediction as opened in DB
+python3 scripts/ops/prediction_db.py open <prediction_id> \
+  --shares <count> --cert-price <fill_price>
+
+# 2. Place exit orders + target alarms via pytr
+python3 scripts/tr/place_exits.py \
+  --isin <CERT_ISIN> \
+  --buy <FILL_PRICE> \
+  --shares <COUNT> \
+  --stops 10:33,17:33,25:34 \
+  --targets <T1-cert-pct>,<T2-cert-pct>
+```
+
+`place_exits.py` behavior:
+
+- Cancels any existing sell orders on the ISIN first (avoids "not enough shares" rejections)
+- Places stop-market sell orders per `--stops` (e.g. -10%/-17%/-25% with 33/33/34% sizes)
+- Sets PRICE ALARMS for the cert-% gains in `--targets` (push to TR mobile app)
+- Exchange is derived from the ISIN issuer (TUB for HSBC, SGL for SocGen, LSX for stock/ETF certs); override with `--exchange` if needed
+- Use `--dry-run` to preview the plan before mutating
+
+**Why alarms not orders for Targets**: TR reserves shares for any open sell order. The three stops already reserve 100% of shares; placing limit-sells for targets would block the stops. The user must sell manually in the TR app when an alarm fires.
+
+### Workflow when Target 1 alarm fires
+
+1. User sells 75% manually in TR app
+2. User runs `place_exits.py --recalibrate` — cancels all existing stops, places a single new stop at break-even (fill price) on the remaining 25%
+3. After Target 1: no more loss possible on the remaining position
+
+### Workflow when Target 2 alarm fires
+
+1. User sells the remaining 25% manually in TR app
+2. Trade is closed; mark as closed in DB:
+   ```bash
+   python3 scripts/ops/prediction_db.py close <prediction_id> \
+     --exit-price <last_sell_price> --reason target
+   ```
+
+### Workflow when a stop triggers
+
+TR auto-sells the configured share count, no user action needed. The position size in DB is updated on next portfolio sync. If Stop 3 triggers (full exit at -25% cert), mark the prediction closed with reason `stop_3`.
+
+### Time-stop manual interventions
+
+Time stops (Day 1 flat, 3 days < 5%, 5 days sideways, earnings within 2 days) are **manual** — the user observes and decides whether to act. There is no automated time-stop daemon.
+
+---
+
+## Persistence
+
+Phase A request and Phase B trading card both written to:
 
 ```
-[STEP 4 COMPLETE - ANALYSIS FINISHED]
+runs/{{SYMBOL}}_{{YYYYMMDD}}_{{HHMMSS}}/step4_delivery.md
 ```
+
+Overwrite if file exists.
+
+---
+
+## What Step 4 does NOT do
+
+- Does not autonomously place buy orders — user manually buys in TR app after seeing the trading card
+- Does not pick the cert for the user — the user searches TR with the request specification and reports back
+- Does not place target limit-orders — TR share-reservation makes this incompatible with the stop staircase; targets are alarms
+
+---
+
+## Audit: Mai 2026 → Bewertung Juni 2026
+
+Die Cert-Stop-Treppe (-10/-17/-25 mit 33/33/34% Anteilen) ist für Mai 2026 bewusst einheitlich über alle Trades und Volatilitäten. Sicherheit vor Optimierung in der initialen Live-Phase.
+
+Bewertung Anfang Juni 2026 nach den Mai-Trades:
+
+1. Wurde Stop 1 (-10%) häufig getriggert und Position erholte sich danach? Wenn ja: -10% ist zu eng für die typische Setup-Volatilität.
+2. Wurde KO trotz Stop-Treppe erreicht? Wenn ja: dritter Stop zu nah an KO oder Treppe insgesamt zu langsam.
+3. Funktioniert die Treppe für NVDA (vol) und ENR.DE (ruhig) gleich gut, oder braucht es vol-abhängige Stufen?
+
+Bis dahin: keine Anpassungen, nur Daten sammeln. Anpassungen evidenzbasiert, nicht bauchgefühlbasiert.
+
+---
+
+## Pipeline Complete
+
+```
+[STEP 4 COMPLETE — ANALYSIS FINISHED]
+```
+
+Subsequent monitoring is via portfolio dashboard and TR app push notifications. Pipeline re-run for the same symbol requires a new `runs/{SYMBOL}_{YYYYMMDD}_{HHMMSS}/` directory.

@@ -1,250 +1,106 @@
 # Silver Hawk Trading
 
-AI-powered trading analysis built with Claude Code and yfinance. Personal
-trading-notification system for turbo-certs and warrants on Trade Republic
-in a 1-5 day horizon. Everything runs locally — no cloud, no tracking, no
-shared data.
+Personal trading-analysis pipeline for turbo-certs and warrants on Trade
+Republic. Five sequential prompts produce a complete trade plan from
+market data — entry range, KO, stop staircase, position size, exit
+orders — for a 1-3 day horizon.
 
-## What It Does
+## Who this is for
 
-- **5-step analysis pipeline** — pre-flight + 4 prompt-driven steps
-  (data collection, bull/bear debate, judge verdict, trading card)
-  for any stock or commodity.
-- **LONG & SHORT signals** — scorecard-based evaluation enforces
-  symmetry (Hard Rule 6: SHORT scorecard mandatory regardless of
-  preconceived direction).
-- **Per-stock indicator analysis** — sigmoid-based confidence adjusts
-  derived from each stock's own historical fwd-5d distribution; no
-  textbook "RSI > 70 = overbought" reflexes (Rule 16). Strongest single
-  axis from RSI / BB / DistHigh is used to avoid double-counting
-  correlated signals.
-- **Reversion guard** — per-stock percentile + own fwd-distribution
-  decides whether today's setup is a continuation or a pullback-required
-  entry (Rule 18).
-- **Smart KO calculation** — `max(ATR-based, chart-based)`, asset-class
-  multiplier (Large Cap 2×, Mid/Small 2.5×, Commodities 3×), with
-  vol-spike and pre-earnings surcharges (Rule 5: KO is computed,
-  never estimated).
-- **Risk management** — Gate at ≥60% confidence, 10% max loss per
-  trade, max 3 open slots, 60% max sector concentration, smooth
-  differential penalty `1 − 0.15·exp(−Diff/4)` instead of bucket
-  cliffs.
-- **v9 sizing** — at confidence 60-65% the Scout is inverted to
-  40/60 (smaller initial, larger confirmation) because the bracket is
-  effectively coin-flip; from ≥65% the classic 60/40 split.
-- **v9 oversold bonus** — RSI band <20 with ≥65% green-rate gets +5%
-  confidence bonus (Rule 19), <15 with ≥70% gets +8% (capitulation
-  setup). Stock-specific evidence overrides regime penalties.
-- **Portfolio tracking** — `memory/predictions.db` (SQLite) is the
-  single source of truth. Updated after every analysis (recorded
-  even on NO-TRADE) and trade.
-- **Time-stops** — halve after 3 days without +5%, exit after 5 days
-  sideways. v9 exits: 80% out at +20% immediately, rest max +30%.
-  Overnight events / Trump posts → all out.
+Traders who want to build their own LLM-driven analysis system and want a
+working reference. The code is opinionated about one thing: the LLM should
+reason on raw market data, not on pre-digested aggregates.
 
-## Requirements
+This is not a library, not a hosted service, not financial advice. It runs
+locally on a personal machine, talks to yfinance and Trade Republic via
+pytr, and persists state in a local SQLite file.
 
-- **Claude Pro** ($20/month) — for Claude Code
-- **yfinance** (free) — all market data
-- **Python 3.10+**
-- **Node.js + npm** — only for Claude Code itself
+## The core idea
 
-## Quick Start
+Earlier versions of this project had thirteen scripts that pre-processed
+market data into ratings, verdicts, and scorecards. The LLM then made
+decisions on those aggregates. It worked, but a backtest showed something
+uncomfortable: when the LLM read raw OHLCV bars directly, it identified
+useful support and resistance levels in 6 of 9 setups. The aggregation
+pipeline managed 1 of 9.
+
+The pipeline was rebuilt around that finding. Step 1 collects raw data.
+Steps 2 and 3 reason on those bars directly — identifying patterns,
+support levels, KO points, conviction asymmetries. Step 4 translates the
+underlying-side trade plan into cert-side execution math, which is the
+only place determinism is preserved (because cert leverage and position
+sizing are arithmetic, not pattern recognition).
+
+The result is shorter, easier to reason about, and measurably better at
+the thing the LLM was already good at.
+
+## How it works
+
+When you tell Claude Code "Analysiere SYMBOL", it runs five steps:
+
+```
+Step 0  Pre-flight       Date, market hours, symbol validity, hard vetos
+Step 1  Data collection  Raw OHLCV (daily + intraday), news, macro
+Step 2  Investment debate Bull vs Bear with per-stock conditioning
+Step 3  Judge & risk      Direction, trade window, KO, targets, sizing
+Step 4  Summary & delivery Cert request → user picks → trading card → exit orders
+```
+
+Each step persists its output to `runs/{SYMBOL}_{TIMESTAMP}/`. A single
+analysis takes a few minutes and produces a reviewable folder of artifacts.
+
+After the user manually buys the cert in the Trade Republic app and
+confirms the fill, `place_exits.py` deploys the stop staircase
+(-10% / -17% / -25% from fill price) and target alarms via pytr. Buy
+execution stays manual. Stops and alarms go automatic.
+
+## Quick start
+
+Requires Claude Code, Python 3.10+, and a Trade Republic account.
 
 ```bash
-# 1. Install Claude Code
-npm install -g @anthropic-ai/claude-code
-
-# 2. Clone the repo
 git clone https://github.com/AbdullahKaratas/NotifyMeClaude.git
 cd NotifyMeClaude
-
-# 3. Install Python dependencies
-pip3 install yfinance numpy pandas pywavelets python-dotenv
-
-# 4. Optional .env (only if you use a dedicated venv or external chart script)
-cp .env.template .env
-
-# 5. Smoke-test the install
+pip3 install yfinance numpy pandas pytr python-dotenv
 python3 scripts/analysis/preflight_check.py AAPL
-python3 scripts/analysis/collect_data.py AAPL
-python3 scripts/ops/prediction_db.py portfolio
-
-# 6. Run your first analysis
 claude
-> Analysiere SYMBOL
+> Analysiere AAPL
 ```
 
-The `memory/predictions.db` SQLite file is created on first use.
+The first run creates `memory/predictions.db` and the `runs/` directory.
+Configure pytr separately following the
+[pytr documentation](https://github.com/marzzzello/pytr).
 
-## Architecture
+## Where to look next
 
-```
-You (Claude Code)
-├── "Analysiere SYMBOL"                        → pre-flight + 4-step analysis → terminal trading card
-├── python3 scripts/ops/prediction_db.py portfolio  → view positions, cash, slots
-└── python3 scripts/analysis/collect_data.py SYMBOL      → quick technical snapshot
-
-Local State
-├── memory/predictions.db                       → positions, stops, P&L, analysis log
-├── memory/preopen_patterns.json                → pre-open pattern statistics
-└── RULES.md                                    → single rule registry (rationale, evidence, falsification)
-```
-
-## Analysis Pipeline
-
-Tell Claude Code: **"Analysiere SYMBOL"** (or "Analyze SYMBOL"). The
-pipeline starts with a pre-flight check (`scripts/analysis/preflight_check.py`)
-and runs all four steps below — no shortcuts, no mini-versions.
-
-| Step | What Happens |
-|------|--------------|
-| 0. Pre-Flight | `scripts/analysis/preflight_check.py` — real date/weekday/market-status, yfinance news (7d), mandatory Trump/Reddit/day-news/event searches, echo-back checklist. |
-| 1. Data Collection | yfinance prices, RSI, MACD, SMAs, ATR, short interest, news, correlation check, event calendar, geopolitical triggers. Per-stock indicator-context with sigmoid adjusts (strongest single axis). Earnings-window pattern. Reversion-edge probe. Step 1 ends with a one-line summary block. |
-| 2. Investment Debate | Bull vs Bear — 2 full rounds + LONG vs SHORT 6-axis scorecard (/60). Reversion-edge mapped to a symmetric rating (LONG max 8/10 in the strongest case). |
-| 3. Judge & Risk | Verdict + confidence (smooth differential penalty), KO via max(ATR, chart), V-vetos + W-warnings, position sizing in % of portfolio with v9 Scout-inversion below 65%. |
-| 4. Trading Card | Final card in terminal. `memory/predictions.db` updated with the analysis (always, even on NO-TRADE). Cert request with target-based leverage formula and KO-range. |
-
-Hard rules live inline in the prompts where they are enforced. The "why"
-behind each rule (rationale, evidence base, falsification trigger) lives
-in `RULES.md` at the repo root.
-
-## Watchlist
-
-The watchlist lives in the `watchlist` table inside `memory/predictions.db`.
-You don't have to use it — every analysis works on any symbol you pass.
-
-```bash
-# List
-sqlite3 memory/predictions.db "SELECT symbol, name, sector FROM watchlist ORDER BY symbol;"
-
-# Add
-sqlite3 memory/predictions.db "INSERT INTO watchlist(symbol, name, sector) VALUES('AAPL', 'Apple Inc.', 'Technology');"
-
-# Remove
-sqlite3 memory/predictions.db "DELETE FROM watchlist WHERE symbol='AAPL';"
-```
-
-## Portfolio Tracking
-
-```bash
-# Show current state (positions, cash, slots, recent closes)
-python3 scripts/ops/prediction_db.py portfolio
-
-# Set cash balance
-python3 scripts/ops/prediction_db.py cash 10000
-
-# After a trade is opened
-python3 scripts/ops/prediction_db.py open ID --shares 50 --cert-price 2.50 --cert-type turbo
-
-# v9 confirmation buy (after Scout +5% in profit)
-python3 scripts/ops/prediction_db.py confirm ID --shares 30 --cert-price 2.65
-
-# Close (full or partial)
-python3 scripts/ops/prediction_db.py close ID --exit-price 3.10 --reason target
-```
-
-## Repository Layout
+Read in this order:
 
 ```
-NotifyMeClaude/
-├── CLAUDE.md                  # onboarding index for Claude
-├── README.md                  # this file
-├── .env.template              # optional config (gitignored .env)
-├── prompts/                   # 5 prompt files (00_master + 01-04)
-├── scripts/
-│   ├── analysis/              # pipeline scripts called by prompts
-│   ├── ops/                   # portfolio state CLI (prediction_db)
-│   ├── backtest/              # validation / falsification tools
-│   └── tr/                    # Trade Republic broker access
-├── lib/                       # shared library modules
-├── tests/                     # pytest suite
-└── memory/                    # local state (predictions.db, patterns)
+CLAUDE.md                Architecture and behavior rules
+prompts/00_master.md     Pipeline index
+prompts/00_preflight.md  Step 0
+prompts/01_data_collection.md   Step 1 — what raw data the LLM gets
+prompts/02_investment_debate.md Step 2 — the reasoning structure
+prompts/03_judge_risk.md         Step 3 — trade plan
+prompts/04_summary_send.md       Step 4 — execution
 ```
 
-## Scripts
+The prompts are the system. Reading them top to bottom shows the full
+shape of an analysis.
 
-All CLI tools live under `scripts/`. Shared library code lives under `lib/`
-and is imported by the scripts — never invoked directly.
+## A note on the approach
 
-### Pipeline scripts (called by prompts)
+The hardest part of building this was deleting things. Every script that
+came out improved the pipeline. Every "rule" that was code-enforced and
+got moved to LLM context made the analyses sharper. The instinct when
+something doesn't work is to add validation, scoring, normalization. The
+backtest data here suggests the opposite is often true: less plumbing,
+more raw data, lets the LLM actually do the work it's good at.
 
-| Script | Purpose |
-|--------|---------|
-| `scripts/analysis/preflight_check.py` | Mandatory first step — date/market status, yfinance news, mandatory search-query banner, echo-back checklist |
-| `scripts/analysis/collect_data.py` | Full technical snapshot (price, RSI, MACD, ATR, SMAs, S/R, events, FX) |
-| `scripts/analysis/price_action_check.py` | 5/10/20-day trend + green-day count + verdict (Rule 14) |
-| `scripts/analysis/indicator_context.py` | Per-stock RSI/BB/DistHigh band statistics + sigmoid adjust + STRONGEST AXIS aggregation (Rule 16) |
-| `scripts/analysis/day_pattern.py` | Similar-day forward-return distribution |
-| `scripts/analysis/pattern_timeline.py` | Mode 1 similar-day + Mode 2 analog-match forecast for Day +1 to +5 |
-| `scripts/analysis/earnings_pattern.py` | Per-stock earnings-window historical behavior (backward + trade-window mode) |
-| `scripts/analysis/event_impact.py` | Big-moves (>3%) reaction history with bounce rate |
-| `scripts/analysis/reversion_guard.py` | Per-stock LONG/SHORT reversion-edge check (Rule 18) |
-| `scripts/analysis/entry_calibration.py` | Intraday-dip statistics + realistic buy-range computation |
-
-### Operational scripts
-
-| Script | Purpose |
-|--------|---------|
-| `scripts/ops/prediction_db.py` | Portfolio state + trade log + analysis record (SQLite CLI) |
-| `scripts/analysis/preopen_check.py` | Pre-open verdict: buy NOW or WAIT? Pattern-based |
-| `scripts/analysis/preopen_backtest.py` | Backtest pre-open patterns on historical data |
-| `scripts/backtest/backtest.py` | Rolling-window validation of `lib/scoring.py` weights + per-component feature-importance decomposition (falsification loop for `score_long`/`score_short`) |
-
-### Library modules (imported, not invoked)
-
-| Module | Purpose |
-|--------|---------|
-| `lib/indicators.py` | `calc_technicals`, `sigmoid_adjust`, `calc_adx`, `calc_bollinger`, `detect_regime`, `detect_rsi_divergence` |
-| `lib/scoring.py` | `score_long`, `score_short` — used by `preopen_check`, `preopen_backtest` and `backtest` (validation) |
-| `lib/risk_audit.py` | Severity-aware risk audit (V4 ATR, V5 slots, SV1 CHOPPY, SV2 60d-corr, SV3 sector, W10 earnings ≤5d) — RULES.md aligned |
-| `lib/wavelet_utils.py` | Wavelet denoising for OHLCV inputs |
-
-## Environment
-
-Optional paths in `.env` (gitignored):
-
-```
-YFINANCE_VENV=...      # path to python3 in a dedicated venv
-CHART_SCRIPT=...        # external chart-generation script
-CHART_OUTPUT_DIR=...    # chart output directory
-```
-
-## Documentation
-
-- **`CLAUDE.md`** — onboarding index for Claude Code (project meta-conventions)
-- **`prompts/00_master.md`** — pipeline overview + invocation rules
-- **`prompts/01_data_collection.md` … `04_summary_send.md`** — step instructions, hard rules inline
-- **`RULES.md`** — single rule registry (severity, owner, rationale, evidence, falsification per rule)
-- **`memory/TRACKING.md`** — pending rules and accumulating evidence
-- **`archive/`** — historical context retained for evidentiary value (e.g. v9 backtest rationale)
-- **`tests/`** — what we never want to break (currency handling, ATR true-range, slot counting, SQL injection guard)
-
-## FAQ
-
-**Does this cost anything?**
-Claude Pro ($20/month). Everything else is free (yfinance, local SQLite).
-
-**Can anyone see my data?**
-No. Everything is local — your own SQLite file, no cloud, no tracking, no
-accounts. yfinance pulls public market data only.
-
-**Do I need to know how to code?**
-You need to be comfortable opening a terminal and running the commands
-above. The actual analysis is driven by Claude Code in natural language.
-
-**How do I update the code?**
-```bash
-git remote add upstream https://github.com/AbdullahKaratas/NotifyMeClaude.git
-git pull upstream main
-```
-
-## Privacy
-
-- No cloud database — state lives in your local `memory/predictions.db`
-- No shared data, no tracking, no accounts
-- yfinance pulls public market data only
+Whether that generalizes beyond support detection is an open question.
+The first month of v1.0 live trading is a data collection phase to find
+out.
 
 ## License
 
-Personal use. Fork and customize for your own trading setup.
+Personal use. Fork and customize.

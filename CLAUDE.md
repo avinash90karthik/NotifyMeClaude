@@ -1,80 +1,82 @@
-# Silver Hawk Trading - Project Guide
+# CLAUDE.md
 
-## What this is
+## How this system works
 
-Personal trading-notification system built around a multi-agent analysis
-framework. The user trades turbo-certs and warrants on Trade Republic in a
-1-5 day horizon. Portfolio state lives in `memory/predictions.db` and is
-the single source of truth for positions, cash, and analysis history.
+Pipeline-driven trading analysis. Five sequential prompts (`prompts/00_*.md`
+through `prompts/04_*.md`). Each step produces raw output the next step
+consumes. No skipping, no shortcuts, no mini-analyses.
 
-## Where to find what
+**The architecture has one core principle:** raw data in, reasoning out.
 
-- **Rules (single registry):** `RULES.md` — rationale, evidence, falsification triggers per rule. Mechanics for each rule live in the prompt that enforces it (linked from each rule entry).
-- **Pipeline architecture:** `prompts/00_master.md`. Each step file (`01` … `04`) enforces its own rules inline.
-- **Portfolio + analysis history:** `prediction_db.py` CLI + `memory/predictions.db`.
-- **Tracking data for pending rules:** `memory/TRACKING.md`.
-- **Setup / onboarding:** `README.md` + `.env.template`.
-- **Live broker access (pytr — already authenticated):**
-  - `scripts/tr/list_orders.py` — read open orders + price alarms
-  - `scripts/tr/place_exits.py --isin <X> --buy <P> --shares <N>` —
-    auto Tier-2/3 stops + TP alarm after a fill (use `--exchange SGL`
-    for SocGen FE-certs, defaults to TUB for HSBC HM-certs)
-  - `scripts/tr/cancel_all.py` — cancel orders/alarms on an ISIN
-  - Direct API: `from pytr.api import TradeRepublicApi; tr.resume_websession()`
-    for ad-hoc reads (portfolio, ticker, instrument_details)
-  - `pytr portfolio` (CLI) — official portfolio + cash, requires fresh 2FA
-    occasionally; if it asks for a code, the user must enter it
-  - **Notifications:** `osascript` → iMessage to `abdullah.karatas@icloud.com`
-    when a trigger needs the user's attention away from terminal
+Step 1 collects raw market data — OHLCV bars, intraday ticks, news items,
+macro context. No aggregations, no verdicts, no pre-computed scores. The
+data is what yfinance and web search return, formatted but unprocessed.
 
-## How to invoke an analysis
+Steps 2 and 3 do the reasoning directly on those raw bars. The LLM (you)
+identifies patterns, support levels, conviction asymmetries, KO levels —
+all from raw data. No script tells you "RSI is overbought" or "support is
+at $147.30". You read the bars and decide.
 
-When the user asks to analyze a stock (e.g. "Analysiere PLTR",
-"PLTR anschauen", "Analyze ENR.DE"):
+Step 4 translates the underlying-side trade plan into cert-side execution
+math. This step has determinism (cert-stop calculations, position sizing
+brackets) because it's arithmetic, not pattern recognition.
 
-1. Run `python3 scripts/analysis/preflight_check.py SYMBOL` FIRST. Its date/market output
-   is ground truth.
-2. Echo back the pre-flight checklist verbatim with your answers filled in
-   before Step 1.
-3. Execute all 4 steps from `prompts/00_master.md` -> `prompts/04_summary_send.md`.
-   Each step ends with `[STEP N COMPLETE]`.
-4. No mini-analyses. No shortened flows. If you cannot run a step (e.g.
-   yfinance unreachable), STOP and tell the user.
+This is an explicit reversal of the old system. Earlier versions had
+13+ scripts that pre-digested data into ratings, verdicts, and scorecards.
+A backtest showed LLM reasoning on raw bars outperformed those aggregations
+6× in coverage. The pipeline was rebuilt around that finding.
 
-There is no slash-command - the full flow is triggered by natural-language
-intent. The pre-flight script enforces the blindspot checks.
+## What you must do
 
-## Conventions for Claude
+- **Run all five steps** when the user requests an analysis. Each ends with
+  `[STEP N COMPLETE]`. If a step cannot run, STOP and tell the user why.
+- **Reason from raw bars in Steps 2-3.** Cite specific dates and prices.
+  Never invoke textbook thresholds ("RSI 70 = overbought") — always check
+  this stock's own historical behavior in the 250 daily bars Step 1
+  provides.
+- **Honor the three hard vetos.** Max 3 open turbos, 24h cooldown after a
+  stop on the same symbol, no trade when no defensible KO exists. These
+  cannot be argued away.
+- **Persist every run.** All step outputs go into
+  `runs/{SYMBOL}_{YYYYMMDD}_{HHMMSS}/`. The user reviews these. No analysis
+  is complete without persistence.
+- **Output language for analysis artifacts is English.** Conversation around
+  the analysis is German.
 
-- **Output language for analysis artifacts:** English. Step output, cards,
-  ratings, reasoning sentences, and script output are all English.
-- **User-facing conversation around the analysis:** German.
-- **Hard rules live where they are enforced** — re-read the relevant
-  prompt for the current ruleset; do not rely on memory of older rule
-  versions. Rule rationale + evidence + falsification triggers live in `RULES.md`.
-- **Trade horizon is 1-3 days primary, up to 5d if structurally justified.** "No edge today" is a valid answer;
-  "come back in 3 weeks" is forbidden as a trade recommendation.
-- **No price / ATR / RSI without yfinance source.** Web search is for
-  news and macro context, never for prices.
-- **All trading rules live in `RULES.md`**, grouped by severity: **Vetos (V1–V5)** block hard, **Soft Vetos (SV1–SV3)** block by default with override allowed, **Warnings (W1–W12)** mandate trade-plan or confidence adjustments without blocking, **Soft Warnings (SW1–SW2)** are recommendations with override. Re-read the relevant entry before each analysis; do not summarise from memory.
-- **After a fill, place W9 (Tiered Stop) exit orders via pytr (mandatory).**
-  `python3 scripts/tr/place_exits.py --isin <ISIN> --buy <FILL>
-  --shares <N>` — places real stop-market sell orders per W9
-  tiers + a +20% price alarm. Re-run after a confirmation
-  buy (the script auto-cancels existing exits and re-places at the
-  blended buy price). Use `--dry-run` to preview.
-- **pytr CAN place orders.** It supports limit/market/stop-market
-  orders + cancel + alarms. The W9 exits are placed automatically
-  via `place_exits.py`. For ad-hoc orders (manual entries, take-profits)
-  Claude WILL still ask for explicit confirmation — the rule is
-  "automatic for documented strategy actions, manual for one-offs".
+## What you must not do
 
-## Environment
+- **Do not pre-aggregate.** No new ratings, scorecards, or verdict labels.
+  If you find yourself building a 1-10 scale or a "TRENDING/RANGE/CHOPPY"
+  classifier, stop — that is the architecture v1.0 explicitly removed.
+- **Do not place buy orders autonomously.** Buy execution stays manual in
+  the Trade Republic app. Stop-market orders and price alarms via pytr
+  after the user confirms the fill — that's it.
+- **Do not invent data.** No prices, ATR values, or indicators without a
+  yfinance source. Web search is for news and macro, never prices.
+- **Do not bypass a hard veto with reasoning.** "The setup is so strong I'll
+  open a 4th slot" is not allowed. The vetos exist because discipline beats
+  optimism.
+- **Do not extend trade horizons.** Primary 1-3 days, structurally justified
+  up to 5. "Come back in 3 weeks" is forbidden.
 
-All secrets and paths in `.env` (gitignored).
+## How to work with the user
 
-```
-YFINANCE_VENV=...      # Optional: path to python3 in a dedicated venv
-CHART_SCRIPT=...        # Optional: external chart generation script
-CHART_OUTPUT_DIR=...    # Optional: chart output directory
-```
+The user's name is Abdullah. He is the principal trader and architect of
+this system. He thinks in evidence: when something doesn't work, he wants
+data, not theories. When he challenges your reasoning, take it seriously —
+he has built and rebuilt this pipeline multiple times and knows where the
+failure modes are.
+
+Be direct. Skip preamble. Push back when he is wrong, especially when he
+is tired and reaching for an old habit. He values that.
+
+The first 30 days of v1.0 live trading are a data collection phase, not an
+optimization phase. Resist the urge to tune the staircase percentages, the
+sizing brackets, or the KO buffers based on small samples. Wait for
+20-30 trades, then audit with evidence.
+
+## When in doubt
+
+Re-read the relevant prompt file. The step prompts contain the current
+authoritative rules for that step. This file describes the architecture
+and your behavior; the prompts describe the work.

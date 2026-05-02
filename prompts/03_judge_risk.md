@@ -1,229 +1,234 @@
 # STEP 3: JUDGE & RISK
 
 **Asset:** {{SYMBOL}}
-**Input:** Step 1 bullets + ratings | Step 2 scorecard + Bull/Bear synthesis.
+**Input:** Step 1 raw data + Step 2 debate output (both in current context).
 
-This step produces the **stock trade plan only** (signal, confidence, entry/stop/KO/target on the underlying, position sizing in EUR). Cert selection, leverage formula, and KO-range for the certificate live entirely in Step 4. Do not propose a cert here.
+Goal: Translate the Step-2 reasoning into a concrete trade plan — direction, trade window, KO range, targets, position size, and the cert-stop staircase rule — by directly reading the Step-1 raw bars. No script-derived verdicts. No fixed scoring formulas. The LLM does the reasoning, citing specific bars/levels from Step 1.
 
-> **All rule mechanics — V1–V5, SV1–SV3, W1–W12, SW1–SW2 — live in `RULES.md`.** This step references them; it does not duplicate them. When this prompt says "compute KO per V1", the table, surcharges, and final-selection rule live in `RULES.md § V1`. Same for every other rule.
+Cert selection, leverage, and KO-range matching for the certificate are Step 4. This step works on the underlying only.
 
 ---
 
-## Judge Verdict
+## 1. Direction Decision
 
-### Signal + Confidence
+Read Step 2's Asymmetry tag and conviction values:
 
-Compute per `RULES.md § W6` (Mechanics → Confidence computation). Output:
+| Step 2 Asymmetry | Action |
+|------------------|--------|
+| `clear-LONG` | Direction = LONG |
+| `clear-SHORT` | Direction = SHORT |
+| `balanced` | NO-TRADE — both sides have standing arguments, edge unclear |
+| `both-weak` | NO-TRADE — neither side made a real case |
+
+For NO-TRADE: skip directly to the Output Card, fill `Signal: NO-TRADE` and `Reasoning` with the abort cause, leave trade-plan fields empty or as `—`. No further sections needed.
+
+For LONG/SHORT: continue.
+
+(Hard stops were checked in Step 0 — not re-checked here.)
+
+## 2. Final Confidence
+
+Derive a single Final Confidence (0-100%) from Step 2's two conviction values, the standing un-rebutted points, and the Notes for Step 3.
+
+The Final Confidence reflects how strongly the LLM believes the trade thesis after weighing both sides:
+- Strong asymmetry with the losing side rebutted → Final Confidence close to the winning conviction
+- Strong asymmetry but with un-rebutted counter-points → Final Confidence noticeably lower than the winning conviction
+- Confidence drives position sizing in §6
+
+State the Final Confidence with a one-sentence reason. Be honest, not optimistic.
+
+## 3. Trade Window
+
+Identify a price range and time validity within which entering the trade is acceptable. The current price may already be inside the window (fill possible today) or outside (wait for retracement, fill possible within the next sessions).
+
+Read Step-1 raw bars (OHLCV_DAILY last 60 bars + OHLCV_INTRADAY last 5 sessions) and identify:
+
+1. **Recent support/resistance levels for THIS stock** — multi-touch zones, volume-confirmed reversals, prior resistance flips. Cite specific dates from the bars.
+2. **Current price location** relative to those levels.
+3. **Reasonable entry range** for the chosen direction:
+   - LONG: between strongest nearby support (range low) and current price or slightly above (range high)
+   - SHORT: between current price or slightly below (range low) and strongest nearby resistance (range high)
+4. **No-chase level**: where entering would mean buying into a stop-cascade or chasing a breakout.
+
+If the current price is **outside** the trade window, recommend that the user sets a **Trade Republic price alarm** at the closer edge of the entry range (range high for LONG-waiting-for-pullback, range low for SHORT-waiting-for-bounce). This prevents missing the fill while waiting passively.
+
+Validity: 3 trading days from now. After expiry, re-evaluate from scratch (new run, new step1, new debate).
+
+## 4. KO Level
+
+The LLM determines the KO level from raw Step-1 data. No script, no fixed formula. The KO is a **trade-defining value** — the LLM must justify it with concrete references to bars and structure.
+
+Required reasoning includes:
+
+1. **Where does the trend break?** Cite the specific swing low/high (LONG/SHORT) where a break would invalidate the setup. Reference the date and price from OHLCV_DAILY.
+2. **Buffer below/above the trend-break level** — typically 0.5-1.5% to absorb normal intraday volatility without false KO trigger. The LLM justifies the chosen buffer based on this stock's recent daily-range behaviour, read directly from the last 14 daily bars in `OHLCV_DAILY` (high − low per day, plus overnight gaps).
+3. **Distance range from entry-range to KO** — because Entry is a range (§3), the KO distance is also a range. Compute distance from both ends of the entry range to the KO level. Audit information for the user.
+
+The KO must not be too close (frequent false-outs from normal volatility) nor too far (R/R ratio destroyed). Both errors are equally bad. The LLM commits to a specific KO level with explicit reasoning.
+
+**Volatility sanity**: if the average true range over the last 14 daily bars is greater than ~6% of price, the 1-3d horizon becomes stressful for KO math — a single average daily move could trigger the KO. Examine the trade plan particularly carefully in such cases.
+
+**The KO distance defines the cert leverage.** Mathematical relationship: Leverage ≈ 100 / KO-distance%. Step 4 inherits this leverage from the actual fill price (which falls somewhere in the entry range) and the KO level chosen here.
+
+If no defensible KO level can be identified from the raw bars (no clear trend-break structure, recent daily-range volatility too large for the trade horizon): discuss this with the user before aborting. Sometimes a wider KO with a smaller position size is acceptable; sometimes the trade should genuinely be skipped. Don't unilaterally NO-TRADE — surface the constraint and let the user decide.
+
+## 5. Targets and Cert-Stop Staircase
+
+Targets are **underlying price levels**. Stops are placed on the cert side (cert-percentage drawdown), not the underlying — Step 4 calculates the concrete cert prices from the chosen cert's ask. Per-stock leverage characteristics differ (NVDA cert at 5x behaves differently from ENR.DE cert at 5x due to volatility, liquidity, KO mechanics) — Step 4 handles this.
+
+**Target 1 (Underlying):** First take-profit level — identified from the next significant resistance (LONG) or support (SHORT) above/below entry, OR a realistic 1-3d move given the recent daily-range pattern in `OHLCV_DAILY`.
+
+**Target 2 (Underlying):** Stretch target — further resistance/support level.
+
+### Cert-Stop staircase (uniform across all trades, calculated in Step 4)
+
+After fill, three stop-market orders are placed via pytr on the cert:
+
+- Cert at -10% from fill price: sell 33% of position
+- Cert at -17% from fill price: sell 33% of position
+- Cert at -25% from fill price: sell remaining 34%
+
+Rationale: full-entry-then-managed-exit. Three escalating stops force discipline before the KO is reached. The KO level (defined in §4) is the ultimate Trade Republic auto-knockout — it should not be reached if the staircase stops trigger as designed. KO is backstop, not normal exit.
+
+Step 4 calculates the concrete cert price levels for these stops based on the chosen cert and its ask price.
+
+### R/R Reasoning (mandatory before commit)
+
+Before emitting the Output Card, the LLM evaluates the trade geometry:
+
+- Distance from entry-range to Target 1 vs. distance to KO
+- Distance from entry-range to Target 2 vs. distance to KO
+- Realistic probability of reaching Target 1 / Target 2 in 1-3 days given the recent daily-range pattern
+
+The LLM judges whether the geometry justifies the trade. A typical Range-Bound-Setup with high probability can work at lower R/R; a Breakout with lower probability needs higher R/R. No fixed threshold — explicit reasoning required.
+
+**Important**: Targets must be derived from real resistance/support structure or realistic 1-3d moves implied by recent daily ranges — never adjusted post-hoc to make the R/R math look better. R/R is a test of the trade plan, not an input.
+
+If the geometry doesn't work cleanly (KO too wide for available upside, Target too close, daily-range volatility insufficient for the move in 1-3d): discuss with the user. There may be acceptable adjustments (lower Target with smaller cert gain expectation, smaller position size to compensate for poor R/R). Don't unilaterally NO-TRADE.
+
+State the R/R ratios explicitly in the Output Card with one sentence on why the LLM judges the geometry as acceptable (or not).
+
+### Exit Logic After Fill (via pytr)
+
+Standard staffelung, identisch über alle Trades:
+
+- **At Target 1**: sell 75% of position. Move stop to break-even (Stop 1 cancelled, Stop 2 and Stop 3 cancelled, new stop placed at fill price). After Target 1: no more loss possible on the remaining 25%.
+- **At Target 2**: sell remaining 25% (full exit)
+- **Cert-stop staircase before Target 1**: triggered automatically by the three stop-market orders placed in Step 4 (-10% / -17% / -25% cert drawdown, 33/33/34% size)
+
+No discretionary trail-vs-exit decisions per trade — consistency over optimization.
+
+**Time stops:**
+- End of Day 1 with no movement (cert flat or negative): consider 50% exit — the setup thesis is not playing out
+- 3 days < 5% profit on cert: halve position
+- 5 days sideways: exit fully
+- Earnings < 2 trading days away: 50% off regardless of position state
+
+## 6. Position Sizing
+
+Sizing brackets driven by Final Confidence — **upper bound, LLM may size smaller with reasoning**:
+
+| Final Confidence | Maximum Position Size (% of cash) |
+|------------------|-----------------------------------|
+| < 60%            | NO-TRADE                          |
+| 60-69%           | 12%                               |
+| 70-79%           | 15%                               |
+| 80-89%           | 18%                               |
+| ≥ 90%            | 20% (rare)                        |
+
+Hard cap: never above 20% of cash on a single turbo.
+
+The LLM may reduce below the bracket if Risk Audit (§7) identifies severe macro timing risk, sector concentration concerns, or other factors. Reduction must be justified in one sentence.
+
+**Full position at entry** — no Scout/Confirmation split.
 
 ```
-Direction:        LONG | SHORT
-Raw Confidence:   XX%   (max(LONG-Total, SHORT-Total) / 60 × 100)
-Diff:             XX    (|LONG-Total − SHORT-Total|)
-Penalty factor:   X.XXX (1 − 0.15 × exp(−Diff / 4))
-Oversold bonus:   +0% | +5% | +8%   (per W5 conditions)
+Cash:                XXX EUR  (live, from pytr portfolio)
+Bracket:             XX% per Final Confidence X%
+Position size:       XXX EUR  (or reduced: XXX EUR — reason: <...>)
+Max loss per trade:  XXX EUR  (assuming KO hit on full position)
+```
+
+Cert count = Position EUR / cert ask price → computed in Step 4 once cert is selected.
+
+## 7. Risk Audit
+
+Four mandatory checks, each addressed explicitly in 1-2 sentences:
+
+1. **Macro Timing**: any Fed/CPI/FOMC within trade window? Other macro events in next 3-5 days that could whipsaw the trade?
+2. **Sector Concentration**: would this trade push sector exposure above comfort? (cite Step 1.6 sector_after_this_trade)
+3. **Trump/Geopolitical**: Trump-Hit on this ticker in last 7d? Active geopolitical triggers that could affect this stock?
+4. **Per-Stock Conditioning**: at least one explicit per-stock observation that affects the trade — e.g., "this stock has historically faded after 5+ consecutive green days, currently at 6", or "daily ranges have widened 40% in the last 5 sessions, KO buffer adjusted accordingly".
+
+After the four checks, 2-3 sentences of free reasoning covering anything not captured above (standing un-rebutted Bear/Bull points from Step 2, unusual volume patterns, etc.).
+
+If any check reveals a severe risk that the trade plan does not adequately address: state it clearly and discuss with the user before aborting.
+
+---
+
+## Output Card
+
+```
+Step 3: Judge Verdict — {{SYMBOL}}
+
+Signal:           LONG | SHORT | NO-TRADE
 Final Confidence: XX%
-```
 
-The 60% gate is automatically consistent: 36/60 Scorecard-Total = 60% Confidence (before W5 bonus).
+TRADE WINDOW (3 trading days validity):
+  Entry range:    $XX.XX  -  $XX.XX
+  Range basis:    <one sentence citing specific bars/levels from Step 1>
+  Current price:  $XX.XX  (inside range | above, wait for retrace | below, wait for bounce)
+  No-chase level: $XX.XX
+  TR alarm:       <if outside range: suggest TR price alarm at closer edge>
 
-### Judge Override (allowed, with mandatory documentation)
+KO LEVEL:
+  KO:             $XX.XX
+  Distance range: X.X%-X.X% (from entry-range low / high to KO)
+  Reasoning:      <1-2 sentences citing the trend-break level and chosen buffer>
 
-The Judge may override the scorecard when at least one Step-1 rating is **demonstrably miscalibrated**. Miscalibration means:
-- Sample too small (THIN) was counted as full
-- Rating source not cited from Step 1 (forbidden gut-feel point)
-- Hard new information has appeared since Step 1 (Trump post, earnings gap)
+TARGETS (Underlying):
+  Target 1:       $XX.XX  (75% exit + move stop to BE)
+  Target 2:       $XX.XX  (remaining 25% exit)
+  R/R geometry:   Target1/KO ≈ X.X× | Target2/KO ≈ X.X× | reasoning: <one sentence>
+  Cert hint for Step 4: leverage that maps Target 1 to ~+10-15% cert gain, Target 2 to ~+20% cert gain
 
-An override MUST be documented with:
-1. **Which rating** is miscalibrated
-2. **Why** (one sentence with concrete source reference)
-3. **Impact**: scorecard said X, Judge decided Y
+CERT-STOP STAIRCASE (calculated in Step 4 from chosen cert):
+  -10% cert: sell 33%  |  -17% cert: sell 33%  |  -25% cert: sell 34%
+  After Target 1: stops cancelled, new stop at break-even (fill price)
 
-This documentation is copied verbatim into the Step-3 card AND the Step-4 trading card — the user must see every override.
+POSITION SIZING:
+  Cash:           XXX EUR
+  Bracket max:    XX% (XXX EUR)
+  Actual size:    XXX EUR  (reason if reduced: <...>)
+  Max loss:       XXX EUR
 
-### Neutrality Check (hard, before final signal)
+RISK AUDIT:
+  Macro timing:        <1-2 sentences>
+  Sector:              <1-2 sentences>
+  Trump/Geopolitical:  <1-2 sentences>
+  Per-stock conditioning: <1-2 sentences>
+  Other risks:         <2-3 sentences>
 
-- Mirror test: would I let through the **same** arguments at mirrored data (RSI 90 instead of 10, +17% instead of −17%)? Asymmetric = bias.
-- Gate is Confidence < 60% OR an active Veto / un-overridden Soft Veto. Everything else ("entered too late", "R/R not perfect", "counter-trend uncomfortable") is a trade-plan adjustment (smaller size, tighter targets), not a signal veto.
-- NO-TRADE is a valid result, but only on a real gate violation — not from caution.
+Reasoning:        <3 sentences: what makes this trade work, what could break it, why these specific levels>
 
-### Horizon
-
-**1-3 days primary, up to 5d if structurally justified.** Day+1 to Day+3 is the primary signal, Day+4 to Day+5 is secondary. Medium-/long-term setups are NOT scored. If the 1-3d window shows no edge → signal = NO-TRADE.
-
-Forbidden: "setup active from date X", "come back in Y weeks", "wait for T-7 pre-earnings". These patterns are RISK warnings or watchlist triggers, never trade triggers.
-
----
-
-## KO Level
-
-Compute per `RULES.md § V1` (Mechanics → ATR-based KO + Chart-based KO + Final selection). Output table:
-
-| Method | Level | Distance |
-|--------|-------|----------|
-| ATR-based | XX.XX | X.X% |
-| Chart-based | XX.XX | X.X% |
-| **FINAL** | **XX.XX** | **X.X%** (further of the two) |
-
-If either calculation cannot complete → trade is invalid, abort (V1 is a hard Veto).
-
----
-
-## Optimal Entry
-
-Run scripts (already pulled in Step 2):
-
-```bash
-python3 scripts/analysis/reversion_guard.py {{SYMBOL}} --direction <LONG|SHORT>
-python3 scripts/analysis/entry_calibration.py {{SYMBOL}}
-```
-
-Compute the entry per `RULES.md § W4` (Mechanics → Center derivation + half-width formula + four levels + reconciliation).
-
-### Entry Plan Card (mandatory in Step 3 output)
-
-```
-╔══════════════════════════════════════════════════════════════╗
-║  ENTRY PLAN (limit range, vol-derived) - UNDERLYING          ║
-╠══════════════════════════════════════════════════════════════╣
-║  Center level:     Stock $XX.XX                              ║
-║  Range half-width: $X.XX                                     ║
-║                                                              ║
-║  1. PRIMARY LIMIT:    Stock @ $XX.XX  (range low)            ║
-║     valid until XX:XX CET                                    ║
-║                                                              ║
-║  2. FALLBACK LIMIT (from XX:XX CET, +60-90 min):             ║
-║     Stock @ $XX.XX  (range high)                             ║
-║                                                              ║
-║  3. ABSOLUTE NO-CHASE LEVEL:                                 ║
-║     Stock > $XX.XX  (= Center + 2×half-width)                ║
-║     -> trade expires, do NOT buy                             ║
-║                                                              ║
-║  No market buys, no orders outside the range.                ║
-╚══════════════════════════════════════════════════════════════╝
-```
-
-**DB record:** `--entry <Center-Level>` — the backtest needs the mid expected fill price. The pre-commit reconciliation in W4 enforces this.
-
-The cert-side translation of this range (cert primary/fallback levels in EUR), the cert leverage selection, and the KO range that Trade Republic should hit are all done in Step 4 — not here.
-
----
-
-## Trade Plan (underlying)
-
-**Entry (limit center):** XX.XX  |  **KO:** XX.XX  |  **Stop (mental, above KO):** XX.XX
-
-**Profit Exits:**
-- 80% SELL at +20% cert gain — immediately
-- Rest max +30%, then trail
-- Trump event / overnight event → all out per W12
-
-**Loss Exits:** apply per `RULES.md § W9`. The trading card emits all three triggers (Tier 2, Tier 3, Support-Override) with their concrete cert-% / underlying-level values for the current trade — see `prompts/04_summary_send.md § 1` for the card layout. After fill: run `python3 scripts/tr/place_exits.py --isin <CERT_ISIN> --buy <FILL> --shares <N>` to place the real stop-market sell orders + +20% TP alarm per W9.
-
-**SW2 Re-Entry Cooldown:** if `now < exit_ts + 24h` for the candidate symbol, emit the **clamped Trading Card variant** (`prompts/04_summary_send.md § 1a`) and the **clamped DB record** path per `RULES.md § SW2` (Mechanics → NO-TRADE Output Clamp table). Do NOT print Entry Plan / KO / Stop / Sizing / Cert-Request blocks under cooldown.
-
-**Time stops:** 3 days < 5% profit → halve | 5 days sideways → exit | Earnings < 2 days → 50% off
-
-**Expected duration:** 1-3d momentum / 2-4d pullback / 1-2d event. If > 5d → warn explicitly that the cert is not suitable.
-
----
-
-## Risk Audit
-
-For every active rule in `RULES.md`, evaluate the rule against the current setup. Output **one line per rule**, in this order:
-
-1. Vetos (V1–V5)
-2. Soft Vetos (SV1–SV3)
-3. Warnings (W1–W12)
-4. Soft Warnings (SW1–SW2)
-
-Format per line:
-
-```
-- <ID> (<one-line summary from RULES.md>): <STATUS> — <observed value or condition>
-```
-
-`<STATUS>` = `PASS` | `VETO` | `OVERRIDE` | `WARN`.
-
-**Decision rules (per severity):**
-- Any active **Veto** → signal = NO-TRADE, abort the trade plan.
-- Any active **Soft Veto** → signal = NO-TRADE by default. Judge may override; the override line `<ID>-override: <reason>` MUST appear verbatim in the Step-3 card.
-- Any active **Warning** → apply the mandated adjustment per `RULES.md § <ID>` (Mechanics block). Signal continues.
-- Any active **Soft Warning** → apply the default behaviour per `RULES.md § <ID>`. User may override with explicit acknowledgement.
-
-The full mechanics for each rule live in `RULES.md`. Do NOT duplicate them here. If a rule's status depends on values the Step-1 / Step-2 output does not yet show, fetch the missing input before evaluating (e.g. live Cash via `pytr portfolio` for W1, 60d correlation via `lib/risk_audit.py` for SV2).
-
-**Result:** APPROVED / BLOCKED — [reason citing the rule ID(s) that fired]
-
----
-
-## Position Sizing
-
-Apply `RULES.md § W6` (Mechanics → Confidence-computation, sizing brackets, compute steps). Before any EUR figure: run the **Sizing Pre-Flight Gate per `RULES.md § W8`** (three checks). Emit each check with the cited source value:
-
-```
-SIZING PRE-FLIGHT (per W8):
-[ ] 1. Confidence-Bias-Check:  PASS / FLAG
-[ ] 2. Correlation/Cluster-Check (SV2):  PASS / SV2-ACTIVE / USER-CONFIRMATION-NEEDED
-[ ] 3. Cash-Basis (W1):  PASS / AMBIGUOUS
-```
-
-If any check is not PASS → STOP. Do not print the Risk-per-Trade table. Return to user for clarification.
-
-### Risk-per-Trade Table
-
-| Metric | Value |
-|--------|-------|
-| Cash (live, from `pytr portfolio`) | XXX EUR |
-| Position size (XX% of Cash, per W6 bracket) | XXX EUR |
-| Scout (XX% of Total) | XXX EUR |
-| Confirmation (XX% of Total) | XXX EUR |
-| Max loss per trade | XXX EUR |
-| Currently at risk | XXX EUR |
-| Remaining risk budget | XXX EUR |
-
-(Cert count = Scout EUR / cert ask price — computed in Step 4 once the cert is known.)
-
----
-
-## Output Card (no JSON)
-
-```
-Step 3:
-╔══════════════════════════════════════════════════════════════╗
-║ JUDGE VERDICT - {{SYMBOL}}                                   ║
-╠══════════════════════════════════════════════════════════════╣
-║ Signal:            LONG | SHORT | NO-TRADE                   ║
-║ Confidence:        XX%   (Raw XX% × penalty XX  + bonus XX)  ║
-║ Scorecard diff:    LONG XX / SHORT XX  (Diff=XX)             ║
-║                                                              ║
-║ Judge override:    YES / NO                                  ║
-║   Rating:          <Technical|Price-Action|News|Event>       ║
-║   Reason:          <1-2 sentences, source reference>         ║
-║   Impact:          scorecard said <X>, Judge decided <Y>     ║
-║                                                              ║
-║ Reversion-Guard:   <Pullback-Pflicht @ X.XX | No-Edge |      ║
-║                     SHORT-NO-TRADE>                          ║
-║ Entry (limit ctr): XX.XX (underlying)                        ║
-║ Stop (mental):     XX.XX (underlying)                        ║
-║ KO (final):        XX.XX  (X.X%, method: ATR|Chart)          ║
-║ Target (+20%):     XX.XX (underlying equivalent of +20% cert)║
-║                                                              ║
-║ Position size:     XX% Cash (XXX EUR)                        ║
-║ W6 split:          scout-inverted (40/60) | scout-classic    ║
-║                    (50/50)                                   ║
-║ Oversold bonus:    NO | +5% | +8%                            ║
-║                                                              ║
-║ Risk Audit:                                                  ║
-║   Vetos:           <list of fired Vetos or "all PASS">       ║
-║   Soft Vetos:      <list with override notes if any>         ║
-║   Warnings:        <list of fired Warnings + adjustment>     ║
-║   Soft Warnings:   <list of fired SW + override notes>       ║
-║ Approved:          YES / NO                                  ║
-╚══════════════════════════════════════════════════════════════╝
-
-Reasoning: <2-3 sentences, chart + indicator-context + signal>
-
-Next step (Step 4): pick cert + KO range + leverage from formula, attach cert-request card.
+Next step (Step 4): cert selection, leverage, KO-range matching, trading card emission, place_exits.py integration.
 
 [STEP 3 COMPLETE]
 ```
+
+## Persistence
+
+Write the full Step 3 output (sections 1-7 + Output Card) to:
+```
+runs/{{SYMBOL}}_{{YYYYMMDD}}_{{HHMMSS}}/step3_judgment.md
+```
+
+Overwrite if file exists.
+
+## What Step 3 does NOT do
+
+- Does not pick the certificate (ISIN, leverage) — that is Step 4
+- Does not place orders — that is Step 4 with `place_exits.py` after fill
+- Does not re-fetch raw data — Step 1 output is in current context
+- Does not specify cert-side stop levels — those are calculated in Step 4 from the chosen cert ask price
+- Does not unilaterally NO-TRADE on geometry or KO problems — surfaces the constraint and discusses with the user first

@@ -52,3 +52,9 @@ all_events.json
 account_transactions.csv
 pytr_*.csv
 portfolio_*.csv
+
+# v1.0 run artefacts (per-analysis output: step1_data.md, charts, metadata)
+runs/
+
+# Backtest results (regenerable)
+results/

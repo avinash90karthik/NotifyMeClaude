@@ -2,284 +2,260 @@
 
 **Asset:** {{SYMBOL}}
 
-Pre-flight (Step 0) must be complete, with the verbatim checklist above § 1.1. If not → STOP.
+Pre-flight (Step 0) abgeschlossen, Checkliste oberhalb von § 1.1. Falls nicht → STOP.
+
+Ziel: Rohdaten für das LLM zusammenstellen. Keine Verdicts, keine Tags, keine Caps, keine Aggregation. Reasoning ist Aufgabe von Step 2/3.
+
+Run-Output wird gespeichert unter `runs/{{SYMBOL}}_{{YYYYMMDD}}_{{HHMMSS}}/step1_data.md` plus Chart-PNG fü den User. 
 
 ---
 
 ## 1.1 Portfolio
 
+Vorrausetzung: user muss eingeloggt sein. Wenn der User nicht eingeloggt ist, bitte den User sich einzulogen. 
+
 ```bash
-python3 scripts/ops/prediction_db.py portfolio
 pytr portfolio
+python3 scripts/ops/prediction_db.py portfolio
 ```
 
-`pytr` = truth for fills/cash/shares. `prediction_db` = truth for analysis coverage.
-On conflict: pytr for size, DB for history. Note: slots used, cash, sector exposure.
+`pytr` = aktuelle Holdings, Cash, Sektoren.
+`prediction_db` = realisierte Trades (Backtest und Doublettenschutz).
 
-## 1.2 Technical Data
+Output:
+```
+Cash: <EUR>
+Open positions: <symbol, side, size, sector>
+Sector exposure: <sector, % of equity> for each sector with positions
+```
+
+Pending-Signal-Tracking (Limit-Orders, die noch nicht gefüllt sind) kommt mit dem DB-Schema-Update — vorerst nicht enthalten.
+
+## 1.2 Preise & Indikatoren
 
 ```bash
 python3 scripts/analysis/collect_data.py {{SYMBOL}}
 ```
 
-Review: price, RSI, MACD, ATR, ADX, regime, SMA50/200, S/R, earnings distance. Flag anomalies.
-**V3:** prices and FX from APIs only — no hardcoded fallbacks (mechanics: `RULES.md § V3`).
+Skript holt das Maximum an verfügbaren Rohdaten von yfinance und liefert:
 
-## 1.3 Pre-Open Pattern
+```
+SYMBOL: {{SYMBOL}}
+TIMESTAMP: <ISO + CET>
+MARKET_STATUS: PRE | OPEN | POST | CLOSED  (via market_state)
+
+CURRENT:
+  price: <native>
+  price_source: premarket | live | postmarket | last_close
+  change_from_close_pct: <±X.XX>
+  prev_close: <X.XX>
+  bid / ask: <X.XX> / <X.XX>
+
+OHLCV_DAILY (max available, target ~250 bars / ~1 trading year):
+  date | O | H | L | C | Volume
+  [Tabelle]
+
+OHLCV_INTRADAY_5MIN (last 5 sessions):
+  datetime_CET | O | H | L | C | Volume
+  [Tabelle]
+
+OHLCV_INTRADAY_1MIN (last 2 sessions, every 5th bar):
+  datetime_CET | O | H | L | C | Volume
+  [Tabelle]
+
+KEY_LEVELS:
+  52w_high: <X.XX> on <date>
+  52w_low:  <X.XX> on <date>
+  3m_high:  <X.XX> on <date>
+  3m_low:   <X.XX> on <date>
+  # Index lookups only — no computed indicators. ATR / SMA / RSI / MACD are
+  # the LLM's job in Step 2/3, computed on demand from OHLCV_DAILY.
+
+STOCK_META:
+  exchange: <code>
+  currency: <code>
+  market_cap: <value>
+  beta: <value>
+  shares_outstanding: <value>
+  avg_volume_10d: <value>
+  trailing_pe / forward_pe: <values>
+  analyst_recommendations_summary: <strongBuy/buy/hold/sell/strongSell counts>
+
+EARNINGS:
+  next_date: <date>
+  days_until: <N>
+  last_4_reports: [date | EPS_estimate | EPS_actual | next_day_return]
+
+YFINANCE_NEWS (last 7-10 items from yfinance .news):
+  [date | provider | title | url | summary]
+```
+
+Hinweise zu yfinance-Limits (handled by collect_data.py, nicht User-relevant):
+- 1m-Bars: nur letzte 7 Tage
+- 5m-Bars: nur letzte 60 Tage
+- Daily-Bars: keine relevante Begrenzung
+- US-Stocks haben separate `preMarketPrice`/`postMarketPrice`-Felder
+- DE-Stocks (XETRA) haben Pre-/Post-Trading nur in den Intraday-Bars
+
+## 1.3 Pre-Open / Pre-Market Snapshot
 
 ```bash
-python3 -c "import json; d=json.load(open('memory/preopen_patterns.json')); print('IN DB' if '{{SYMBOL}}' in d.get('symbols',[]) else 'NOT IN DB')"
-# If NOT IN DB:
-python3 scripts/analysis/preopen_backtest.py --symbols {{SYMBOL}}
-# Then in either case:
-python3 scripts/analysis/preopen_check.py {{SYMBOL}} --entry-timing
+python3 scripts/analysis/preopen_snapshot.py {{SYMBOL}}
 ```
 
-Note: verdict, hit-rate, gap-fill %, best entry time.
+Skript-Logik:
+- **US-Stocks**: `info.preMarketPrice` + Pre-Market-Range aus 5min-Bars (04:00-15:30 CET)
+- **DE-Stocks**: Pre-Trading-Range aus 5min-Bars (08:00-09:00 CET, XETRA pre-trading window)
+- Falls Markt offen → Marker `MARKET_OPEN_NO_PREOPEN_DATA`
+- Falls keine Pre-Trading-Aktivität → Marker `NO_PREOPEN_TRADING_TODAY`
 
-## 1.4 Chart + Indicator Context
+Output-Format gleich für US und DE (transparent für Step 2/3):
 
-### Chart
+```
+PRE_OPEN_SNAPSHOT:
+  market: US | DE
+  premarket_high: <X.XX>
+  premarket_low: <X.XX>
+  premarket_volume: <X>
+  premarket_last_price: <X.XX>
+  gap_vs_prev_close_pct: <±X.XX>
+```
+
+Historische Pre-Open-Pattern-Analyse (Pre-Market-Gap → First-Hour-Reaktion → Day-Close) leitet sich aus den `OHLCV_INTRADAY_5MIN`-Bars in § 1.2 ab. Das LLM rekonstruiert das Pattern selbst aus den letzten 5 Sessions, statt es als pre-aggregierte Tabelle zu konsumieren.
+
+## 1.4 Chart
 
 ```bash
-source .env 2>/dev/null
-SCRIPT="${CHART_SCRIPT:-}"
-if [ -n "$SCRIPT" ]; then ${YFINANCE_VENV:-python3} $SCRIPT {{SYMBOL}}; fi
+python3 scripts/analysis/render_chart.py {{SYMBOL}}
 ```
 
-Note: trend, SMA constellation (golden/death cross), RSI + divergence, volume, pattern, support, resistance.
+Erzeugt PNG: 60 Daily Bars + Volume-Subplot. Keine SMA-Overlays, keine Annotations, keine Indikator-Overlays (konsistent mit § 1.2 — falls das LLM Bezugspunkte braucht, rechnet es sie aus den Daily Closes). PNG wird ans LLM-Prompt angehängt und parallel via iMessage an User.
 
-### Price-Action Reality (W2)
+Skript-Ziel: `runs/{{SYMBOL}}_{{YYYYMMDD}}_{{HHMMSS}}/step1_chart.png`.
 
-```bash
-python3 scripts/analysis/price_action_check.py {{SYMBOL}}
+## 1.5 Context (Stock-Specific + Market-Wide)
+
+### Stock-Specific
+
+`YFINANCE_NEWS` (aus § 1.2) liefert bereits 7-10 stabile Items kostenlos. Für die folgenden drei Quellen nutzt das LLM seine WebSearch direkt im Step-1-Prompt — keine separaten Fetch-Skripte.
+
+**News (WebSearch):**
+- Query: `"{{SYMBOL}}" news site:reuters.com OR site:bloomberg.com OR site:seekingalpha.com last 7 days`
+- 5-10 Items in Rohform übernehmen.
+
+Output:
+```
+WEB_NEWS_LAST_7D:
+  [date | source | title | url | first_paragraph_or_excerpt]
 ```
 
-Output: 5/10/20-day trend + greens-in-10d + verdict. Mechanics: `RULES.md § W2`.
+**Trump Truth Social (WebSearch):**
+- Query: `Trump Truth Social {{SYMBOL}}` und (falls relevant) Sektor-Schlüsselwort.
+- Caveat: WebSearch ist nicht autoritativ für Truth Social — false-negatives möglich. Bei kritischer Lage (große Position, Earnings-Woche) zusätzlich manuell prüfen.
 
-### Indicator Context (W3 + W5)
-
-```bash
-python3 scripts/analysis/indicator_context.py {{SYMBOL}} --expected-price <Close from 1.2> --expected-date <last trading day>
+Output:
+```
+TRUMP_HIT: yes | no | uncertain
+[falls hit: date | original_text_or_paraphrase | url | confidence: high|medium|low]
 ```
 
-Per-stock conditional green-rates over 3y for RSI / BB-position / Dist-3M-high.
-Aborts (exit 2) if history is >2 days stale or close diverges >0.5%. Mechanics: `RULES.md § W3`.
-If the script flags an extreme-oversold band → apply W5 LONG bonus (`RULES.md § W5`).
-**The W5 bonus must be noted explicitly — even when 0%.** Otherwise it gets systematically dropped in Step 3.
+**Reddit (WebSearch) oder Bash Aufruf**
+- Query: `site:reddit.com {{SYMBOL}}`
+- Top 10 Treffer der letzten 24h.
 
-| Axis | Now | Sample (n, tag) | Fwd-5d | Green | Adjust | Strongest? |
-|------|-----|-----------------|--------|-------|--------|------------|
-| RSI | | | | | | |
-| BB position | | | | | | |
-| Dist 3M-high | | | | | | |
-| Combo (if active) | | | | | | |
+bzw.
 
-State explicitly: **archetype = TREND or Range** (justifies whether range penalties apply).
-The strongest single axis is the input for Rating 1.
+Bash-Aufruf:
+curl -A "silver-hawk/1.0" "https://www.reddit.com/search.json?q={{SYMBOL}}&sort=new&t=day&limit=10"
 
-## 1.5 News & Sentiment
+Output: 10 neueste Posts der letzten 24h mit Score, Comments, Subreddit, Title, Top-Comment.
+Kein Sentiment-Tag, das LLM liest selbst.
 
-**Three sources, all mandatory:**
-
-1. **yfinance** — items from pre-flight, last 7d.
-2. **Web search** — ≥5 items from Reuters / Bloomberg / Seeking Alpha / sector sources.
-3. **Trump Truth Social / tweets** — for every ticker, queries are in the pre-flight banner. On hit → "no overnight" applies in Step 3.
-
-**Reddit** (one query, one read):
-
+Output:
 ```
-site:reddit.com {{SYMBOL}}
+REDDIT_TOP_10_LAST_24H:
+  [post_date | subreddit | title | url | upvotes_or_comments_if_visible | excerpt]
 ```
 
-Sentiment tag: EUPHORIC | BULLISH | NEUTRAL | BEARISH | PANIC | QUIET.
-Contra-flags: EUPHORIC@ATH (bearish) or PANIC@oversold (bullish).
+Kein Sentiment-Tag, kein Score, keine Aggregation.
 
-### Quality Check (SW1, MANDATORY)
+### Market-Wide
 
-Majority sentiment is not a signal — the quality of the minority arguments is. Discipline against confirmation bias:
+VIX, DXY, US_10Y und EURUSD kommen direkt aus `collect_data.py` (yfinance liefert sie kostenlos via `^VIX`, `DX-Y.NYB`, `^TNX`, `EURUSD=X`). Block heißt `MACRO_LIVE`:
 
-1. **Top 3 counter-arguments** to the setup bias (on LONG → bear cases; on SHORT → bull cases) — even if Reddit is clearly one-sided.
-2. **Rating: HARD** (filings, insider trades, hard data) **or SOFT** (opinion, narrative, price targets).
-3. **HARD minority → contra signal**, regardless of the majority. SOFT minority → note, no override.
-
-This rating is cited as `minority arg=HARD/SOFT` in Rating 3.
-
-**News table:**
-
-| # | Date | Headline | Source | Score (-2..+2) |
-|---|------|----------|--------|----------------|
-
-**NSI = mean of the scores.** > +1.0 strongly bullish · -0.3..+0.3 neutral · < -1.0 strongly bearish.
-
-## 1.6 Macro + Geopolitical Triggers
-
-**Macro (web):** VIX, CNN F&G, Fed/rates + days until next decision, DXY, latest CPI, 10Y, Polymarket odds for upcoming events.
-
-**Geopolitical scan:** only ACTIVE triggers with deadline / expiry / material headline in the next 7d.
-Categories: armed conflicts + ceasefire expiries, tariff/sanctions deadlines, central-bank decisions, energy chokepoints, election dates.
-If nothing material: `Geopolitical scan: no active triggers in next 7d`.
-Any trigger with deadline <5 trading days → also add a row in §1.9.
-
-Format per active trigger: `<name>: <status> | next deadline <date> | 24h reaction if relevant`
-
-## 1.7 Correlation
-
-From `pytr portfolio`: open positions with sectors. Flag if:
-- Sector concentration >60% after this trade
-- All-LONG bias (correlation risk)
-
-## 1.8 Pattern Analytics
-
-Three scripts with different conditionings — none subsumes the others.
-
-### Recent Day Pattern (streak conditional)
-
-```bash
-python3 scripts/analysis/day_pattern.py {{SYMBOL}}
+```
+MACRO_LIVE:
+  VIX:    <X.X>
+  DXY:    <X.XX>
+  US_10Y: <X.XX>
+  EURUSD: <X.XXXX>
 ```
 
-| Pattern | Next Day | After 3d | After 5d |
-|---------|----------|----------|----------|
-| After similar day (n=X) | +X.X% (X% green) | +X.X% (X% green) | +X.X% (X% green) |
-| After X red days streak (n=X) | +X.X% (X% green) | | |
+CNN F&G, Fed-Termine, CPI, Geopolitical-Triggers via WebSearch im Prompt:
 
-The streak conditional is a sequence signal (last N days' direction), structurally different from Mode-1 return-bands in Pattern Timeline. Subsumption status tracked in `memory/TRACKING.md`.
+- Query 1: `CNN Fear and Greed Index current value`
+- Query 2: `Fed next FOMC meeting date {{current month/year}}`
+- Query 3: `latest US CPI release date and value`
+- Query 4: `geopolitical events next 7 days deadlines tariffs sanctions central bank decisions`
 
-Key insight: what does the pattern say about the likely direction?
+Output:
+```
+MACRO_WEB:
+  CNN_FG: <X> (<label verbatim>)
+  Fed_next_FOMC: <date> (<N> days)
+  Last_CPI_release: <date> | <value>
 
-### Pattern Timeline
-
-```bash
-python3 scripts/analysis/pattern_timeline.py {{SYMBOL}}
+Geopolitical_active_triggers_next_7d:
+  [name | status | next_deadline | one-line context]
+or: NO_ACTIVE_TRIGGERS
 ```
 
-Mode 1: similar-day fwd-return (5 return-bands, n typically >100).
-Mode 2: analogous 7-day windows (corr ≥0.7, RSI ±7, ATR-regime 0.7–1.4). Skip if <10 analogs.
-Per day +1..+3: mean / ±1σ / green-rate + AGREEMENT/DIVERGE.
+## 1.6 Korrelation
 
-Reading: AGREEMENT all 3 days → robust. DIVERGE ≥3 days → cap Step-3 confidence at 60–63%.
-Mode 2 SKIP → use Mode 1 only as a hint. ±1σ band = realistic entry-limit corridor.
+Sektor pro offener Position via yfinance (`info.sector` für jedes Symbol). Direkt im Prompt als kleiner Inline-Block, kein separates Skript:
 
-### Convergence (cross-source)
-
-```bash
-python3 scripts/analysis/convergence_check.py {{SYMBOL}}
+```python
+# Wird vom LLM via Bash ausgeführt — ein Aufruf pro offene Position + Kandidat
+import yfinance as yf
+for sym in [<offene Symbols + {{SYMBOL}}>]:
+    print(sym, yf.Ticker(sym).info.get('sector'))
 ```
 
-Compares three independent fwd-5d green-rate estimators: indicator_context strongest-axis (=Rating-1 input), Mode 1, Mode 2.
+Output:
+```
+Sectors_after_this_trade:
+  [sector | new_pct_of_equity]
 
-Verdict: TIGHT (<10 pp) | MODERATE (10–20 pp) | HIGH SPREAD (≥20 pp).
-**HIGH SPREAD is information about regime conditionality, not a NO-TRADE trigger.**
-Mode 2 SKIP/THIN → script falls back to a 2-source diagnosis.
-Output is descriptive — no auto-cap. Quote the Reading line verbatim in Step 2/3.
-
-### Earnings Window (W7)
-
-```bash
-python3 scripts/analysis/earnings_pattern.py {{SYMBOL}}
-# If earnings ≤15 days AND a directional setup is being considered:
-python3 scripts/analysis/earnings_pattern.py {{SYMBOL}} --trade-entry <T-N> --trade-exit <T-M> --same-month
+All_LONG_bias_after_this_trade: <yes/no>
 ```
 
-**Earnings proximity is never a skip reason** — adjust hold time (typically exit 1–3 days before earnings), not the trade itself. Mechanics: `RULES.md § W7`. The sigmoid adjust from the script print applies directly.
-Same-month sample with ≥3 quarters = validation; <3 = directional hint only.
-
-## 1.9 Events
-
-| Date | Event | Impact | Relevance |
-|------|-------|--------|-----------|
-
-For each HIGH/VERY-HIGH event decide:
-
-- Resolves uncertainty (catalyst) or creates new uncertainty (risk-off)?
-- Do the data support a direction?
-   ```bash
-   python3 scripts/analysis/event_impact.py {{SYMBOL}}
-   ```
-   Lists >3% moves of the last 6 months + next-day reaction + post-drop bounce rate.
-
-Decision matrix:
-- Clarity + data → trade BEFORE event
-- Clarity + ambivalent direction → trade with stop management
-- New uncertainty → WAIT
-- Both outcomes bullish → opportunity, not risk
-
-If earnings <5 trading days → flag for KO adjustment in Step 3.
+Kein Schwellwert, kein Verdict — die Konzentrations-Beurteilung ist Step-3-Aufgabe.
 
 ---
 
-## Output: Ratings for Step 2
+## Output für Step 2
 
-Step 2 takes these unchanged. No re-rating in the debate.
-
-**Green-rate → rating mapping (symmetric):**
-
-| Fwd-5d green | LONG | SHORT |
-|--------------|------|-------|
-| >70% | 9 | 1 |
-| 60–70% | 7 | 3 |
-| 50–60% | 5 | 5 |
-| 40–50% | 3 | 7 |
-| <40% | 1 | 9 |
-
-THIN sample (n<15) → cap 5/5. WEAK → max ±2 from neutral (3–7).
-
-### Rating 1 — Technical Green-Rate (§ 1.4 strongest axis + archetype)
+Das LLM (Claude Code) schreibt am Ende des Step-1-Runs selbst die folgenden Dateien — keine separate Compose-Logik, keine Pipeline-Plumbing:
 
 ```
-LONG X/10 | SHORT X/10
-Source: <axis name, n=X, green=X%, adjust=±X.X%, w5_bonus=±X.X%, archetype=TREND|Range>
+runs/{{SYMBOL}}_{{YYYYMMDD}}_{{HHMMSS}}/step1_data.md
+runs/{{SYMBOL}}_{{YYYYMMDD}}_{{HHMMSS}}/step1_chart.png    (vom render_chart.py erzeugt)
+runs/{{SYMBOL}}_{{YYYYMMDD}}_{{HHMMSS}}/metadata.json
 ```
 
-`w5_bonus` is a required field — when W5 is not active, write `w5_bonus=0%` explicitly, do not omit.
+`step1_data.md` ist ein zusammenhängender Markdown-Block mit allen Sektions-Outputs (1.1 bis 1.6) — Rohdaten verbatim wie von den Skripten / WebSearch zurückgegeben.
 
-### Rating 2 — Price-Action Reality (§ 1.4 price_action_check)
+`metadata.json` enthält:
+- `run_id` (`{{SYMBOL}}_{{YYYYMMDD}}_{{HHMMSS}}`)
+- `started_at`, `completed_at` (ISO UTC)
+- `scripts_run` (Liste aller ausgeführten Bash-Befehle)
+- `web_searches` (Liste der WebSearch-Queries)
+- `symbol`, `cutoff_price`, `market_status`
 
-```
-LONG X/10 | SHORT X/10
-Source: <Greens-10d, Trend-5d, Trend-20d, Verdict>
-LONG cap (max 4) applies only if: Greens<5/10 AND Trend-5d ≤0% AND Trend-20d ≤+5%
-SHORT cap (max 3) applies only if: Greens>7/10 AND Trend-5d ≥0% AND Trend-20d ≥-5%
-Otherwise: rate by verdict, no cap.
-```
+**Keine Ratings. Keine Verdicts. Keine Caps. Keine Aggregation.**
 
-### Rating 3 — News + Reddit Flow (§ 1.5)
-
-```
-LONG X/10 | SHORT X/10
-Source: <NSI=±X.X, Retail=FLAG, Trump-Hit=Y/N, minority arg=HARD/SOFT>
-Adjust: Trump-Hit → both -2. EUPHORIC@ATH → LONG -2. PANIC@oversold → SHORT -2.
-HARD minority → contra side +1, setup side -1.
-```
-
-### Rating 4 — Event/Catalyst (§ 1.8 Earnings + § 1.9 Events)
-
-```
-LONG X/10 | SHORT X/10
-Source: <main event/earnings phase, clarity, decision>
-WAIT → 3/3. Trade-BEFORE bullish → LONG 7–9 / SHORT 1–3. Earnings WARNING → affected side -2.
-```
-
----
-
-## Step 1 One-Line Summary
-
-```
-1.1 Portfolio:           <slots / cash EUR / sector clash Y/N>
-1.2 Technical:           <regime + 1 key indicator>
-1.3 Pre-Open:            <verdict>
-1.4 Chart + IndCtx:      <archetype + strongest axis + adjust + w5_bonus>
-1.5 News + Reddit:       <NSI + retail flag + Trump Y/N + minority arg HARD/SOFT>
-1.6 Macro + Geo:         <VIX + F&G + Fed days + most relevant active trigger or "all QUIET">
-1.7 Correlation:         <clash Y/N>
-1.8 Day Pattern:         <similar-day Fwd5 + streak insight>
-1.8 Pattern Timeline:    <Mode1/Mode2 fwd5 + AGREEMENT Y/N>
-1.8 Convergence:         <spread pp + verdict TIGHT|MODERATE|HIGH>
-1.8 Convergence Reading: <verbatim Reading line from script>
-1.8 Earnings:            <skip / phase / trade-window adjust>
-1.9 Events:              <main event + decision>
-```
+Step 2 (Investment Debate) debattiert Long-vs-Short direkt auf den Daten und schreibt nach `step2_debate.md`.
+Step 3 (Judge) urteilt mit Per-Stock-Conditioning ("ist ein +6% 5d-Move ungewöhnlich für DIESE Aktie in DIESEM Regime?") und entscheidet final, schreibt nach `step3_judgment.md`.
 
 ```
 [STEP 1 COMPLETE]

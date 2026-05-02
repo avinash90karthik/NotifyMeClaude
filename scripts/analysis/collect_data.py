@@ -1,480 +1,425 @@
 #!/usr/bin/env python3
-"""Silver Hawk — Automated data collection for the 4-step analysis.
-Replaces ~300 lines of inline Python that was embedded in prompts/01_data_collection.md.
-Outputs a structured JSON block that the LLM prompts consume directly.
+"""Step 1.2 — raw data collection for the v1.0 pipeline.
+
+Hands the LLM the maximum yfinance gives, formatted but not aggregated:
+
+  MARKET_STATUS, CURRENT (price + provenance)
+  OHLCV_DAILY        — last ~250 bars
+  OHLCV_INTRADAY_5MIN — last 5 sessions
+  OHLCV_INTRADAY_1MIN — last 2 sessions, every 5th bar (size-managed)
+  KEY_LEVELS         — 52w/3m H+L (index lookups, no math)
+  STOCK_META         — exchange, currency, market cap, beta, vol, PE, analyst rec
+  EARNINGS           — next date + last 4 reports (when present)
+  YFINANCE_NEWS      — last 7-10 items
+  MACRO_LIVE         — VIX, DXY, US_10Y, EURUSD
+
+No verdicts. No tags. No scoring. No support detection. No computed
+indicators (ATR, SMA, RSI, MACD). All reasoning and indicator math is
+the LLM's job in Step 2/3, on the raw bars above.
 
 Usage:
-    python collect_data.py SYMBOL              # Full collection
-    python collect_data.py SYMBOL --json-only  # JSON only (for piping)
+    python3 collect_data.py SYMBOL              # human-readable text
+    python3 collect_data.py SYMBOL --json-only  # JSON (for piping / programmatic)
 """
+
+from __future__ import annotations
 
 import argparse
 import json
 import os
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import yfinance as yf
 
-# Allow `from lib.X` when invoked as `python3 scripts/collect_data.py`
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+REPO = Path(__file__).resolve().parent.parent.parent
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
 
-from lib.indicators import calc_adx, calc_bollinger, detect_regime
-
-try:
-    from lib.wavelet_utils import wavelet_denoise
-    _PYWT_AVAILABLE = True
-except ImportError:
-    _PYWT_AVAILABLE = False
-
-# 2026-04-27 -- Wavelet denoise disabled in v10 production after diagnosis
-# of look-ahead leakage in lib/wavelet_utils.wavelet_denoise (pywt.wavedec
-# operates over the full series, sigma threshold is a global statistic,
-# cycle-spinning rolls end-to-end). End-to-end decision-class flip rate
-# on 17-symbol watchlist had a bimodal distribution with 4 symbols in the
-# operational range (>=30%) and median +12 RSI-point systematic upward
-# correction over 5 bars. See plan.md Deviations 2026-04-27 and
-# scripts/wavelet_drift_today.py / wavelet_decision_drift_e2e.py for the
-# full diagnostic. Code path retained but gated; flip the flag back on
-# only after replacing wavelet_denoise with a causal implementation.
-HAS_WAVELET = False
-
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# Futures → ETF proxy for RSI/MACD (avoids rollover distortion)
-FUTURES_ETF_PROXY = {
-    'SI=F': 'SLV', 'GC=F': 'GLD', 'CL=F': 'USO', 'NG=F': 'UNG',
-}
-
-EXCHANGE_MAP = {
-    'US': (14.5, 21.0), 'EU': (7.0, 15.5), 'FUT': (23.0, 22.0),
-}
+from lib.market_status import classify_market_status, select_live_price
 
 
-def detect_exchange(symbol):
-    if symbol.endswith(('.DE', '.PA', '.AS', '.L')):
-        return 'EU'
-    if '=F' in symbol:
-        return 'FUT'
-    return 'US'
+# ----------------------------------------------------------------------
+# Helpers
+# ----------------------------------------------------------------------
+
+def _format_daily_table(hist: pd.DataFrame, n: int = 250) -> str:
+    """date | O | H | L | C | Volume[M] — last n bars."""
+    sl = hist.tail(n).copy()
+    if 'Volume' in sl.columns:
+        sl['Volume'] = (sl['Volume'] / 1e6).round(2)
+    for col in ('Open', 'High', 'Low', 'Close'):
+        if col in sl.columns:
+            sl[col] = sl[col].round(2)
+    sl.index = [d.strftime('%Y-%m-%d') if hasattr(d, 'strftime') else str(d) for d in sl.index]
+    return sl[['Open', 'High', 'Low', 'Close', 'Volume']].to_string()
 
 
-def is_market_open(exchange):
-    now = datetime.now(timezone.utc)
-    h = now.hour + now.minute / 60
-    wd = now.weekday()
-    if wd >= 5:
-        return False
-    if exchange == 'FUT':
-        return not (22.0 <= h < 23.0)
-    o, c = EXCHANGE_MAP.get(exchange, (14.5, 21.0))
-    return o <= h < c
+def _format_intraday_table(df: pd.DataFrame, sample_every: int = 1) -> str:
+    """datetime_CET | O | H | L | C | Volume."""
+    if df.empty:
+        return '(no intraday data)'
+    sl = df.copy()
+    if sample_every > 1:
+        sl = sl.iloc[::sample_every]
+    if sl.index.tz is None:
+        sl.index = sl.index.tz_localize('UTC')
+    sl.index = sl.index.tz_convert('Europe/Berlin')
+    sl.index = [d.strftime('%Y-%m-%d %H:%M') for d in sl.index]
+    if 'Volume' in sl.columns:
+        sl['Volume'] = sl['Volume'].fillna(0).astype(int)
+    for col in ('Open', 'High', 'Low', 'Close'):
+        if col in sl.columns:
+            sl[col] = sl[col].round(2)
+    return sl[['Open', 'High', 'Low', 'Close', 'Volume']].to_string()
 
 
-def calc_rsi(close, periods=14):
-    delta = close.diff()
-    gain = delta.where(delta > 0, 0).ewm(alpha=1 / periods, min_periods=periods).mean()
-    loss = (-delta.where(delta < 0, 0)).ewm(alpha=1 / periods, min_periods=periods).mean()
-    rs = gain / loss
-    return 100 - (100 / (1 + rs))
+def _key_levels(hist: pd.DataFrame) -> dict:
+    """Index lookups only — no math, no aggregation. The 52w/3m extremes
+    are bar references the LLM would otherwise have to scan 250 bars to find."""
+    out = {'52w_high': None, '52w_low': None, '3m_high': None, '3m_low': None}
+    y = hist.tail(252)
+    if not y.empty:
+        out['52w_high'] = {'value': round(float(y['High'].max()), 2),
+                           'date': y['High'].idxmax().strftime('%Y-%m-%d')}
+        out['52w_low'] = {'value': round(float(y['Low'].min()), 2),
+                          'date': y['Low'].idxmin().strftime('%Y-%m-%d')}
+    three_m = hist.tail(63)
+    if not three_m.empty:
+        out['3m_high'] = {'value': round(float(three_m['High'].max()), 2),
+                          'date': three_m['High'].idxmax().strftime('%Y-%m-%d')}
+        out['3m_low'] = {'value': round(float(three_m['Low'].min()), 2),
+                         'date': three_m['Low'].idxmin().strftime('%Y-%m-%d')}
+    return out
 
 
-def calc_macd(close):
-    exp12 = close.ewm(span=12, adjust=False).mean()
-    exp26 = close.ewm(span=26, adjust=False).mean()
-    macd = exp12 - exp26
-    signal = macd.ewm(span=9, adjust=False).mean()
-    return macd, signal, macd - signal
-
-
-def detect_divergence_detailed(close_vals, rsi_vals, lookback=30, currency_symbol='$'):
-    """Detect bullish/bearish RSI divergence with detail strings.
-
-    Returns (type, details_list) — richer than indicators.detect_rsi_divergence."""
-    if len(close_vals) < lookback or len(rsi_vals) < lookback:
-        return None, []
-    c = close_vals[-lookback:]
-    r = rsi_vals[-lookback:]
-    cs = currency_symbol
-
-    lows, highs = [], []
-    for i in range(2, len(c) - 2):
-        if np.isnan(r[i]):
-            continue
-        if c[i] < c[i - 1] and c[i] < c[i - 2] and c[i] < c[i + 1] and c[i] < c[i + 2]:
-            lows.append((i, c[i], r[i]))
-        if c[i] > c[i - 1] and c[i] > c[i - 2] and c[i] > c[i + 1] and c[i] > c[i + 2]:
-            highs.append((i, c[i], r[i]))
-
-    details = []
-    div_type = None
-
-    if len(lows) >= 2:
-        p, cu = lows[-2], lows[-1]
-        if cu[1] < p[1] and cu[2] > p[2]:
-            div_type = 'bullish'
-            details.append(f'Low1 {cs}{p[1]:.2f} RSI={p[2]:.1f} -> Low2 {cs}{cu[1]:.2f} RSI={cu[2]:.1f}')
-
-    if len(highs) >= 2:
-        p, cu = highs[-2], highs[-1]
-        if cu[1] > p[1] and cu[2] < p[2]:
-            div_type = div_type or 'bearish'
-            details.append(f'High1 {cs}{p[1]:.2f} RSI={p[2]:.1f} -> High2 {cs}{cu[1]:.2f} RSI={cu[2]:.1f}')
-
-    return div_type, details
-
-
-def calc_intraday_range(hist, lookback=60):
-    """How far does price dip below open (LONG) or rally above open (SHORT)?
-    Returns P25/Median/P75 percentiles from recent trading days."""
-    if len(hist) < 20:
-        return None
-    recent = hist.tail(lookback)
-    opens = recent['Open'].values.astype(float)
-    highs = recent['High'].values.astype(float)
-    lows = recent['Low'].values.astype(float)
-    valid = opens > 0
-    if valid.sum() < 15:
-        return None
-    dip_pct = ((opens[valid] - lows[valid]) / opens[valid]) * 100
-    rally_pct = ((highs[valid] - opens[valid]) / opens[valid]) * 100
+def _stock_meta(info: dict, ticker: yf.Ticker) -> dict:
+    rec_summary = '—'
+    try:
+        rec = ticker.recommendations
+        if rec is not None and not rec.empty:
+            row = rec.iloc[0]
+            n_total = info.get('numberOfAnalystOpinions') or '—'
+            rec_summary = (
+                f"strongBuy={int(row.get('strongBuy', 0))}, "
+                f"buy={int(row.get('buy', 0))}, "
+                f"hold={int(row.get('hold', 0))}, "
+                f"sell={int(row.get('sell', 0))}, "
+                f"strongSell={int(row.get('strongSell', 0))} "
+                f"(total {n_total}, key: {info.get('recommendationKey', '—')})"
+            )
+    except Exception:
+        pass
+    if rec_summary == '—' and info.get('recommendationKey'):
+        rec_summary = info.get('recommendationKey')
     return {
-        'dip_median_pct': round(float(np.median(dip_pct)), 2),
-        'dip_p25_pct': round(float(np.percentile(dip_pct, 25)), 2),
-        'dip_p75_pct': round(float(np.percentile(dip_pct, 75)), 2),
-        'rally_median_pct': round(float(np.median(rally_pct)), 2),
-        'rally_p25_pct': round(float(np.percentile(rally_pct, 25)), 2),
-        'rally_p75_pct': round(float(np.percentile(rally_pct, 75)), 2),
-        'sample_days': int(valid.sum()),
+        'exchange': info.get('fullExchangeName') or info.get('exchange'),
+        'currency': info.get('currency'),
+        'market_cap': info.get('marketCap'),
+        'beta': info.get('beta'),
+        'shares_outstanding': info.get('sharesOutstanding'),
+        'avg_volume_10d': info.get('averageDailyVolume10Day') or info.get('averageVolume10days'),
+        'trailing_pe': info.get('trailingPE'),
+        'forward_pe': info.get('forwardPE'),
+        'analyst_recommendations': rec_summary,
     }
 
 
-def parse_support_resistance(hist, price):
-    """Simple S/R from recent swing highs/lows."""
-    highs, lows = [], []
-    h = hist['High'].values
-    lo = hist['Low'].values
-    for i in range(5, len(h) - 5):
-        if h[i] == max(h[i - 5:i + 6]):
-            highs.append(float(h[i]))
-        if lo[i] == min(lo[i - 5:i + 6]):
-            lows.append(float(lo[i]))
-
-    supports = sorted(set(round(l, 2) for l in lows if l < price), reverse=True)[:3]
-    resistances = sorted(set(round(r, 2) for r in highs if r > price))[:3]
-    return supports, resistances
-
-
-def collect(symbol):
-    """Collect all data for a symbol. Returns structured dict."""
-    ticker = yf.Ticker(symbol)
-    try:
-        info = ticker.info or {}
-    except Exception:
-        info = {}
-    hist = ticker.history(period='1y')
-
-    if hist.empty:
-        return {'error': f'No data for {symbol}'}
-
-    price = info.get('currentPrice') or info.get('regularMarketPrice')
-    if not price:
-        price = float(hist['Close'].iloc[-1])
-    if price <= 0:
-        return {'error': f'Invalid price for {symbol}'}
-
-    # Currency detection (NEVER hardcoded rates — CLAUDE.md rule #6)
-    raw_currency = (info.get('currency') or 'USD')
-    native_currency = raw_currency.upper()
-
-    # GBp (pence) → normalize to GBP (pounds)
-    is_pence = raw_currency in ('GBp', 'GBX', 'GBP')  # yfinance uses GBp for pence
-    if is_pence and raw_currency != 'GBP':
-        native_currency = 'GBP'
-        price = price / 100  # pence → pounds
-        # Convert hist OHLCV from pence to pounds too
-        for col in ['Open', 'High', 'Low', 'Close']:
-            if col in hist.columns:
-                hist[col] = hist[col] / 100
-
-    # Fetch live FX rates as needed — use history() instead of .info (Yahoo .info is flaky)
-    def _fx_last(symbol):
-        try:
-            h = yf.Ticker(symbol).history(period='5d')
-            if not h.empty:
-                return float(h['Close'].iloc[-1])
-        except Exception:
-            pass
-        try:
-            v = yf.Ticker(symbol).info.get('regularMarketPrice')
-            return float(v) if v else None
-        except Exception:
-            return None
-
-    eurusd = _fx_last('EURUSD=X')
-    if not eurusd or eurusd <= 0:
-        return {'error': 'EUR/USD rate unavailable — refusing to use hardcoded fallback'}
-
-    gbpusd = None
-    if native_currency == 'GBP':
-        gbpusd = _fx_last('GBPUSD=X')
-        if not gbpusd or gbpusd <= 0:
-            return {'error': 'GBP/USD rate unavailable — refusing to use hardcoded fallback'}
-
-    # Technicals source: ETF proxy for futures
-    proxy = FUTURES_ETF_PROXY.get(symbol)
-    if proxy:
-        proxy_hist = yf.Ticker(proxy).history(period='1y')
-        close_ta = wavelet_denoise(proxy_hist['Close']) if HAS_WAVELET else proxy_hist['Close']
-        high_ta = proxy_hist['High']
-        low_ta = proxy_hist['Low']
-        ta_source = f'{proxy} (ETF proxy)'
-    else:
-        close_ta = wavelet_denoise(hist['Close']) if HAS_WAVELET else hist['Close']
-        high_ta = hist['High']
-        low_ta = hist['Low']
-        ta_source = symbol
-
-    # RSI
-    rsi_series = calc_rsi(close_ta)
-    rsi = round(float(rsi_series.iloc[-1]), 1)
-    rsi_prev = round(float(rsi_series.iloc[-2]), 1)
-    rsi_delta_1d = round(rsi - rsi_prev, 1)
-    rsi_delta_5d = round(rsi - float(rsi_series.iloc[-6]), 1) if len(rsi_series) >= 6 else 0
-    rsi_slope = rsi_series.diff().rolling(3).mean()
-    rsi_slope_val = round(float(rsi_slope.iloc[-1]), 2)
-
-    # RSI Divergence (detailed version for analysis prompts)
-    cur_sym = '€' if native_currency == 'EUR' else '£' if native_currency == 'GBP' else '$'
-    div_type, div_details = detect_divergence_detailed(close_ta.values, rsi_series.values, currency_symbol=cur_sym)
-
-    # MACD
-    macd_line, signal_line, histogram = calc_macd(close_ta)
-    macd_hist = round(float(histogram.iloc[-1]), 4)
-    macd_hist_prev = round(float(histogram.iloc[-2]), 4)
-    macd_signal = 'BULLISH_CROSS' if macd_hist_prev < 0 and macd_hist > 0 else \
-                  'BEARISH_CROSS' if macd_hist_prev > 0 and macd_hist < 0 else \
-                  'BULLISH' if macd_hist > 0 else 'BEARISH'
-
-    # ATR (True Range, not just High-Low — accounts for overnight gaps)
-    tr = pd.concat([
-        hist['High'] - hist['Low'],
-        (hist['High'] - hist['Close'].shift()).abs(),
-        (hist['Low'] - hist['Close'].shift()).abs()
-    ], axis=1).max(axis=1)
-    atr14 = tr.rolling(14).mean().iloc[-1]
-    atr5 = tr.rolling(5).mean().iloc[-1]
-    atr_pct = round(float(atr14) / price * 100, 2)
-    atr_ratio = round(float(atr5 / atr14), 2) if atr14 > 0 else 1.0
-
-    # SMAs (from hist, not proxy — SMA must match the actual traded price)
-    sma50_series = hist['Close'].rolling(50).mean()
-    sma200_series = hist['Close'].rolling(200).mean()
-    sma50 = round(float(sma50_series.iloc[-1]), 2) if not np.isnan(sma50_series.iloc[-1]) else None
-    sma200 = round(float(sma200_series.iloc[-1]), 2) if len(hist) >= 200 and not np.isnan(sma200_series.iloc[-1]) else None
-    dist_sma50 = round((price / sma50 - 1) * 100, 1) if sma50 and sma50 > 0 else None
-    dist_sma200 = round((price / sma200 - 1) * 100, 1) if sma200 and sma200 > 0 else None
-
-    # ADX + Regime (using shared indicators.py)
-    adx_val, plus_di, minus_di = None, None, None
-    regime = 'TRANSITIONAL'
-    bb_pctl = 50
-    bb_pos = None
-    try:
-        if len(high_ta) >= 30 and len(low_ta) >= 30 and len(close_ta) >= 30:
-            adx_val, plus_di, minus_di = calc_adx(high_ta, low_ta, close_ta)
-            adx_val = round(adx_val, 1)
-            plus_di = round(plus_di, 1)
-            minus_di = round(minus_di, 1)
-
-        bb = calc_bollinger(close_ta)
-        bb_pctl = bb.get('bb_width_percentile', 50)
-        bb_pos = bb.get('bb_position')
-
-        regime, _ = detect_regime(adx_val, atr_pct, bb_pctl, plus_di, minus_di)
-    except Exception:
-        pass
-
-    # Support / Resistance
-    supports, resistances = parse_support_resistance(hist, price)
-
-    # Exchange / Market status
-    exchange = detect_exchange(symbol)
-    market_open = is_market_open(exchange)
-
-    # Earnings
-    earnings_date = None
+def _earnings(ticker: yf.Ticker) -> dict:
+    out = {'next_date': None, 'days_until': None, 'last_4_reports': []}
+    # Next earnings date via calendar
     try:
         cal = ticker.calendar
         if cal and isinstance(cal, dict) and 'Earnings Date' in cal:
             dates = cal['Earnings Date']
             if dates:
-                ed = dates[0].date() if hasattr(dates[0], 'date') else dates[0]
+                ed = dates[0]
+                if hasattr(ed, 'date'):
+                    ed = ed.date()
                 if ed >= datetime.now(timezone.utc).date():
-                    earnings_date = str(ed)
+                    out['next_date'] = str(ed)
+                    out['days_until'] = (ed - datetime.now(timezone.utc).date()).days
     except Exception:
         pass
+    # Earnings history (EPS_estimate, EPS_actual, surprise)
+    try:
+        eh = ticker.earnings_history
+        if eh is not None and not eh.empty:
+            tail = eh.tail(4)
+            for idx, row in tail.iterrows():
+                date_str = idx.strftime('%Y-%m-%d') if hasattr(idx, 'strftime') else str(idx)
+                out['last_4_reports'].append({
+                    'date': date_str,
+                    'eps_estimate': float(row.get('epsEstimate')) if not pd.isna(row.get('epsEstimate')) else None,
+                    'eps_actual': float(row.get('epsActual')) if not pd.isna(row.get('epsActual')) else None,
+                    'surprise_pct': float(row.get('surprisePercent')) if not pd.isna(row.get('surprisePercent')) else None,
+                })
+    except Exception:
+        pass
+    return out
 
-    # Volume
-    avg_vol = int(hist['Volume'].tail(20).mean()) if len(hist['Volume']) >= 20 else 0
-    vol_today = int(hist['Volume'].iloc[-1]) if len(hist['Volume']) > 0 else 0
 
-    now = datetime.now(timezone.utc)
+def _yfinance_news(ticker: yf.Ticker, max_items: int = 10) -> list[dict]:
+    out = []
+    try:
+        news = ticker.news or []
+    except Exception:
+        return out
+    for item in news[:max_items]:
+        c = item.get('content') if isinstance(item, dict) else None
+        if c:
+            title = c.get('title', '')
+            provider = (c.get('provider') or {}).get('displayName', '')
+            url = (c.get('canonicalUrl') or {}).get('url', '')
+            pub = c.get('pubDate') or c.get('displayTime', '')
+            summary = c.get('summary', '') or c.get('description', '')
+        else:
+            title = item.get('title', '')
+            provider = item.get('publisher', '')
+            url = item.get('link', '')
+            ts = item.get('providerPublishTime')
+            pub = (datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
+                   if ts else '')
+            summary = item.get('summary', '')
+        if not title:
+            continue
+        out.append({
+            'date': pub,
+            'provider': provider,
+            'title': title,
+            'url': url,
+            'summary': (summary or '')[:300],
+        })
+    return out
+
+
+def _macro_live() -> dict:
+    """VIX / DXY / US_10Y / EURUSD via yfinance — single batch."""
+    tickers = {'VIX': '^VIX', 'DXY': 'DX-Y.NYB', 'US_10Y': '^TNX', 'EURUSD': 'EURUSD=X'}
+    out = {}
+    for label, sym in tickers.items():
+        try:
+            h = yf.Ticker(sym).history(period='5d')
+            if not h.empty:
+                out[label] = round(float(h['Close'].iloc[-1]), 4 if label == 'EURUSD' else 2)
+            else:
+                out[label] = None
+        except Exception:
+            out[label] = None
+    return out
+
+
+# ----------------------------------------------------------------------
+# Main collector
+# ----------------------------------------------------------------------
+
+def collect(symbol: str) -> dict:
+    ticker = yf.Ticker(symbol)
+    try:
+        info = ticker.info or {}
+    except Exception:
+        info = {}
+
+    daily = ticker.history(period='2y', auto_adjust=False)
+    if daily.empty:
+        return {'error': f'No daily data for {symbol}'}
+
+    # Pence -> Pound normalisation for GBp listings (LSE)
+    raw_currency = (info.get('currency') or 'USD')
+    is_pence = raw_currency in ('GBp', 'GBX')
+    if is_pence:
+        for col in ('Open', 'High', 'Low', 'Close'):
+            if col in daily.columns:
+                daily[col] = daily[col] / 100.0
+
+    last_close = float(daily['Close'].iloc[-1])
+    prev_close_info = info.get('previousClose')
+    prev_close = (float(prev_close_info)
+                  if prev_close_info and prev_close_info > 0
+                  else (float(daily['Close'].iloc[-2]) if len(daily) >= 2 else last_close))
+    if is_pence and prev_close_info:
+        prev_close = prev_close_info / 100.0
+
+    # Market status + live price selection (with staleness check on extended hours)
+    market_status, market_status_source = classify_market_status(info.get('marketState'))
+    pick = select_live_price(info, prev_close=prev_close,
+                             market_status=market_status, last_close=last_close)
+    price = pick['price']
+    if is_pence and price is not None:
+        price = price / 100.0
+
+    if not price or price <= 0:
+        return {'error': f'Invalid price for {symbol}'}
+
+    # Intraday histories
+    try:
+        intra_5m = ticker.history(period='5d', interval='5m', prepost=True, auto_adjust=False)
+    except Exception:
+        intra_5m = pd.DataFrame()
+    try:
+        intra_1m = ticker.history(period='2d', interval='1m', prepost=True, auto_adjust=False)
+    except Exception:
+        intra_1m = pd.DataFrame()
+    if is_pence:
+        for df in (intra_5m, intra_1m):
+            for col in ('Open', 'High', 'Low', 'Close'):
+                if col in df.columns:
+                    df[col] = df[col] / 100.0
+
+    bid = info.get('bid')
+    ask = info.get('ask')
 
     return {
         'symbol': symbol,
-        'timestamp': now.isoformat(),
-        'ta_source': ta_source,
-        'wavelet': HAS_WAVELET,
-        'exchange': exchange,
-        'market_open': market_open,
-
-        # Price (currency-aware)
-        'native_currency': native_currency,
-        'price_native': round(price, 2),
-        'price_usd': round(price * eurusd, 2) if native_currency == 'EUR'
-                      else round(price * gbpusd, 2) if native_currency == 'GBP'
-                      else round(price, 2),
-        'price_eur': round(price, 2) if native_currency == 'EUR'
-                     else round(price * gbpusd / eurusd, 2) if native_currency == 'GBP'
-                     else round(price / eurusd, 2),
-        'eurusd': round(eurusd, 4),
-        'day_high': info.get('dayHigh', 0),
-        'day_low': info.get('dayLow', 0),
-        'prev_close': info.get('previousClose', 0),
-        'change_pct': round((price - info.get('previousClose', price)) / info.get('previousClose', price) * 100, 2) if info.get('previousClose') else 0,
-        'week52_high': info.get('fiftyTwoWeekHigh', 0),
-        'week52_low': info.get('fiftyTwoWeekLow', 0),
-
-        # RSI (all derivatives)
-        'rsi': rsi,
-        'rsi_prev': rsi_prev,
-        'rsi_delta_1d': rsi_delta_1d,
-        'rsi_delta_5d': rsi_delta_5d,
-        'rsi_slope_3d': rsi_slope_val,
-        'rsi_status': 'OVERBOUGHT' if rsi > 70 else 'OVERSOLD' if rsi < 30 else 'NEUTRAL',
-        'rsi_divergence': div_type,
-        'rsi_divergence_details': div_details,
-
-        # MACD
-        'macd_hist': macd_hist,
-        'macd_hist_prev': macd_hist_prev,
-        'macd_signal': macd_signal,
-
-        # Volatility
-        'atr14': round(float(atr14), 2),
-        'atr14_currency': native_currency,
-        'atr_pct': atr_pct,
-        'atr5_atr14_ratio': atr_ratio,
-        'atr_elevated': atr_ratio > 1.5,
-        'beta': info.get('beta', None),
-        'ann_volatility': round(float(hist['Close'].pct_change().std() * (252 ** 0.5) * 100), 0),
-
-        # Trend
-        'sma50': round(sma50, 2) if sma50 else None,
-        'sma200': round(sma200, 2) if sma200 else None,
-        'dist_sma50_pct': dist_sma50,
-        'dist_sma200_pct': dist_sma200,
-        'golden_cross': sma50 > sma200 if sma50 and sma200 else None,
-
-        # ADX / Regime
-        'adx': adx_val,
-        'plus_di': plus_di,
-        'minus_di': minus_di,
-        'bb_width_pctl': bb_pctl,
-        'bb_position': bb_pos,
-        'regime': regime,
-
-        # Fundamentals
-        'market_cap': info.get('marketCap', 0),
-        'short_pct_float': round(info.get('shortPercentOfFloat', 0) * 100, 1) if info.get('shortPercentOfFloat') else 0,
-        'short_ratio_days': info.get('shortRatio') or 0,
-        'analyst_target_mean': info.get('targetMeanPrice', 0),
-        'analyst_target_high': info.get('targetHighPrice', 0),
-        'analyst_target_low': info.get('targetLowPrice', 0),
-        'analyst_target_currency': native_currency,
-        'recommendation': info.get('recommendationKey', 'N/A'),
-
-        # Volume
-        'avg_volume_20d': avg_vol,
-        'volume_today': vol_today,
-
-        # Levels
-        'supports': supports,
-        'resistances': resistances,
-
-        # Intraday range (for optimal entry)
-        'intraday_range': calc_intraday_range(hist),
-
-        # Events
-        'earnings_date': earnings_date,
+        'timestamp_utc': datetime.now(timezone.utc).isoformat(),
+        'market_status': market_status,
+        'market_status_source': market_status_source,
+        'currency': info.get('currency'),
+        'short_name': info.get('shortName'),
+        'current': {
+            'price': round(price, 2),
+            'price_source': pick['price_source'],
+            'price_timestamp': pick['price_timestamp'],
+            'change_from_close_pct': pick['change_from_close_pct'],
+            'extended_change_pct': pick['extended_change_pct'],
+            'prev_close': round(prev_close, 2),
+            'bid': round(float(bid), 2) if bid else None,
+            'ask': round(float(ask), 2) if ask else None,
+            'warnings': pick['warnings'],
+        },
+        'ohlcv_daily': _format_daily_table(daily, n=250),
+        'ohlcv_intraday_5m': _format_intraday_table(intra_5m),
+        'ohlcv_intraday_1m_every5': _format_intraday_table(intra_1m, sample_every=5),
+        'key_levels': _key_levels(daily),
+        'stock_meta': _stock_meta(info, ticker),
+        'earnings': _earnings(ticker),
+        'yfinance_news': _yfinance_news(ticker),
+        'macro_live': _macro_live(),
     }
 
 
-def print_human_readable(d):
-    """Print formatted output for human consumption."""
+# ----------------------------------------------------------------------
+# Rendering
+# ----------------------------------------------------------------------
+
+def render_text(d: dict) -> str:
     if 'error' in d:
-        print(f'ERROR: {d["error"]}')
-        return
+        return f'ERROR: {d["error"]}'
 
+    out = []
     sym = d['symbol']
-    print(f'{"=" * 60}')
-    print(f'{sym} -- COLLECTED DATA')
-    print(f'{"=" * 60}')
-    print(f'Time: {d["timestamp"]}  |  Source: {d["ta_source"]}  |  Wavelet: {d["wavelet"]}')
-    mkt = 'OPEN' if d['market_open'] else 'CLOSED (wider spreads!)'
-    print(f'Market ({d["exchange"]}): {mkt}')
-    print()
+    out.append(f'SYMBOL: {sym}')
+    if d.get('short_name'):
+        out.append(f'NAME:   {d["short_name"]}')
+    out.append(f'TIMESTAMP: {d["timestamp_utc"]}')
+    out.append(f'MARKET_STATUS: {d["market_status"]} (via {d["market_status_source"]})')
+    out.append('')
 
-    cur = d.get('native_currency', 'USD')
-    sym_cur = '€' if cur == 'EUR' else '£' if cur == 'GBP' else '$'
-    # Show native price first, then converted
-    native_p = d['price_native']
-    print(f'PRICE:  {sym_cur}{native_p}  (€{d["price_eur"]} EUR / ${d["price_usd"]} USD)  |  Change: {d["change_pct"]:+.2f}%')
-    print(f'Range:  {sym_cur}{d["day_low"]} - {sym_cur}{d["day_high"]}  |  52W: {sym_cur}{d["week52_low"]} - {sym_cur}{d["week52_high"]}')
-    print()
+    cur = d['current']
+    out.append('CURRENT:')
+    out.append(f'  price:                  {cur["price"]} {d.get("currency") or ""}')
+    out.append(f'  price_source:           {cur["price_source"]}')
+    if cur.get('price_timestamp'):
+        out.append(f'  price_timestamp:        {cur["price_timestamp"]}')
+    if cur.get('change_from_close_pct') is not None:
+        out.append(f'  change_from_close_pct:  {cur["change_from_close_pct"]:+.3f}')
+    if cur.get('extended_change_pct') is not None:
+        out.append(f'  extended_change_pct:    {cur["extended_change_pct"]:+.3f}')
+    out.append(f'  prev_close:             {cur["prev_close"]}')
+    if cur['bid'] is not None or cur['ask'] is not None:
+        out.append(f'  bid / ask:              {cur["bid"]} / {cur["ask"]}')
+    if cur['warnings']:
+        for w in cur['warnings']:
+            out.append(f'  WARN: {w}')
+    out.append('')
 
-    rsi_arrow = '^' if d['rsi_delta_1d'] > 0 else 'v'
-    print(f'RSI:    {d["rsi"]} ({d["rsi_status"]})  d1d={d["rsi_delta_1d"]:+.1f}{rsi_arrow}  d5d={d["rsi_delta_5d"]:+.1f}  Slope={d["rsi_slope_3d"]:+.2f}')
-    if d['rsi_divergence']:
-        print(f'        DIVERGENCE: {d["rsi_divergence"].upper()}  {d["rsi_divergence_details"]}')
+    out.append('OHLCV_DAILY (last 250 bars, Volume[M]):')
+    out.append(d['ohlcv_daily'])
+    out.append('')
 
-    print(f'MACD:   {d["macd_signal"]}  Hist={d["macd_hist"]:+.4f} (prev={d["macd_hist_prev"]:+.4f})')
-    print(f'ATR:    {sym_cur}{d["atr14"]} ({d["atr_pct"]}%)  ATR5/14={d["atr5_atr14_ratio"]}x {"ELEVATED!" if d["atr_elevated"] else ""}')
-    print(f'ADX:    {d["adx"]}  +DI={d["plus_di"]}  -DI={d["minus_di"]}  -> REGIME: {d["regime"]}')
-    sma50_str = f'{d["sma50"]} ({d["dist_sma50_pct"]:+.1f}%)' if d['sma50'] and d['dist_sma50_pct'] is not None else 'N/A'
-    sma200_str = f'{d["sma200"]} ({d["dist_sma200_pct"]:+.1f}%)' if d['sma200'] and d['dist_sma200_pct'] is not None else 'N/A'
-    print(f'SMA50:  {sma50_str}  SMA200: {sma200_str}  Golden: {d["golden_cross"]}')
-    print()
+    out.append('OHLCV_INTRADAY_5MIN (last 5 sessions):')
+    out.append(d['ohlcv_intraday_5m'])
+    out.append('')
 
-    print(f'SHORT:  {d["short_pct_float"]}% float  |  {d["short_ratio_days"]:.1f} days to cover')
-    print(f'ANALYST: {d["recommendation"].upper()}  Target: {sym_cur}{d["analyst_target_low"]}-{sym_cur}{d["analyst_target_mean"]}-{sym_cur}{d["analyst_target_high"]}')
-    print(f'S/R:    S={d["supports"]}  R={d["resistances"]}')
-    ir = d.get('intraday_range')
-    if ir:
-        print(f'ENTRY:  Dip from open: median {ir["dip_median_pct"]:.2f}% (p25={ir["dip_p25_pct"]:.2f}%, p75={ir["dip_p75_pct"]:.2f}%)  |  {ir["sample_days"]}d sample')
-    if d['earnings_date']:
-        print(f'EARNINGS: {d["earnings_date"]}')
+    out.append('OHLCV_INTRADAY_1MIN (last 2 sessions, every 5th bar):')
+    out.append(d['ohlcv_intraday_1m_every5'])
+    out.append('')
 
+    kl = d['key_levels']
+    out.append('KEY_LEVELS:')
+    if kl.get('52w_high'):
+        out.append(f'  52w_high: {kl["52w_high"]["value"]} on {kl["52w_high"]["date"]}')
+    if kl.get('52w_low'):
+        out.append(f'  52w_low:  {kl["52w_low"]["value"]} on {kl["52w_low"]["date"]}')
+    if kl.get('3m_high'):
+        out.append(f'  3m_high:  {kl["3m_high"]["value"]} on {kl["3m_high"]["date"]}')
+    if kl.get('3m_low'):
+        out.append(f'  3m_low:   {kl["3m_low"]["value"]} on {kl["3m_low"]["date"]}')
+    out.append('')
 
-def main():
-    parser = argparse.ArgumentParser(description='Silver Hawk Data Collection')
-    parser.add_argument('symbol', help='Ticker symbol')
-    parser.add_argument('--json-only', action='store_true', help='Output JSON only')
-    args = parser.parse_args()
+    sm = d['stock_meta']
+    out.append('STOCK_META:')
+    for k in ('exchange', 'currency', 'market_cap', 'beta', 'shares_outstanding',
+              'avg_volume_10d', 'trailing_pe', 'forward_pe', 'analyst_recommendations'):
+        v = sm.get(k)
+        if v is not None:
+            out.append(f'  {k}: {v}')
+    out.append('')
 
-    data = collect(args.symbol.upper())
+    e = d['earnings']
+    out.append('EARNINGS:')
+    out.append(f'  next_date:   {e.get("next_date") or "—"}')
+    out.append(f'  days_until:  {e.get("days_until") if e.get("days_until") is not None else "—"}')
+    if e.get('last_4_reports'):
+        out.append('  last_4_reports:')
+        for r in e['last_4_reports']:
+            est = r.get('eps_estimate')
+            act = r.get('eps_actual')
+            sur = r.get('surprise_pct')
+            est_s = f'{est:.2f}' if est is not None else '—'
+            act_s = f'{act:.2f}' if act is not None else '—'
+            sur_s = f'{sur:+.1f}%' if sur is not None else '—'
+            out.append(f'    {r["date"]}: estimate={est_s} actual={act_s} surprise={sur_s}')
+    out.append('')
 
-    if args.json_only:
-        print(json.dumps(data, indent=2, default=str))
+    out.append('YFINANCE_NEWS (last 7-10 items):')
+    if not d['yfinance_news']:
+        out.append('  (no items)')
     else:
-        print_human_readable(data)
-        print(f'\n{"=" * 60}')
-        print('JSON OUTPUT:')
-        print(json.dumps(data, indent=2, default=str))
+        for n in d['yfinance_news']:
+            out.append(f'  - [{n.get("date") or "—"}] {n.get("provider") or ""}')
+            out.append(f'    {n.get("title", "")}')
+            if n.get('url'):
+                out.append(f'    {n["url"]}')
+            if n.get('summary'):
+                out.append(f'    {n["summary"]}')
+    out.append('')
+
+    macro = d['macro_live']
+    out.append('MACRO_LIVE:')
+    for k in ('VIX', 'DXY', 'US_10Y', 'EURUSD'):
+        v = macro.get(k)
+        out.append(f'  {k:6s}: {v if v is not None else "—"}')
+    return '\n'.join(out)
+
+
+def main() -> int:
+    p = argparse.ArgumentParser(description='Step 1.2 raw data collector')
+    p.add_argument('symbol')
+    p.add_argument('--json-only', action='store_true',
+                   help='Emit JSON instead of text (intraday tables stay as preformatted strings)')
+    args = p.parse_args()
+
+    d = collect(args.symbol.upper())
+    if args.json_only:
+        print(json.dumps(d, indent=2, default=str))
+    else:
+        print(render_text(d))
+    return 0 if 'error' not in d else 2
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
