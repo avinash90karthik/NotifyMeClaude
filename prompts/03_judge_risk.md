@@ -54,6 +54,23 @@ If the current price is **outside** the trade window, recommend that the user se
 
 Validity: 3 trading days from now. After expiry, re-evaluate from scratch (new run, new step1, new debate).
 
+### Entry-Trigger Specificity Rule
+
+If the trade window includes a "wait for confirmation" condition (cash-open behavior, intraday reversal, breakout retest, support hold), the condition MUST be specified as a concrete bar-pattern, never a single price threshold.
+
+  WRONG:  "AAPL holds $275+ at cash-open"
+  RIGHT:  "On 5-min bars after 15:40 CET — Bar N high ≥ $277.00,
+           Bar N+1 high > Bar N high, Bar N+1 low > Bar N low
+           (Higher High + Higher Low structure)"
+
+Reasoning: a single price print can be a spike that's immediately distributed. Two-bar structure rules out the spike-fade case. Required components:
+
+1. Time window (after when, until when)
+2. Bar interval (1m / 5m / 15m)
+3. Structural condition (HH+HL, breakout-with-retest, range-expansion, etc.)
+
+If the user observes cert-side only, additionally provide cert-equivalent levels using actual Hebel × Verhältnis × EURUSD sensitivity. Output Card includes both underlying and cert-side trigger levels in this case.
+
 ## 4. KO Level
 
 The LLM determines the KO level from raw Step-1 data. No script, no fixed formula. The KO is a **trade-defining value** — the LLM must justify it with concrete references to bars and structure.
@@ -107,6 +124,22 @@ The LLM judges whether the geometry justifies the trade. A typical Range-Bound-S
 If the geometry doesn't work cleanly (KO too wide for available upside, Target too close, daily-range volatility insufficient for the move in 1-3d): discuss with the user. There may be acceptable adjustments (lower Target with smaller cert gain expectation, smaller position size to compensate for poor R/R). Don't unilaterally NO-TRADE.
 
 State the R/R ratios explicitly in the Output Card with one sentence on why the LLM judges the geometry as acceptable (or not).
+
+### Mandatory Expected Value Calculation when T1/KO < 1.0
+
+If Target1/KO ratio falls below 1.0× (cert reaches T1 with smaller % gain than Stop 3 reaches with % loss), explicit EV math is mandatory:
+
+  Win_pct  = 0.75 × T1_cert_gain_pct + 0.25 × T2_cert_gain_pct
+  Loss_pct = effective stop loss at Stop 3 (account for modified staircase)
+  Break-even hit-rate = Loss_pct / (Win_pct + Loss_pct)
+  EV = Final_Confidence × Win_pct − (1 − Final_Confidence) × Loss_pct
+
+State all four numbers in the Output Card. Reject the trade if either:
+
+- EV < +5% per trade, OR
+- Break-even hit-rate > Final Confidence × 0.90
+
+Rationale: R/R ratios hide the hit-rate × payoff interaction. Sub-1.0× R/R trades are acceptable only when hit-rate margin is meaningful — never assumed.
 
 ### Exit Logic After Fill (via pytr)
 
@@ -163,6 +196,23 @@ Four mandatory checks, each addressed explicitly in 1-2 sentences:
 After the four checks, 2-3 sentences of free reasoning covering anything not captured above (standing un-rebutted Bear/Bull points from Step 2, unusual volume patterns, etc.).
 
 If any check reveals a severe risk that the trade plan does not adequately address: state it clearly and discuss with the user before aborting.
+
+## 8. Re-Run Drift Audit (only when re-running same symbol within 24h)
+
+If this analysis is a re-run of a prior plan for the same symbol within the last 24 trading hours, enumerate every parameter that changed vs. the prior plan and classify each change as:
+
+- corrective (narrows, reduces, constrains, adds gate)
+- structural (different direction, fundamentally different thesis)
+- neutral (refinement without tightening)
+
+| Corrective changes | Action |
+|---|---|
+| 0–2 | Continue normally |
+| 3+  | Hard NO-TRADE — log all corrections in DB reason field |
+
+Common corrective changes to count: Final Confidence reduced, Position size reduced, Entry range tightened, Time stop shortened, Stop staircase modified, new conditional entry gate added, R/R ratio worsened.
+
+Rationale: a setup needing three or more corrective patches to remain tradable on re-run has structurally deteriorated. Removing one patch to "get back under 3" is sunk-cost rationalization — the count is the signal, not a step in the argument.
 
 ---
 

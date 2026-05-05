@@ -169,7 +169,24 @@ def hard_stops(symbol: str, db_path: Path) -> dict:
     return {'max_3_slots': max_3_slots, 'cooldown_24h': cooldown_24h}
 
 
-def render_text(symbol: str, d: dict, sym: dict, hs: dict, status: str) -> str:
+def drift_banner() -> str:
+    """Run sync_from_pytr.py in quiet mode for a 1-line drift summary.
+    Non-blocking — any failure is silent and returns an empty string."""
+    import subprocess
+    sync = REPO / 'scripts' / 'ops' / 'sync_from_pytr.py'
+    try:
+        r = subprocess.run(
+            ['python3', str(sync), '--quiet'],
+            capture_output=True, text=True, timeout=45,
+        )
+        line = (r.stdout or '').strip()
+        return line if line.startswith('SYNC:') else ''
+    except Exception:
+        return ''
+
+
+def render_text(symbol: str, d: dict, sym: dict, hs: dict, status: str,
+                drift: str = '') -> str:
     bar = '=' * 60
     out = []
     out.append(bar)
@@ -200,6 +217,9 @@ def render_text(symbol: str, d: dict, sym: dict, hs: dict, status: str) -> str:
     c = hs['cooldown_24h']
     out.append(f'  Max_3_Slots:  {s["detail"]} → {s["verdict"]}')
     out.append(f'  Cooldown_24h: {c["detail"]} → {c["verdict"]}')
+    if drift:
+        out.append('')
+        out.append(drift)
     out.append('')
     out.append(f'STATUS: {status}')
     out.append(bar)
@@ -229,6 +249,7 @@ def main() -> int:
     sym = resolve_symbol(symbol)
     hs = hard_stops(symbol, Path(args.db))
     status = determine_status(sym, hs)
+    drift = drift_banner()
 
     if args.json:
         print(json.dumps({
@@ -236,9 +257,10 @@ def main() -> int:
             'symbol': sym,
             'hard_stops': hs,
             'status': status,
+            'drift': drift,
         }, indent=2, default=str))
     else:
-        print(render_text(symbol, d, sym, hs, status))
+        print(render_text(symbol, d, sym, hs, status, drift))
 
     if status == 'READY_FOR_STEP_1':
         return 0

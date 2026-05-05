@@ -62,6 +62,23 @@ After both sides have presented and rebutted: what is the honest read?
 
 This is the LLM's actual reasoning. Don't hedge — commit to a read.
 
+### Evidence Hierarchy when Both Sides have Standing Points
+
+When both Bull and Bear retain un-rebutted points after Round 2, classify each standing point by evidence type:
+
+- **Tier 1** — Live-observable behavior (today's price action, today's volume, today's news flow vs. today's price reaction): strongest weight
+- **Tier 2** — Setup-matched historical analogs with n ≥ 5: medium weight
+- **Tier 3** — Setup-matched historical analogs with n < 5: weak, MUST be flagged as anecdotal in the Output Block
+- **Tier 4** — Textbook patterns without per-stock conditioning: forbidden (already covered by Per-Stock-Conditioning Rule)
+
+Asymmetry derivation:
+
+- Tier-1 point on one side + only Tier-3 points on the other side → Asymmetry follows the Tier-1 side, regardless of which conviction % is higher
+- Both sides hold only Tier-3 points and no Tier-1 points → Asymmetry = `both-weak`, regardless of conviction %
+- Both sides hold Tier-1 points (genuine live-evidence conflict) → Asymmetry = `balanced`
+
+Rationale: an n=3 historical sample is anecdotal regardless of direction. "Positive news + falling price" is verifiable today and binds reality to one direction. Conviction % alone is not a tie-breaker.
+
 ---
 
 ## Output Block

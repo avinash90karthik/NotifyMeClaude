@@ -126,8 +126,10 @@ Historische Pre-Open-Pattern-Analyse (Pre-Market-Gap → First-Hour-Reaktion →
 ## 1.4 Chart
 
 ```bash
-python3 scripts/analysis/render_chart.py {{SYMBOL}}
+python3 scripts/analysis/render_chart.py {{SYMBOL}} --run-id {{SYMBOL}}_{{YYYYMMDD}}_{{HHMMSS}}
 ```
+
+`--run-id` ist erforderlich, wenn das PNG in einen bereits angelegten Run-Folder geschrieben werden soll (Standard-Pipeline-Verhalten). Ohne `--run-id` legt das Skript einen neuen Run-Folder mit eigenem Timestamp an — das produziert einen Parallel-Folder, was die Pipeline durcheinanderbringt. Optional `--no-imessage` falls keine Push-Benachrichtigung gewünscht.
 
 Erzeugt PNG: 60 Daily Bars + Volume-Subplot. Keine SMA-Overlays, keine Annotations, keine Indikator-Overlays (konsistent mit § 1.2 — falls das LLM Bezugspunkte braucht, rechnet es sie aus den Daily Closes). PNG wird ans LLM-Prompt angehängt und parallel via iMessage an User.
 
@@ -159,25 +161,33 @@ TRUMP_HIT: yes | no | uncertain
 [falls hit: date | original_text_or_paraphrase | url | confidence: high|medium|low]
 ```
 
-**Reddit (WebSearch) oder Bash Aufruf**
-- Query: `site:reddit.com {{SYMBOL}}`
-- Top 10 Treffer der letzten 24h.
+**Reddit (Bash mit Subreddit-Whitelist + Company-Name)**
 
-bzw.
+Reddit's `/search.json?q={SYMBOL}` liefert für kurze, common-word Tickers (HOOD, AMC, GME, ARM) global trending Müll, weil der Ticker auch normale Wörter ("hood", "arm") matcht und Cashtag-Operator ohne API-Auth ignoriert wird. Workflow:
 
-Bash-Aufruf:
-curl -A "silver-hawk/1.0" "https://www.reddit.com/search.json?q={{SYMBOL}}&sort=new&t=day&limit=10"
+1. **Per-Subreddit-Suche** auf Trading-Whitelist mit `restrict_sr=on`. Für jedes der vier Whitelist-Subreddits einen Call:
+   ```bash
+   for sr in wallstreetbets stocks investing options; do
+     curl -sA "silver-hawk/1.0" \
+       "https://www.reddit.com/r/$sr/search.json?q={{SYMBOL}}&restrict_sr=on&sort=new&t=week&limit=5"
+   done
+   ```
 
-Output: 10 neueste Posts der letzten 24h mit Score, Comments, Subreddit, Title, Top-Comment.
-Kein Sentiment-Tag, das LLM liest selbst.
+2. **Company-Name-Fallback** falls < 5 Hits oder Ticker = common-word: zusätzlich global mit Firmen-Name (`Robinhood`, `Palantir`, etc.):
+   ```bash
+   curl -sA "silver-hawk/1.0" "https://www.reddit.com/search.json?q={{COMPANY_NAME}}&sort=top&t=week&limit=15"
+   ```
+   Aus dem Ergebnis nur Posts behalten, deren Subreddit in `{wallstreetbets, wallstreetbetsGER, stocks, investing, options, smallstreetbets, dividends, EconomyCharts, CryptoCurrency}` liegt.
+
+3. Kombiniere die Treffer, dedupliziere per `permalink`, sortiere nach `score`.
 
 Output:
 ```
-REDDIT_TOP_10_LAST_24H:
-  [post_date | subreddit | title | url | upvotes_or_comments_if_visible | excerpt]
+REDDIT_LAST_7D:
+  [post_date | subreddit | upvotes | num_comments | title | url | excerpt]
 ```
 
-Kein Sentiment-Tag, kein Score, keine Aggregation.
+Kein Sentiment-Tag, kein Score, keine Aggregation. Das LLM liest selbst.
 
 ### Market-Wide
 

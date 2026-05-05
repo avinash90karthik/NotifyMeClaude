@@ -150,11 +150,16 @@ def get_db():
 
     # Migrate: add watchlist columns if missing (for existing DBs)
     wl_existing = {row[1] for row in conn.execute('PRAGMA table_info(watchlist)').fetchall()}
-    for col, typ in [('price', 'REAL'), ('change_pct', 'REAL'), ('rsi', 'REAL'),
+    for col, typ in [('name', 'TEXT'), ('sector', "TEXT NOT NULL DEFAULT 'Unknown'"),
+                     ('active', 'INTEGER NOT NULL DEFAULT 1'),
+                     ('price', 'REAL'), ('change_pct', 'REAL'), ('rsi', 'REAL'),
                      ('sma50', 'REAL'), ('sma200', 'REAL'), ('market_cap', 'INTEGER'),
                      ('analyst_rating', 'TEXT'), ('last_updated', 'TEXT')]:
         if col not in wl_existing:
             conn.execute(f'ALTER TABLE watchlist ADD COLUMN {col} {typ}')
+    # Backfill: legacy rows had 'notes' but no 'name' → seed name from notes/symbol
+    if 'name' not in wl_existing:
+        conn.execute("UPDATE watchlist SET name = COALESCE(notes, symbol) WHERE name IS NULL")
 
     # Migrate: add columns if missing (for existing DBs upgrading to v2 or v1.0)
     existing = {row[1] for row in conn.execute('PRAGMA table_info(predictions)').fetchall()}
@@ -865,6 +870,19 @@ def pivot_position(args):
     conn.close()
 
 
+# ─── Sync (delegate to sync_from_pytr.py) ─────────────────────────
+
+def sync_from_pytr(args):
+    """Convenience wrapper: forward to scripts/ops/sync_from_pytr.py."""
+    import subprocess
+    cmd = ['python3', os.path.join(os.path.dirname(__file__), 'sync_from_pytr.py')]
+    if args.dry_run:
+        cmd.append('--dry-run')
+    if args.quiet:
+        cmd.append('--quiet')
+    sys.exit(subprocess.call(cmd))
+
+
 # ─── Watchlist ─────────────────────────────────────────────────────
 
 def watchlist_add(args):
@@ -961,8 +979,8 @@ def main():
     s.add_argument('--shares', required=True, type=int)
     s.add_argument('--cert-price', required=True, type=float)
     s.add_argument('--cert-type', type=str, default='turbo')
-    s.add_argument('--cert-isin', type=str,
-                   help='Optional: cert ISIN (also written by record --cert-isin in v1.0)')
+    s.add_argument('--cert-isin', required=True, type=str,
+                   help='Cert ISIN — required for sync-from-pytr to match this position.')
 
     # confirm
     s = sub.add_parser('confirm', help='v5 confirmation (add shares)')
@@ -1016,6 +1034,11 @@ def main():
     # watchlist
     sub.add_parser('watchlist', help='List watchlist symbols')
 
+    # sync — convenience wrapper around scripts/ops/sync_from_pytr.py
+    s = sub.add_parser('sync', help='Sync DB position-state from pytr (live TR)')
+    s.add_argument('--dry-run', action='store_true', help='Report only, no DB writes')
+    s.add_argument('--quiet', action='store_true', help='1-line summary (for pre-flight)')
+
     args = p.parse_args()
     cmds = {
         'record': record_prediction, 'open': open_position,
@@ -1026,6 +1049,7 @@ def main():
         'list': list_predictions, 'export': export_predictions,
         'watchlist-add': watchlist_add, 'watchlist-remove': watchlist_remove,
         'watchlist': watchlist_list,
+        'sync': sync_from_pytr,
     }
     fn = cmds.get(args.command)
     if fn:
