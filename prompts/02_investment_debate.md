@@ -71,13 +71,16 @@ When both Bull and Bear retain un-rebutted points after Round 2, classify each s
 - **Tier 3** — Setup-matched historical analogs with n < 5: weak, MUST be flagged as anecdotal in the Output Block
 - **Tier 4** — Textbook patterns without per-stock conditioning: forbidden (already covered by Per-Stock-Conditioning Rule)
 
-Asymmetry derivation:
+Asymmetry derivation (apply rules in order, first match wins):
 
-- Tier-1 point on one side + only Tier-3 points on the other side → Asymmetry follows the Tier-1 side, regardless of which conviction % is higher
-- Both sides hold only Tier-3 points and no Tier-1 points → Asymmetry = `both-weak`, regardless of conviction %
-- Both sides hold Tier-1 points (genuine live-evidence conflict) → Asymmetry = `balanced`
+1. Confidence spread override:
+   - If Bull ≥ 60 AND (Bull − Bear) ≥ 5  → Asymmetry = `clear-LONG`
+   - If Bear ≥ 60 AND (Bear − Bull) ≥ 5  → Asymmetry = `clear-SHORT`
 
-Rationale: an n=3 historical sample is anecdotal regardless of direction. "Positive news + falling price" is verifiable today and binds reality to one direction. Conviction % alone is not a tie-breaker.
+2. Otherwise apply tier-based rules:
+   - Tier-1 on one side + only Tier-3 on the other → follow Tier-1 side
+   - Both sides only Tier-3, no Tier-1 → `both-weak`
+   - Both sides Tier-1 AND spread < 5 → `balanced`
 
 ---
 
@@ -137,6 +140,6 @@ When assigning conviction percentages:
 - **70-90%**: strong case, counter-arguments rebutted with concrete evidence
 - **>90%**: rare — should require multiple independent confirmations and clear per-stock conditioning
 
-If both Bull and Bear conviction are above 60%, that is itself a signal: high uncertainty, the stock is genuinely contested. Mark Asymmetry as `balanced` and let Step 3 size accordingly.
+If both Bull and Bear conviction are above 75%, that is genuine high uncertainty — mark Asymmetry as `balanced`. Below that, rule 1 (spread override) decides.
 
 If both are below 40%, mark Asymmetry as `both-weak` — Step 3 will likely decide NO-TRADE.

@@ -286,4 +286,41 @@ Bis dahin: keine Anpassungen, nur Daten sammeln. Anpassungen evidenzbasiert, nic
 [STEP 4 COMPLETE — ANALYSIS FINISHED]
 ```
 
-Subsequent monitoring is via portfolio dashboard and TR app push notifications. Pipeline re-run for the same symbol requires a new `runs/{SYMBOL}_{YYYYMMDD}_{HHMMSS}/` directory.
+Subsequent monitoring is via portfolio dashboard and TR app push notifications.
+
+### When the TR price alarm fires (alarm-fired re-run)
+
+Do NOT trigger a full Step 1 → 2 → 3 re-run. The original plan defined the
+trigger condition deliberately; the trigger firing is the entry signal, not
+a request for re-debate.
+
+Instead, run §8 Mode A (Catastrophic Event Check) from `03_judge_risk.md`.
+This is a short check (~30 seconds, four explicit yes/no questions) against
+the original plan's `metadata.json` timestamp:
+
+  1. Earnings surprise on this stock since original plan?
+  2. Material company-specific news (M&A, fraud, SEC, guidance pull, CEO,
+     recall) since original plan?
+  3. Market regime break (VIX +50%, SPX/DAX -3% intraday, sector ETF -4%)?
+  4. Per-stock structure break (daily close below the original KO)?
+
+If all four = NO: emit a Mode A confirmation card. The underlying-side plan
+is preserved unchanged (entry zone, KO, targets, position EUR, staircase
+percentages). No new run_id — append the confirmation card to the original
+`runs/{SYMBOL}_*/` folder as `step4_alarm_confirmation.md`.
+
+Cert-side recalculation is mandatory:
+  - User reports current cert ask (may differ from original ask)
+  - Cert-Stop-Staircase prices recomputed: new_ask × 0.90 / 0.83 / 0.75
+  - Cert count = position EUR / new_ask
+  - Target cert prices recomputed from current cert ask × leverage
+
+If any = YES: this becomes a Mode B (User-Initiated Re-Run) with full
+pipeline AND Drift Audit applied. New run_id, new folder.
+
+### When the user asks for a fresh look (user-initiated re-run)
+
+Full Step 1 → 2 → 3 → 4 pipeline with new run_id. Step 3 §8 Mode B applies
+(Drift Audit). This is the right place for the conservative "3+ corrective
+changes = NO-TRADE" gate — the user came in fresh, structural deterioration
+is a real signal.

@@ -54,6 +54,34 @@ If the current price is **outside** the trade window, recommend that the user se
 
 Validity: 3 trading days from now. After expiry, re-evaluate from scratch (new run, new step1, new debate).
 
+### Entry-Range Reachability Cap (mandatory)
+
+Read the average daily range (H − L) / C over the last 14 daily bars from
+OHLCV_DAILY. The entry range MUST be reachable in the trade horizon:
+
+- Range_low for LONG (or range_high for SHORT) distance from current price
+  must not exceed:    horizon_days × avg_daily_range × 1.5
+
+  Example: 3-day horizon, avg daily range 5% → max distance 22.5% — but see
+  also the absolute caps below, which usually bind first.
+
+- Absolute caps (whichever is tighter):
+    1-3d horizon:  max 7% from current price to far edge of entry range
+    5d horizon:    max 12% from current price to far edge of entry range
+
+If the structurally-strongest support/resistance lies beyond this cap, the
+LLM has two options — pick one and state it:
+
+  (a) Use a closer, weaker support/resistance level inside the cap.
+      Acknowledge the level is weaker; tighten KO accordingly.
+  (b) NO-TRADE with reasoning: "structural entry is beyond reachability cap
+      — wait for natural pullback over multiple sessions before re-evaluating."
+
+Forbidden: emitting an entry range whose far edge is beyond the cap and
+labeling it "wait for pullback". A wait that statistically won't happen in
+the horizon is not a plan, it's a wish.
+
+
 ### Entry-Trigger Specificity Rule
 
 If the trade window includes a "wait for confirmation" condition (cash-open behavior, intraday reversal, breakout retest, support hold), the condition MUST be specified as a concrete bar-pattern, never a single price threshold.
@@ -159,30 +187,74 @@ No discretionary trail-vs-exit decisions per trade — consistency over optimiza
 
 ## 6. Position Sizing
 
-Sizing brackets driven by Final Confidence — **upper bound, LLM may size smaller with reasoning**:
+Sizing brackets driven by Final Confidence — these are **target sizes**, not
+upper bounds. The LLM uses the bracket value unless §6.1 reduction rules
+explicitly apply.
 
-| Final Confidence | Maximum Position Size (% of cash) |
-|------------------|-----------------------------------|
-| < 60%            | NO-TRADE                          |
-| 60-69%           | 12%                               |
-| 70-79%           | 15%                               |
-| 80-89%           | 18%                               |
-| ≥ 90%            | 20% (rare)                        |
+| Final Confidence | Target Position Size (% of cash) |
+|------------------|----------------------------------|
+| < 55%            | NO-TRADE                         |
+| 55-59%           | 9%                               |
+| 60-69%           | 14%                              |
+| 70-79%           | 17%                              |
+| 80-89%           | 20%                              |
+| ≥ 90%            | 22% (rare)                       |
 
-Hard cap: never above 20% of cash on a single turbo.
+Hard cap: never above 22% of cash on a single turbo.
 
-The LLM may reduce below the bracket if Risk Audit (§7) identifies severe macro timing risk, sector concentration concerns, or other factors. Reduction must be justified in one sentence.
+### 6.1 Reduction Rules (LLM may reduce, but only for these reasons)
+
+The LLM may size below the bracket only if one or more of the following
+specific conditions apply. Each invoked reduction must be named explicitly
+in the Output Card with a one-sentence justification — vague references to
+"caution" or "general risk" are not valid reasons.
+
+- **R1. Macro event inside trade horizon** — Fed/CPI/FOMC release falls
+  within the time-stop window. Reduce by one bracket step (e.g. 14% → 9%).
+
+- **R2. Sector concentration** — this trade would push a single sector
+  above 25% of equity, OR all open positions would share the same direction
+  (all-LONG or all-SHORT) with this trade making the third such position.
+  Reduce by one bracket step.
+
+- **R3. Stock-specific volatility flag** — average daily range over last
+  14 bars exceeds 6% of price (the §4 volatility-sanity threshold). Reduce
+  by one bracket step.
+
+- **R4. Geopolitical / Trump-Hit** — Trump-Hit or active geopolitical
+  trigger directly affecting this ticker or sector within the trade
+  horizon. Reduce by one bracket step.
+
+- **R5. Mode B Drift Audit** shows 1-2 corrective changes (3+ is already
+  Hard NO-TRADE per §8). Reduce by one bracket step per corrective change,
+  max two steps.
+
+Stacking: maximum cumulative reduction is two bracket steps. Below that,
+the trade should be re-evaluated for NO-TRADE rather than sized down to
+near-zero.
+
+Forbidden reductions:
+
+- "Felt cautious" / "want to be safe" without naming a specific R-rule
+- "Bear case has some merit" — the Bear case is already weighted into
+  Final Confidence; double-counting it via size reduction is not allowed
+- Reduction below 5% of cash — at that point the trade is too small to
+  matter; emit NO-TRADE instead
+
+### 6.2 Output
+
+The position-sizing block of the Output Card uses this format:
+
+    Cash:                XXX EUR  (live, from pytr portfolio)
+    Bracket target:      XX% per Final Confidence X%  (= XXX EUR)
+    Reductions applied:  none | R1 | R2 | R3 | R4 | R5  (one line per applied)
+    Position size:       XXX EUR  (final, after reductions)
+    Max loss per trade:  XXX EUR  (assuming KO hit on full position)
+
+Cert count = Position EUR / cert ask price → computed in Step 4 once cert
+is selected.
 
 **Full position at entry** — no Scout/Confirmation split.
-
-```
-Cash:                XXX EUR  (live, from pytr portfolio)
-Bracket:             XX% per Final Confidence X%
-Position size:       XXX EUR  (or reduced: XXX EUR — reason: <...>)
-Max loss per trade:  XXX EUR  (assuming KO hit on full position)
-```
-
-Cert count = Position EUR / cert ask price → computed in Step 4 once cert is selected.
 
 ## 7. Risk Audit
 
@@ -197,10 +269,58 @@ After the four checks, 2-3 sentences of free reasoning covering anything not cap
 
 If any check reveals a severe risk that the trade plan does not adequately address: state it clearly and discuss with the user before aborting.
 
-## 8. Re-Run Drift Audit (only when re-running same symbol within 24h)
+## 8. Re-Run Logic (when re-running same symbol within 24h)
 
-If this analysis is a re-run of a prior plan for the same symbol within the last 24 trading hours, enumerate every parameter that changed vs. the prior plan and classify each change as:
+Two distinct re-run modes — the LLM identifies which one applies:
 
+### Mode A: Trigger-Fired Re-Run
+
+Triggered when: the original plan set a TR price alarm or entry-trigger
+condition, the alarm/trigger fired, and the re-run is the consequence.
+
+Original plan must have been emitted with Final Confidence ≥ 55% and an
+explicit trigger. If yes → run the Catastrophic Event Check, NOT a full
+Bull/Bear/Judge cycle.
+
+#### Catastrophic Event Check (only blocks execution if YES on any item)
+
+1. Earnings surprise on this stock since original plan? (yfinance .earnings,
+   compare to last_4_reports in step1_data.md)
+2. Material company-specific news since original plan? (M&A announcement,
+   fraud, SEC action, guidance withdrawal, CEO change, major recall) —
+   read WEB_NEWS_LAST_7D and YFINANCE_NEWS, compare timestamps to
+   original_run.completed_at.
+3. Market regime break since original plan? Any of:
+     - VIX up > 50% from original_run VIX
+     - SPX (or relevant index for DE stocks: DAX) down > 3% intraday
+     - Sector ETF (SMH for semis, XLF for financials, etc.) down > 4% intraday
+4. Per-stock structure break? Has the stock printed a daily close BELOW the
+   KO level from the original plan since the plan was emitted? (KO break =
+   thesis was wrong, abort.)
+
+If all four = NO: execute the original plan as written. Position size, KO,
+targets, staircase = identical to original. Skip Bull/Bear re-debate, skip
+Drift Audit. Emit a short confirmation card with the original parameters.
+
+If any = YES: escalate to full Mode B (User-Initiated Re-Run) and run the
+Drift Audit on top.
+
+Rationale: the original plan defined the trigger condition deliberately
+(e.g. "LONG on pullback to $545"). The trigger firing IS the entry signal —
+re-debating the case at trigger price systematically introduces fresh Bear
+arguments (negative momentum, weak intraday tape) that did not exist when
+the plan was made and could not have been anticipated, because the trigger
+itself produces them. This is the bug that turned MU and AAPL into missed
++40% / +300% moves in early May 2026.
+
+### Mode B: User-Initiated Re-Run
+
+Triggered when: the user explicitly requests a fresh look at the symbol
+without an original-plan trigger having fired (or triggered in Mode A
+escalated up).
+
+Run full Step 1 → 2 → 3 pipeline. Then enumerate every parameter that
+changed vs. the prior plan and classify each as:
 - corrective (narrows, reduces, constrains, adds gate)
 - structural (different direction, fundamentally different thesis)
 - neutral (refinement without tightening)
@@ -210,9 +330,13 @@ If this analysis is a re-run of a prior plan for the same symbol within the last
 | 0–2 | Continue normally |
 | 3+  | Hard NO-TRADE — log all corrections in DB reason field |
 
-Common corrective changes to count: Final Confidence reduced, Position size reduced, Entry range tightened, Time stop shortened, Stop staircase modified, new conditional entry gate added, R/R ratio worsened.
+Common corrective changes to count: Final Confidence reduced, Position size
+reduced, Entry range tightened, Time stop shortened, Stop staircase
+modified, new conditional entry gate added, R/R ratio worsened.
 
-Rationale: a setup needing three or more corrective patches to remain tradable on re-run has structurally deteriorated. Removing one patch to "get back under 3" is sunk-cost rationalization — the count is the signal, not a step in the argument.
+Rationale: a setup needing three or more corrective patches on a fresh
+user-initiated look has structurally deteriorated. Removing one patch to
+"get back under 3" is sunk-cost rationalization — the count is the signal.
 
 ---
 

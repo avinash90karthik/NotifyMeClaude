@@ -11,7 +11,7 @@ User entry: natural-language request ("Analysiere PLTR", "Analyze ENR.DE").
 | 0 | `prompts/00_preflight.md` | Date/market-status, symbol validity, V5/SW2 hard stops |
 | 1 | `prompts/01_data_collection.md` | Raw data: prices, indicators, intraday, news, macro |
 | 2 | `prompts/02_investment_debate.md` | Bull vs Bear debate on raw data |
-| 3 | `prompts/03_judge_risk.md` | Signal + confidence, KO, exits, per-stock conditioning |
+| 3 | `prompts/03_judge_risk.md` | Signal + confidence, KO, exits, per-stock conditioning. §8 Mode A skips full re-debate when an alarm/trigger fires; only runs Catastrophic Event Check. |
 | 4 | `prompts/04_summary_send.md` | Trading card, cert request, prediction DB record |
 
 Each step builds on the previous. No skipping. Each step persists output to `runs/{SYMBOL}_{YYYYMMDD}_{HHMMSS}/`.
